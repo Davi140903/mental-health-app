@@ -3,9 +3,14 @@
 import json
 import os
 import re
+import secrets
+import socket
+import smtplib
 import unicodedata
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+from hashlib import sha256
 from typing import Any, Generator, Literal
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -33,6 +38,27 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+
+def load_local_env_file() -> None:
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if not os.path.exists(env_path):
+        return
+
+    with open(env_path, "r", encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key:
+                os.environ[key] = value
+
+
+load_local_env_file()
+
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mental_health.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "troque-esta-chave-em-producao")
 ALGORITHM = "HS256"
@@ -42,8 +68,22 @@ FRONTEND_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
-OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "45"))
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))
+EMAIL_VERIFICATION_CODE_TTL_MINUTES = int(os.getenv("EMAIL_VERIFICATION_CODE_TTL_MINUTES", "10"))
+EMAIL_VERIFICATION_DEBUG = os.getenv("EMAIL_VERIFICATION_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME).strip()
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Mental Health App").strip() or "Mental Health App"
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes", "on"}
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").strip().lower() in {"1", "true", "yes", "on"}
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
+RESEND_FROM_NAME = os.getenv("RESEND_FROM_NAME", "Mental Health App").strip() or "Mental Health App"
 LIA_AI_UNAVAILABLE_DETAIL = (
     "A Lia precisa do Ollama ativo para responder agora. Inicie o Ollama e tente novamente."
 )
@@ -163,6 +203,12 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def ensure_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -172,6 +218,18 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     consentimento_lgpd = Column(Boolean, nullable=False, default=True)
     criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    email = Column(String, nullable=False, index=True)
+    purpose = Column(String, nullable=False, index=True)
+    code_hash = Column(String, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    consumed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
 
 
 class MoodEntry(Base):
@@ -229,11 +287,28 @@ class UsuarioCreate(BaseModel):
     nome: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=6, max_length=100)
     consentimento_lgpd: bool
+    codigo: str = Field(min_length=6, max_length=6)
 
 
 class LoginData(BaseModel):
     email: EmailStr
     password: str
+    codigo: str = Field(min_length=6, max_length=6)
+
+
+class EmailCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class LoginCodeRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=100)
+
+
+class CodeRequestOut(BaseModel):
+    detail: str
+    expires_in_minutes: int
+    debug_code: str | None = None
 
 
 class UsuarioOut(BaseModel):
@@ -401,6 +476,43 @@ def env_flag(name: str, default: bool = False) -> bool:
 
 
 OLLAMA_ENABLED = env_flag("OLLAMA_ENABLED", True)
+_OLLAMA_RESOLVED_MODEL: str | None = None
+
+
+def resolve_ollama_model() -> str:
+    global _OLLAMA_RESOLVED_MODEL
+    if _OLLAMA_RESOLVED_MODEL:
+        return _OLLAMA_RESOLVED_MODEL
+
+    configured_model = OLLAMA_MODEL.strip() or "llama3:latest"
+    resolved_model = configured_model
+
+    try:
+        request = urllib_request.Request(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", method="GET")
+        with urllib_request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        models = payload.get("models") or []
+        model_names = [str(item.get("name") or item.get("model") or "") for item in models]
+        model_names = [name for name in model_names if name]
+
+        if configured_model in model_names:
+            resolved_model = configured_model
+        elif configured_model.split(":", 1)[0] + ":latest" in model_names:
+            resolved_model = configured_model.split(":", 1)[0] + ":latest"
+        else:
+            llama_model = next((name for name in model_names if "llama" in name.lower()), None)
+            if llama_model:
+                resolved_model = llama_model
+    except Exception:
+        resolved_model = configured_model
+
+    _OLLAMA_RESOLVED_MODEL = resolved_model
+    return resolved_model
+
+
+def is_ollama_transport_error(exc: Exception) -> bool:
+    return isinstance(exc, (TimeoutError, urllib_error.HTTPError, urllib_error.URLError))
 
 
 def get_first_name(name: str) -> str:
@@ -2065,9 +2177,10 @@ def call_ollama_for_lia(
     prompt_stage = forced_stage or (infer_prompt_stage(session, latest_user_message) if latest_user_message else session.stage)
 
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": resolve_ollama_model(),
         "stream": False,
         "format": "json",
+        "options": {"temperature": 0.4, "num_predict": 360},
         "messages": [
             {"role": "system", "content": build_lia_system_prompt(prompt_stage, retry_hint)},
             {"role": "system", "content": build_lia_memory_prompt(session)},
@@ -2153,16 +2266,12 @@ def generate_lia_plain_reply(
         extra_style_hint = "A conversa ja reuniu contexto suficiente. Feche com sintese curta e um proximo passo simples."
 
     system_prompt = (
-        "Voce e a Lia, uma assistente conversacional simples com foco em apoio emocional. "
-        "Responda apenas com a mensagem final que o usuario vai ler, sem JSON e sem explicacoes extras. "
-        "Use portugues do Brasil em ASCII simples, com tom humano e acolhedor. "
-        "Nunca use respostas passivas como 'estou aqui para ouvir'. "
-        "Evite frases minimizantes como 'e natural sentir-se assim de vez em quando'. "
-        "Evite tom de coach, autoajuda, produtividade ou conselhos prontos. "
-        "Primeiro reconheca e acompanhe a experiencia da pessoa; so depois, se fizer sentido, traga uma orientacao minima. "
-        "Se a ultima mensagem for curta, como uma duracao, um 'sim' ou um 'nao', use a pergunta anterior e o contexto recente para responder de forma especifica. "
+        "Voce e Lia, uma assistente de apoio emocional. "
+        "Responda apenas com a mensagem final, sem JSON e sem explicacoes extras. "
+        "Use portugues do Brasil simples, tom humano e acolhedor, em ate 80 palavras. "
+        "Acolha primeiro; depois, se fizer sentido, traga uma orientacao minima. "
         "Nao mencione diagnostico, questionario, pontuacao ou avaliacao. "
-        f"A etapa atual e {stage}. {question_rule} {extra_style_hint} "
+        f"Etapa: {stage}. {question_rule} {extra_style_hint} "
     )
     if repair_reason:
         system_prompt += f"Motivo do reparo: {repair_reason}. "
@@ -2170,8 +2279,9 @@ def generate_lia_plain_reply(
         system_prompt += f"Ajuste adicional: {retry_hint}"
 
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": resolve_ollama_model(),
         "stream": False,
+        "options": {"temperature": 0.5, "num_predict": 140, "num_ctx": 2048},
         "messages": [
             {"role": "system", "content": system_prompt.strip()},
             {"role": "system", "content": build_lia_memory_prompt(session)},
@@ -2276,8 +2386,9 @@ def rewrite_lia_reply(
     )
 
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": resolve_ollama_model(),
         "stream": False,
+        "options": {"temperature": 0.4, "num_predict": 220},
         "messages": [
             {
                 "role": "system",
@@ -2496,6 +2607,21 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
 def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
     last_error: Exception | None = None
     recent_assistant_messages = [normalize_for_match(item) for item in get_recent_transcript_by_role(session, "assistant", 2)]
+
+    if resolve_ollama_model() == "llama3.2:1b":
+        try:
+            quick_analysis = build_ai_rescue_analysis(
+                session,
+                user_message,
+                retry_hint="Responda de forma curta, humana e especifica, com no maximo uma pergunta.",
+            )
+            if has_usable_assistant_reply(quick_analysis.assistant_reply or "", recent_assistant_messages):
+                return quick_analysis, True
+        except Exception as exc:
+            last_error = exc
+            if is_ollama_transport_error(exc):
+                return fallback_lia_analysis(session, user_message), False
+
     retry_hints = [
         None,
         (
@@ -2517,6 +2643,8 @@ def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAn
             return refine_lia_analysis(session, analysis, user_message), True
         except Exception as exc:
             last_error = exc
+            if is_ollama_transport_error(exc):
+                return fallback_lia_analysis(session, user_message), False
 
     rescue_hints = [
         "A resposta precisa soar como conversa real, com apoio emocional de verdade, sem formulario nem conselhos vagos.",
@@ -2542,6 +2670,8 @@ def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAn
             return refine_lia_analysis(session, rescue_analysis, user_message), True
         except Exception as exc:
             last_error = exc
+            if is_ollama_transport_error(exc):
+                return fallback_lia_analysis(session, user_message), False
 
     try:
         final_rescue = build_ai_rescue_analysis(
@@ -2557,8 +2687,10 @@ def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAn
             return final_rescue, True
     except Exception as exc:
         last_error = exc
+        if is_ollama_transport_error(exc):
+            return fallback_lia_analysis(session, user_message), False
 
-    raise RuntimeError(LIA_AI_UNAVAILABLE_DETAIL) from last_error
+    return fallback_lia_analysis(session, user_message), False
 
 
 def count_answered_scores(scores: list[int | None]) -> int:
@@ -2856,6 +2988,214 @@ def verify_password(password: str, hashed_password: str) -> bool:
     return pwd_context.verify(password, hashed_password)
 
 
+def normalize_email(value: str) -> str:
+    return value.strip().lower()
+
+
+def normalize_verification_code(value: str) -> str:
+    cleaned = re.sub(r"\D", "", value or "")
+    if len(cleaned) != 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe um codigo de 6 digitos.")
+    return cleaned
+
+
+def hash_verification_code(email: str, purpose: str, code: str) -> str:
+    return sha256(f"{normalize_email(email)}:{purpose}:{code}".encode("utf-8")).hexdigest()
+
+
+def smtp_is_configured() -> bool:
+    placeholder_values = {
+        "",
+        "seu-email@gmail.com",
+        "sua-senha-de-app",
+    }
+    return bool(
+        SMTP_HOST
+        and SMTP_FROM_EMAIL not in placeholder_values
+        and SMTP_USERNAME not in placeholder_values
+        and SMTP_PASSWORD not in placeholder_values
+    )
+
+
+def resend_is_configured() -> bool:
+    placeholder_values = {
+        "",
+        "re_xxxxxxxxx",
+    }
+    return bool(
+        RESEND_API_KEY not in placeholder_values
+        and RESEND_FROM_EMAIL not in placeholder_values
+    )
+
+
+def build_verification_email_subject(purpose: str) -> str:
+    if purpose == "register":
+        return "Codigo de verificacao para cadastro"
+    if purpose == "login":
+        return "Codigo de verificacao para login"
+    return "Codigo de verificacao"
+
+
+def build_verification_email_body(code: str, purpose: str) -> str:
+    action_label = "concluir seu cadastro" if purpose == "register" else "entrar na sua conta"
+    return (
+        "Seu codigo de verificacao do Mental Health App e:\n\n"
+        f"{code}\n\n"
+        f"Use este codigo para {action_label}.\n"
+        f"Ele expira em {EMAIL_VERIFICATION_CODE_TTL_MINUTES} minutos.\n\n"
+        "Se voce nao pediu este codigo, ignore este email."
+    )
+
+
+def send_verification_email_via_resend(email: str, code: str, purpose: str) -> None:
+    if not resend_is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="O envio por Resend ainda nao foi configurado no servidor.",
+        )
+
+    payload = {
+        "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
+        "to": [normalize_email(email)],
+        "subject": build_verification_email_subject(purpose),
+        "text": build_verification_email_body(code, purpose),
+        "html": (
+            "<p>Seu codigo de verificacao do Mental Health App e:</p>"
+            f"<p style=\"font-size:28px;font-weight:700;letter-spacing:4px;\">{code}</p>"
+            f"<p>Use este codigo para {'concluir seu cadastro' if purpose == 'register' else 'entrar na sua conta'}."
+            f" Ele expira em {EMAIL_VERIFICATION_CODE_TTL_MINUTES} minutos.</p>"
+            "<p>Se voce nao pediu este codigo, ignore este email.</p>"
+        ),
+    }
+
+    request = urllib_request.Request(
+        RESEND_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": "mental-health-app/1.0",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib_request.urlopen(request, timeout=20) as response:
+            if response.status not in {200, 201, 202}:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="O provedor de email recusou o envio do codigo.",
+                )
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="ignore")
+        if exc.code in {401, 403}:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Falha ao autenticar no Resend. Confira a chave da API e o remetente configurado.",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"O Resend recusou o envio do email. {body[:180]}".strip(),
+        ) from exc
+    except (TimeoutError, urllib_error.URLError, OSError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nao foi possivel conectar ao Resend. Confira o acesso de rede.",
+        ) from exc
+
+
+def send_verification_email(email: str, code: str, purpose: str) -> None:
+    if resend_is_configured():
+        send_verification_email_via_resend(email, code, purpose)
+        return
+
+    if not smtp_is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="O envio de email ainda nao foi configurado no servidor.",
+        )
+
+    message = EmailMessage()
+    message["Subject"] = build_verification_email_subject(purpose)
+    message["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    message["To"] = normalize_email(email)
+    message.set_content(build_verification_email_body(code, purpose))
+
+    try:
+        if SMTP_USE_SSL:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+                if SMTP_USERNAME:
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.send_message(message)
+            return
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+            if SMTP_USE_TLS:
+                server.starttls()
+            if SMTP_USERNAME:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
+    except smtplib.SMTPAuthenticationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Falha ao autenticar no servidor de email. Confira o usuario e a senha de app do Gmail.",
+        ) from exc
+    except (TimeoutError, socket.timeout, ConnectionError, OSError, smtplib.SMTPException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nao foi possivel conectar ao servidor de email. Confira SMTP, firewall ou acesso de rede.",
+        ) from exc
+
+
+def create_email_verification_code(db: Session, email: str, purpose: str) -> str:
+    normalized_email = normalize_email(email)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    now = utcnow()
+
+    db.query(EmailVerificationCode).filter(
+        EmailVerificationCode.email == normalized_email,
+        EmailVerificationCode.purpose == purpose,
+        EmailVerificationCode.consumed_at.is_(None),
+    ).update({"consumed_at": now}, synchronize_session=False)
+
+    verification = EmailVerificationCode(
+        email=normalized_email,
+        purpose=purpose,
+        code_hash=hash_verification_code(normalized_email, purpose, code),
+        expires_at=now + timedelta(minutes=EMAIL_VERIFICATION_CODE_TTL_MINUTES),
+    )
+    db.add(verification)
+    db.commit()
+    return code
+
+
+def consume_email_verification_code(db: Session, email: str, purpose: str, code: str) -> None:
+    normalized_email = normalize_email(email)
+    normalized_code = normalize_verification_code(code)
+    verification = db.scalar(
+        select(EmailVerificationCode)
+        .where(EmailVerificationCode.email == normalized_email)
+        .where(EmailVerificationCode.purpose == purpose)
+        .where(EmailVerificationCode.consumed_at.is_(None))
+        .order_by(EmailVerificationCode.created_at.desc())
+    )
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Primeiro solicite um codigo de verificacao para este email.",
+        )
+
+    if ensure_utc(verification.expires_at) < utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O codigo expirou. Solicite outro.")
+
+    if verification.code_hash != hash_verification_code(normalized_email, purpose, normalized_code):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Codigo de verificacao invalido.")
+
+    verification.consumed_at = utcnow()
+    db.add(verification)
+    db.commit()
+
+
 def create_access_token(subject: str) -> str:
     expires_at = utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {"sub": subject, "exp": expires_at}
@@ -2863,7 +3203,7 @@ def create_access_token(subject: str) -> str:
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-    return db.scalar(select(User).where(User.email == email))
+    return db.scalar(select(User).where(User.email == normalize_email(email)))
 
 
 def get_current_user(
@@ -3063,6 +3403,23 @@ def root() -> dict[str, str]:
     return {"message": "Mental Health API online"}
 
 
+@app.post("/auth/register/request-code", response_model=CodeRequestOut)
+def request_register_code(data: EmailCodeRequest, db: Session = Depends(get_db)) -> CodeRequestOut:
+    normalized_email = normalize_email(data.email)
+    existing_user = get_user_by_email(db, normalized_email)
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ja cadastrado.")
+
+    code = create_email_verification_code(db, normalized_email, "register")
+    if not EMAIL_VERIFICATION_DEBUG:
+        send_verification_email(normalized_email, code, "register")
+    return CodeRequestOut(
+        detail="Codigo de verificacao enviado para o email de cadastro.",
+        expires_in_minutes=EMAIL_VERIFICATION_CODE_TTL_MINUTES,
+        debug_code=code if EMAIL_VERIFICATION_DEBUG else None,
+    )
+
+
 @app.post("/auth/register", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 def register(data: UsuarioCreate, db: Session = Depends(get_db)) -> User:
     if not data.consentimento_lgpd:
@@ -3071,12 +3428,15 @@ def register(data: UsuarioCreate, db: Session = Depends(get_db)) -> User:
             detail="E necessario aceitar o termo de privacidade para criar a conta.",
         )
 
-    existing_user = get_user_by_email(db, data.email)
+    normalized_email = normalize_email(data.email)
+    existing_user = get_user_by_email(db, normalized_email)
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ja cadastrado.")
 
+    consume_email_verification_code(db, normalized_email, "register", data.codigo)
+
     user = User(
-        email=data.email,
+        email=normalized_email,
         nome=data.nome.strip(),
         consentimento_lgpd=data.consentimento_lgpd,
         hashed_password=hash_password(data.password),
@@ -3087,12 +3447,33 @@ def register(data: UsuarioCreate, db: Session = Depends(get_db)) -> User:
     return user
 
 
+@app.post("/auth/login/request-code", response_model=CodeRequestOut)
+def request_login_code(data: LoginCodeRequest, db: Session = Depends(get_db)) -> CodeRequestOut:
+    normalized_email = normalize_email(data.email)
+    user = get_user_by_email(db, normalized_email)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email nao encontrado.")
+    if not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou senha invalidos.")
+
+    code = create_email_verification_code(db, normalized_email, "login")
+    if not EMAIL_VERIFICATION_DEBUG:
+        send_verification_email(normalized_email, code, "login")
+    return CodeRequestOut(
+        detail="Codigo de verificacao enviado para o email de login.",
+        expires_in_minutes=EMAIL_VERIFICATION_CODE_TTL_MINUTES,
+        debug_code=code if EMAIL_VERIFICATION_DEBUG else None,
+    )
+
+
 @app.post("/auth/login", response_model=TokenOut)
 def login(data: LoginData, db: Session = Depends(get_db)) -> TokenOut:
-    user = get_user_by_email(db, data.email)
+    normalized_email = normalize_email(data.email)
+    user = get_user_by_email(db, normalized_email)
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou senha invalidos.")
 
+    consume_email_verification_code(db, normalized_email, "login", data.codigo)
     token = create_access_token(user.email)
     return TokenOut(access_token=token)
 

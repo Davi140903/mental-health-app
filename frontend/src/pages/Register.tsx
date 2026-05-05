@@ -1,49 +1,116 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 
+function buildCodeMessage(debugCode: string | null, fallback: string) {
+  if (!debugCode) {
+    return `${fallback} Confira sua caixa de entrada.`;
+  }
+  return `${fallback} Neste ambiente local, use o codigo ${debugCode}.`;
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+  }
+  return fallback;
+}
+
 export default function Register() {
-  const { register } = useAuth();
+  const { register, requestRegisterCode } = useAuth();
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [consentimentoLgpd, setConsentimentoLgpd] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const [codeRequested, setCodeRequested] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const validateForm = () => {
+    if (password.length < 6) {
+      return 'A senha precisa ter pelo menos 6 caracteres.';
+    }
+    if (password !== confirmPassword) {
+      return 'As senhas nao coincidem.';
+    }
+    if (!consentimentoLgpd) {
+      return 'Voce precisa aceitar o termo de privacidade para continuar.';
+    }
+    return '';
+  };
+
+  const handleRequestCode = async () => {
+    setError('');
+    setInfo('');
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSendingCode(true);
+    try {
+      const response = await requestRegisterCode(email);
+      setCodeRequested(true);
+      if (response.debug_code) {
+        setCodigo(response.debug_code);
+      }
+      setInfo(buildCodeMessage(response.debug_code, 'Codigo de cadastro enviado.'));
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Nao foi possivel enviar o codigo. Verifique se o email ja esta em uso.'));
+    } finally {
+      setSendingCode(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setInfo('');
 
-    if (password.length < 6) {
-      setError('A senha precisa ter pelo menos 6 caracteres.');
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('As senhas nao coincidem.');
+    if (!codeRequested) {
+      setError('Primeiro solicite o codigo de verificacao do email.');
       return;
     }
 
-    if (!consentimentoLgpd) {
-      setError('Voce precisa aceitar o termo de privacidade para continuar.');
+    if (codigo.trim().length !== 6) {
+      setError('Informe o codigo de 6 digitos para concluir o cadastro.');
       return;
     }
 
     setSubmitting(true);
-
     try {
       await register({
         email,
         nome,
         password,
         consentimento_lgpd: consentimentoLgpd,
+        codigo,
       });
-      navigate('/dashboard');
-    } catch {
-      setError('Nao foi possivel criar a conta. Verifique se o email ja esta em uso.');
+      navigate('/login', {
+        state: {
+          email,
+          info: 'Conta criada. Agora solicite um codigo para entrar com seguranca.',
+        },
+      });
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Nao foi possivel criar a conta. Confira o codigo e tente de novo.'));
     } finally {
       setSubmitting(false);
     }
@@ -53,9 +120,10 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card auth-card-wide">
         <h1>Criar conta</h1>
-        <p className="auth-subtitle">Leva so alguns instantes.</p>
+        <p className="auth-subtitle">Confirme seu email com um codigo antes de concluir.</p>
 
         {error ? <div className="alert error">{error}</div> : null}
+        {info ? <div className="alert success">{info}</div> : null}
 
         <form className="form-grid" onSubmit={handleSubmit}>
           <div className="split-fields">
@@ -103,6 +171,30 @@ export default function Register() {
             </span>
           </label>
 
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void handleRequestCode()}
+            disabled={sendingCode}
+          >
+            {sendingCode ? 'Enviando codigo...' : 'Pedir codigo por email'}
+          </button>
+
+          {codeRequested ? (
+            <label className="field">
+              <span>Codigo de verificacao</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={codigo}
+                onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
+                placeholder="Codigo preenchido automaticamente no modo local"
+                required
+              />
+            </label>
+          ) : null}
+
           <button type="submit" disabled={submitting}>
             {submitting ? 'Criando conta...' : 'Criar conta'}
           </button>
@@ -115,5 +207,3 @@ export default function Register() {
     </div>
   );
 }
-
-

@@ -1,11 +1,13 @@
 import { createContext } from 'react';
-import type { ProfileUpdate, Usuario, UsuarioCreate } from '../types/auth';
+import type { CodeRequestResponse, ProfileUpdate, Usuario, UsuarioCreate } from '../types/auth';
 
 export interface AuthContextValue {
   user: Usuario | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  requestRegisterCode: (email: string) => Promise<CodeRequestResponse>;
+  requestLoginCode: (email: string, password: string) => Promise<CodeRequestResponse>;
+  login: (email: string, password: string, codigo: string) => Promise<void>;
   register: (data: UsuarioCreate) => Promise<void>;
   refreshUser: () => Promise<Usuario>;
   updateProfile: (data: ProfileUpdate) => Promise<Usuario>;

@@ -48,10 +48,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [token]);
 
-  const login = async (email: string, password: string) => {
+  const requestRegisterCode = async (email: string) => authService.requestRegisterCode({ email });
+
+  const requestLoginCode = async (email: string, password: string) =>
+    authService.requestLoginCode({ email, password });
+
+  const login = async (email: string, password: string, codigo: string) => {
     setLoading(true);
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ email, password, codigo });
       localStorage.setItem('access_token', response.access_token);
       setToken(response.access_token);
       const currentUser = await authService.getMe();
@@ -67,7 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       await authService.register(data);
-      await login(data.email, data.password);
     } finally {
       setLoading(false);
     }
@@ -102,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         loading,
+        requestRegisterCode,
+        requestLoginCode,
         login,
         register,
         refreshUser,

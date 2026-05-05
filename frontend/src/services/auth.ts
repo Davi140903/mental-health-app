@@ -1,8 +1,27 @@
 import api from './api';
-import type { AuthResponse, LoginData, ProfileUpdate, Usuario, UsuarioCreate } from '../types/auth';
+import type {
+  AuthResponse,
+  CodeRequestResponse,
+  EmailCodeRequest,
+  LoginCodeRequest,
+  LoginData,
+  ProfileUpdate,
+  Usuario,
+  UsuarioCreate,
+} from '../types/auth';
 import type { ExportData } from '../types/app';
 
 export const authService = {
+  async requestRegisterCode(data: EmailCodeRequest): Promise<CodeRequestResponse> {
+    const response = await api.post<CodeRequestResponse>('/auth/register/request-code', data);
+    return response.data;
+  },
+
+  async requestLoginCode(data: LoginCodeRequest): Promise<CodeRequestResponse> {
+    const response = await api.post<CodeRequestResponse>('/auth/login/request-code', data);
+    return response.data;
+  },
+
   async login(data: LoginData): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/auth/login', data);
     return response.data;

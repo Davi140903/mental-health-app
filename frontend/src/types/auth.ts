@@ -11,6 +11,7 @@ export interface UsuarioCreate {
   nome: string;
   password: string;
   consentimento_lgpd: boolean;
+  codigo: string;
 }
 
 export interface ProfileUpdate {
@@ -21,6 +22,22 @@ export interface ProfileUpdate {
 export interface LoginData {
   email: string;
   password: string;
+  codigo: string;
+}
+
+export interface EmailCodeRequest {
+  email: string;
+}
+
+export interface LoginCodeRequest {
+  email: string;
+  password: string;
+}
+
+export interface CodeRequestResponse {
+  detail: string;
+  expires_in_minutes: number;
+  debug_code: string | null;
 }
 
 export interface AuthResponse {
