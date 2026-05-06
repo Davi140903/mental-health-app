@@ -125,6 +125,34 @@ class LiaToneTests(unittest.TestCase):
         self.assertEqual(len(snapshot.recent_conversations), 1)
         self.assertEqual(snapshot.latest_report, "Abertura do dia: musica.")
 
+    def test_support_reply_does_not_stop_after_work_context(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        analysis = main.fallback_lia_analysis(session, "acho que muito trabalho")
+
+        self.assertIsNotNone(analysis.assistant_reply)
+        self.assertIn("?", analysis.assistant_reply or "")
+        self.assertFalse(analysis.ready_to_close)
+
+    def test_session_only_closes_with_enough_context(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=4)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="estou cansado"),
+            main.LiaTranscriptMessage(role="user", content="acho que muito trabalho"),
+        ]
+        analysis = main.LiaAnalysis(
+            assistant_reply="Entendi. O que mais pesou nisso?",
+            reflection="Entendi.",
+            next_question="O que mais pesou nisso?",
+            risk_level="none",
+            mood_value=2,
+            gad7_scores=[2, None, None, None, None, None, None],
+            phq9_scores=[None] * 9,
+            ready_to_close=True,
+            recommended_stage="anxiety",
+        )
+
+        self.assertFalse(main.should_close_lia_session(session, analysis, "anxiety", enough_distress_data=True))
+
 
 if __name__ == "__main__":
     unittest.main()

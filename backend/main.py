@@ -1393,9 +1393,15 @@ def build_contextual_question(
             return "Flores te passam calma ou essa imagem apareceu por algum motivo especial?"
         if context["mentions_help"] or context["asks_to_talk"]:
             return "Quer me contar o que mais esta batendo forte ai agora?"
+        if context["work_study"] and context["pressure"]:
+            return "No meio desse trabalho todo, o que foi o que mais te desgastou?"
+        if context["work_study"]:
+            return "Quando voce fala de trabalho, foi mais volume, cobranca ou cansaco acumulado?"
+        if context["pressure"]:
+            return "Essa pressao apareceu mais como cobranca, cansaco ou cabeca cheia?"
         if session.turn_count == 1:
             return "Se quiser, me conta o que mais ficou na sua cabeca hoje."
-        return None
+        return default_next_question("support", session.turn_count)
 
     if stage == "anxiety":
         if context["mentions_help"] and session.turn_count == 1:
@@ -1514,6 +1520,68 @@ def build_contextual_support(
     return None
 
 
+def should_close_lia_session(
+    session: LiaSessionState,
+    analysis: LiaAnalysis,
+    effective_stage: Literal["support", "anxiety", "mood", "closing"],
+    enough_distress_data: bool,
+) -> bool:
+    if analysis.risk_level == "urgent":
+        return True
+
+    if effective_stage not in {"anxiety", "mood", "closing"}:
+        return False
+
+    if not enough_distress_data:
+        return False
+
+    meaningful_messages = count_meaningful_user_messages(session)
+    if meaningful_messages < 3 or session.turn_count < 4:
+        return False
+
+    topics = derive_memory_topics(session)
+    if not topics and sum(score or 0 for score in session.gad7_scores + session.phq9_scores) < 4:
+        return False
+
+    return bool(analysis.ready_to_close or session.turn_count >= 6)
+
+
+def ensure_lia_continuation(
+    session: LiaSessionState,
+    user_message: str,
+    analysis: LiaAnalysis,
+) -> LiaAnalysis:
+    if analysis.risk_level == "urgent" or analysis.recommended_stage == "closing" or analysis.ready_to_close:
+        return analysis
+
+    has_question = bool(normalize_optional_text(analysis.next_question)) or "?" in (analysis.assistant_reply or "")
+    has_support = bool(normalize_optional_text(analysis.assistant_reply))
+
+    if has_question and has_support:
+        return analysis
+
+    fallback_question = build_contextual_question(session, user_message, analysis.recommended_stage)
+    if not fallback_question:
+        fallback_question = default_next_question(analysis.recommended_stage, session.turn_count)
+
+    if not fallback_question:
+        return analysis
+
+    current_reply = normalize_optional_text(analysis.assistant_reply)
+    if current_reply:
+        if "?" in current_reply:
+            return analysis
+        analysis.assistant_reply = join_reply_parts(current_reply, None, fallback_question)
+    else:
+        analysis.assistant_reply = join_reply_parts(
+            analysis.reflection,
+            build_contextual_support(session, user_message, analysis.recommended_stage),
+            fallback_question,
+        )
+    analysis.next_question = fallback_question
+    return analysis
+
+
 def join_reply_parts(reflection: str, support: str | None = None, question: str | None = None) -> str:
     if not support and not question:
         return reflection.strip()
@@ -1577,7 +1645,7 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
     if stage == "support":
         if turn_count <= 1:
             return "Se quiser, me conta o que marcou seu dia ate aqui."
-        return None
+        return "Se quiser continuar, me fala qual parte disso mais ficou com voce."
 
     if stage == "anxiety":
         if turn_count <= 1:
@@ -1594,6 +1662,14 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
 
 def count_positive_scores(scores: list[int | None]) -> int:
     return sum(1 for value in scores if (value or 0) > 0)
+
+
+def count_meaningful_user_messages(session: LiaSessionState) -> int:
+    return sum(
+        1
+        for item in session.transcript
+        if item.role == "user" and is_probably_meaningful_message(item.content, allow_short_contextual=False)
+    )
 
 
 def infer_prompt_stage(session: LiaSessionState, user_message: str) -> Literal["support", "anxiety", "mood", "closing"]:
@@ -2279,8 +2355,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
 
     support = build_contextual_support(session, user_message, recommended_stage)
     assistant_reply = join_reply_parts(reflection, support, next_question if recommended_stage != "closing" else None)
-
-    return LiaAnalysis(
+    analysis = LiaAnalysis(
         assistant_reply=assistant_reply,
         reflection=reflection,
         next_question=next_question,
@@ -2291,6 +2366,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         ready_to_close=ready_to_close,
         recommended_stage=recommended_stage,
     )
+    return ensure_lia_continuation(session, user_message, analysis)
 
 
 def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_message: str) -> LiaAnalysis:
@@ -3572,11 +3648,7 @@ def lia_message(
         and gad_positive >= 1
         and phq_positive >= 1
     ) or (session.turn_count >= 5 and has_anxiety_context and has_mood_context)
-    should_close = (
-        analysis.risk_level == "urgent"
-        or analysis.ready_to_close
-        or (session.turn_count >= 5 and enough_distress_data and effective_stage in {"anxiety", "mood"})
-    )
+    should_close = should_close_lia_session(session, analysis, effective_stage, enough_distress_data)
 
     if should_close and not analysis.ready_to_close:
         closing_reply: str | None = None
