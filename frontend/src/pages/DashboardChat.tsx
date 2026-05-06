@@ -8,7 +8,6 @@ import type { LiaSession } from '../types/app';
 
 const LIA_SESSION_STORAGE_PREFIX = 'mental-health-lia-session';
 const LIA_DRAFT_STORAGE_PREFIX = 'mental-health-lia-draft';
-const LIA_STARTER_PROMPT_PREFIX = 'mental-health-lia-starter';
 const LIA_LIGHT_PROMPT_PREFIX = 'mental-health-lia-light-prompt';
 
 function getSessionStorageKey(userId: string) {
@@ -17,10 +16,6 @@ function getSessionStorageKey(userId: string) {
 
 function getDraftStorageKey(userId: string) {
   return `${LIA_DRAFT_STORAGE_PREFIX}:${userId}`;
-}
-
-function getStarterStorageKey(userId: string) {
-  return `${LIA_STARTER_PROMPT_PREFIX}:${userId}`;
 }
 
 function getLightPromptStorageKey(userId: string) {
@@ -80,11 +75,9 @@ export default function DashboardChat() {
   const [busy, setBusy] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
   const endRef = useRef<HTMLDivElement | null>(null);
-  const consumedStarterPrompt = useRef<string | null>(null);
 
   const sessionStorageKey = user?.id ? getSessionStorageKey(user.id) : null;
   const draftStorageKey = user?.id ? getDraftStorageKey(user.id) : null;
-  const starterStorageKey = user?.id ? getStarterStorageKey(user.id) : null;
   const lightPromptStorageKey = user?.id ? getLightPromptStorageKey(user.id) : null;
 
   const startConversation = useCallback(async () => {
@@ -133,36 +126,6 @@ export default function DashboardChat() {
     localStorage.removeItem(sessionStorageKey);
     void startConversation();
   }, [draftStorageKey, sessionStorageKey, startConversation]);
-
-  useEffect(() => {
-    if (!starterStorageKey || !liaSession || startingLia || busy) {
-      return;
-    }
-
-    const starterPrompt = sessionStorage.getItem(starterStorageKey)?.trim();
-    if (!starterPrompt || consumedStarterPrompt.current === starterPrompt) {
-      return;
-    }
-
-    consumedStarterPrompt.current = starterPrompt;
-    sessionStorage.removeItem(starterStorageKey);
-
-    const sendStarterPrompt = async () => {
-      setBusy(true);
-      setLiaError('');
-
-      try {
-        const response = await appService.sendLiaMessage(starterPrompt, liaSession);
-        setLiaSession(response.session);
-      } catch (error) {
-        setLiaError(getApiErrorMessage(error, 'Nao consegui comecar a conversa a partir da sua escolha.'));
-      } finally {
-        setBusy(false);
-      }
-    };
-
-    void sendStarterPrompt();
-  }, [busy, liaSession, starterStorageKey, startingLia]);
 
   useEffect(() => {
     if (!sessionStorageKey) {

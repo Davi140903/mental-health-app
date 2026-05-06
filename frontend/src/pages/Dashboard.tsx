@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/useAuth';
 
-const LIA_STARTER_PROMPT_PREFIX = 'mental-health-lia-starter';
 const LIA_DAILY_CHECKIN_PREFIX = 'mental-health-lia-daily-checkin';
 const LIA_LIGHT_PROMPT_PREFIX = 'mental-health-lia-light-prompt';
 
@@ -39,10 +38,6 @@ const lightQuestions = [
     ],
   },
 ];
-
-function getStarterStorageKey(userId: string) {
-  return `${LIA_STARTER_PROMPT_PREFIX}:${userId}`;
-}
 
 function getDailyCheckInStorageKey(userId: string) {
   return `${LIA_DAILY_CHECKIN_PREFIX}:${userId}`;
@@ -97,10 +92,6 @@ export default function Dashboard() {
     }
 
     setSelectedOption(label);
-    sessionStorage.setItem(
-      getStarterStorageKey(user.id),
-      `No comeco da conversa, eu disse que curto ${value}. Se isso fizer sentido mais tarde, voce pode puxar esse assunto de um jeito leve.`
-    );
     sessionStorage.setItem(
       getLightPromptStorageKey(user.id),
       JSON.stringify({
