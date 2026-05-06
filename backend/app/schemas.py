@@ -1,0 +1,201 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class UsuarioCreate(BaseModel):
+    email: EmailStr
+    nome: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=6, max_length=100)
+    consentimento_lgpd: bool
+    codigo: str = Field(min_length=6, max_length=6)
+
+
+class LoginData(BaseModel):
+    email: EmailStr
+    password: str
+    codigo: str = Field(min_length=6, max_length=6)
+
+
+class EmailCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class LoginCodeRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=100)
+
+
+class CodeRequestOut(BaseModel):
+    detail: str
+    expires_in_minutes: int
+    debug_code: str | None = None
+
+
+class UsuarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: EmailStr
+    nome: str
+    consentimento_lgpd: bool
+    criado_em: datetime
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class ProfileUpdate(BaseModel):
+    nome: str = Field(min_length=2, max_length=120)
+    consentimento_lgpd: bool
+
+
+class MoodEntryCreate(BaseModel):
+    valor: int = Field(ge=1, le=5)
+    nota: str | None = Field(default=None, max_length=500)
+
+
+class MoodEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    valor: int
+    nota: str | None
+    criado_em: datetime
+
+
+class QuestionnaireSubmission(BaseModel):
+    respostas: list[int]
+
+
+class QuestionnaireResultOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    tipo: str
+    respostas: list[int]
+    pontuacao: int
+    classificacao: str
+    criado_em: datetime
+
+
+class EducationalContentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    titulo: str
+    categoria: str
+    resumo: str
+    conteudo: str
+    nivel: str
+    questionario_tipo: str | None
+    criado_em: datetime
+
+
+class DashboardStatOut(BaseModel):
+    total_registros_humor: int
+    media_humor_7_dias: float | None
+    triagens_realizadas: int
+    ultima_triagem_phq9: int | None
+    ultima_triagem_gad7: int | None
+
+
+class MoodHistoryPoint(BaseModel):
+    data: str
+    valor: int
+
+
+class RecommendationOut(BaseModel):
+    titulo: str
+    descricao: str
+    prioridade: Literal["baixa", "media", "alta"]
+
+
+class DashboardOut(BaseModel):
+    usuario: UsuarioOut
+    estatisticas: DashboardStatOut
+    ultimo_humor: MoodEntryOut | None
+    ultimos_questionarios: list[QuestionnaireResultOut]
+    historico_humor: list[MoodHistoryPoint]
+    recomendacoes: list[RecommendationOut]
+    conteudos_em_destaque: list[EducationalContentOut]
+
+
+class ExportDataOut(BaseModel):
+    usuario: UsuarioOut
+    humores: list[MoodEntryOut]
+    questionarios: list[QuestionnaireResultOut]
+    lia_interacoes: list[LiaRecentInteraction] = Field(default_factory=list)
+    exportado_em: datetime
+
+
+class LiaTranscriptMessage(BaseModel):
+    role: Literal["assistant", "user"]
+    content: str = Field(min_length=1, max_length=2000)
+
+
+class LiaRecentInteraction(BaseModel):
+    created_at: datetime
+    opening_label: str | None = None
+    opening_value: str | None = None
+    summary: str
+    report: str | None = None
+    topics: list[str] = Field(default_factory=list)
+
+
+class LiaMemorySnapshot(BaseModel):
+    summary: str | None = None
+    recent_summary: str | None = None
+    topics: list[str] = Field(default_factory=list)
+    conversation_count: int = 0
+    is_first_contact: bool = True
+    light_prompt_label: str | None = None
+    light_prompt_value: str | None = None
+    recent_conversations: list[LiaRecentInteraction] = Field(default_factory=list)
+    latest_report: str | None = None
+
+
+class LiaSessionState(BaseModel):
+    stage: Literal["opening", "support", "anxiety", "mood", "closing"] = "opening"
+    turn_count: int = Field(default=0, ge=0, le=12)
+    clarification_streak: int = Field(default=0, ge=0, le=6)
+    transcript: list[LiaTranscriptMessage] = Field(default_factory=list)
+    gad7_scores: list[int | None] = Field(default_factory=lambda: [None] * 7)
+    phq9_scores: list[int | None] = Field(default_factory=lambda: [None] * 9)
+    mood_value: int | None = Field(default=None, ge=1, le=5)
+    focus_kind: Literal["gad7", "phq9"] | None = None
+    completed: bool = False
+    saved_questionnaires: list[Literal["gad7", "phq9"]] = Field(default_factory=list)
+    saved_mood: bool = False
+    pause_offer_pending: bool = False
+    pause_used: bool = False
+    memory: LiaMemorySnapshot = Field(default_factory=LiaMemorySnapshot)
+
+
+class LiaTurnInput(BaseModel):
+    session: LiaSessionState
+    message: str = Field(min_length=1, max_length=2000)
+
+
+class LiaTurnOut(BaseModel):
+    session: LiaSessionState
+    refresh_dashboard: bool = False
+    using_ollama: bool = False
+
+
+class LiaAnalysis(BaseModel):
+    assistant_reply: str | None = Field(default=None, max_length=600)
+    reflection: str = Field(min_length=1, max_length=400)
+    next_question: str | None = Field(default=None, max_length=300)
+    risk_level: Literal["none", "attention", "urgent"] = "none"
+    mood_value: int | None = Field(default=None, ge=1, le=5)
+    gad7_scores: list[int | None] = Field(default_factory=lambda: [None] * 7)
+    phq9_scores: list[int | None] = Field(default_factory=lambda: [None] * 9)
+    ready_to_close: bool = False
+    recommended_stage: Literal["support", "anxiety", "mood", "closing"] = "support"

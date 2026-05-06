@@ -73,6 +73,7 @@ export interface ExportData {
   usuario: Usuario;
   humores: MoodEntry[];
   questionarios: QuestionnaireResult[];
+  lia_interacoes: LiaRecentInteraction[];
   exportado_em: string;
 }
 
@@ -81,12 +82,25 @@ export interface LiaTranscriptMessage {
   content: string;
 }
 
+export interface LiaRecentInteraction {
+  created_at: string;
+  opening_label?: string | null;
+  opening_value?: string | null;
+  summary: string;
+  report?: string | null;
+  topics: string[];
+}
+
 export interface LiaMemorySnapshot {
   summary: string | null;
   recent_summary: string | null;
   topics: string[];
   conversation_count: number;
   is_first_contact: boolean;
+  light_prompt_label?: string | null;
+  light_prompt_value?: string | null;
+  recent_conversations: LiaRecentInteraction[];
+  latest_report?: string | null;
 }
 
 export interface LiaSession {
@@ -101,6 +115,8 @@ export interface LiaSession {
   completed: boolean;
   saved_questionnaires: QuestionnaireKind[];
   saved_mood: boolean;
+  pause_offer_pending?: boolean;
+  pause_used?: boolean;
   memory: LiaMemorySnapshot;
 }
 

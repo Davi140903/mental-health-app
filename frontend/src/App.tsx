@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/useAuth';
-import Dashboard from './pages/DashboardChat';
+import Dashboard from './pages/Dashboard';
 import GAD7 from './pages/GAD7';
 import Humor from './pages/Humor';
 import Login from './pages/Login';
@@ -9,6 +9,7 @@ import PHQ9 from './pages/PHQ9';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Contents from './pages/Contents';
+import DashboardChat from './pages/DashboardChat';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
@@ -54,6 +55,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/lia"
+        element={
+          <PrivateRoute>
+            <DashboardChat />
           </PrivateRoute>
         }
       />

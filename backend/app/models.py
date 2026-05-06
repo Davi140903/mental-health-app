@@ -1,0 +1,99 @@
+from __future__ import annotations
+
+from uuid import uuid4
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase
+
+from .db import utcnow
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    email = Column(String, unique=True, nullable=False, index=True)
+    nome = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    consentimento_lgpd = Column(Boolean, nullable=False, default=True)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    email = Column(String, nullable=False, index=True)
+    purpose = Column(String, nullable=False, index=True)
+    code_hash = Column(String, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    consumed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+
+class MoodEntry(Base):
+    __tablename__ = "mood_entries"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    valor = Column(Integer, nullable=False)
+    nota = Column(Text, nullable=True)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+
+class QuestionnaireResult(Base):
+    __tablename__ = "questionnaire_results"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    tipo = Column(String, nullable=False, index=True)
+    respostas = Column(JSON, nullable=False)
+    pontuacao = Column(Integer, nullable=False)
+    classificacao = Column(String, nullable=False)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+
+class EducationalContent(Base):
+    __tablename__ = "educational_contents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    slug = Column(String, unique=True, nullable=False, index=True)
+    titulo = Column(String, nullable=False)
+    categoria = Column(String, nullable=False)
+    resumo = Column(Text, nullable=False)
+    conteudo = Column(Text, nullable=False)
+    nivel = Column(String, nullable=False, default="geral")
+    questionario_tipo = Column(String, nullable=True)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class LiaUserMemory(Base):
+    __tablename__ = "lia_user_memories"
+
+    usuario_id = Column(String, ForeignKey("users.id"), primary_key=True)
+    resumo = Column(Text, nullable=True)
+    resumo_recente = Column(Text, nullable=True)
+    topicos = Column(JSON, nullable=False, default=list)
+    total_conversas = Column(Integer, nullable=False, default=0)
+    ultimo_humor_valor = Column(Integer, nullable=True)
+    primeiro_contato_concluido = Column(Boolean, nullable=False, default=False)
+    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    atualizado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class LiaInteraction(Base):
+    __tablename__ = "lia_interactions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    opening_label = Column(String, nullable=True)
+    opening_value = Column(String, nullable=True)
+    summary = Column(Text, nullable=False)
+    report = Column(Text, nullable=True)
+    topics = Column(JSON, nullable=False, default=list)
+    mood_value = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)

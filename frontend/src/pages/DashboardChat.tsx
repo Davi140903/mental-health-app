@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -8,6 +8,8 @@ import type { LiaSession } from '../types/app';
 
 const LIA_SESSION_STORAGE_PREFIX = 'mental-health-lia-session';
 const LIA_DRAFT_STORAGE_PREFIX = 'mental-health-lia-draft';
+const LIA_STARTER_PROMPT_PREFIX = 'mental-health-lia-starter';
+const LIA_LIGHT_PROMPT_PREFIX = 'mental-health-lia-light-prompt';
 
 function getSessionStorageKey(userId: string) {
   return `${LIA_SESSION_STORAGE_PREFIX}:${userId}`;
@@ -15,6 +17,14 @@ function getSessionStorageKey(userId: string) {
 
 function getDraftStorageKey(userId: string) {
   return `${LIA_DRAFT_STORAGE_PREFIX}:${userId}`;
+}
+
+function getStarterStorageKey(userId: string) {
+  return `${LIA_STARTER_PROMPT_PREFIX}:${userId}`;
+}
+
+function getLightPromptStorageKey(userId: string) {
+  return `${LIA_LIGHT_PROMPT_PREFIX}:${userId}`;
 }
 
 function readStoredSession(storageKey: string) {
@@ -55,7 +65,7 @@ function CompanionAvatar({ returning }: { returning: boolean }) {
       <div>
         <strong className="companion-name">Lia</strong>
         <p className="companion-copy">
-          {returning ? 'Continuamos de onde for melhor para voce.' : 'Uma conversa acolhedora, no seu ritmo.'}
+          {returning ? 'A gente continua de onde parou.' : 'Um espaco simples pra voce falar um pouco.'}
         </p>
       </div>
     </div>
@@ -70,23 +80,39 @@ export default function DashboardChat() {
   const [busy, setBusy] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
   const endRef = useRef<HTMLDivElement | null>(null);
+  const consumedStarterPrompt = useRef<string | null>(null);
 
   const sessionStorageKey = user?.id ? getSessionStorageKey(user.id) : null;
   const draftStorageKey = user?.id ? getDraftStorageKey(user.id) : null;
+  const starterStorageKey = user?.id ? getStarterStorageKey(user.id) : null;
+  const lightPromptStorageKey = user?.id ? getLightPromptStorageKey(user.id) : null;
 
-  const startConversation = async () => {
+  const startConversation = useCallback(async () => {
     setStartingLia(true);
     setLiaError('');
 
     try {
       const response = await appService.startLiaConversation();
-      setLiaSession(response.session);
+      const nextSession = response.session;
+      if (lightPromptStorageKey) {
+        const rawLightPrompt = sessionStorage.getItem(lightPromptStorageKey);
+        if (rawLightPrompt) {
+          try {
+            const parsed = JSON.parse(rawLightPrompt) as { label?: string; value?: string };
+            nextSession.memory.light_prompt_label = parsed.label ?? null;
+            nextSession.memory.light_prompt_value = parsed.value ?? null;
+          } catch {
+            sessionStorage.removeItem(lightPromptStorageKey);
+          }
+        }
+      }
+      setLiaSession(nextSession);
     } catch (error) {
       setLiaError(getApiErrorMessage(error, 'Nao foi possivel iniciar a conversa agora.'));
     } finally {
       setStartingLia(false);
     }
-  };
+  }, [lightPromptStorageKey]);
 
   useEffect(() => {
     if (!sessionStorageKey || !draftStorageKey) {
@@ -106,7 +132,37 @@ export default function DashboardChat() {
 
     localStorage.removeItem(sessionStorageKey);
     void startConversation();
-  }, [sessionStorageKey, draftStorageKey]);
+  }, [draftStorageKey, sessionStorageKey, startConversation]);
+
+  useEffect(() => {
+    if (!starterStorageKey || !liaSession || startingLia || busy) {
+      return;
+    }
+
+    const starterPrompt = sessionStorage.getItem(starterStorageKey)?.trim();
+    if (!starterPrompt || consumedStarterPrompt.current === starterPrompt) {
+      return;
+    }
+
+    consumedStarterPrompt.current = starterPrompt;
+    sessionStorage.removeItem(starterStorageKey);
+
+    const sendStarterPrompt = async () => {
+      setBusy(true);
+      setLiaError('');
+
+      try {
+        const response = await appService.sendLiaMessage(starterPrompt, liaSession);
+        setLiaSession(response.session);
+      } catch (error) {
+        setLiaError(getApiErrorMessage(error, 'Nao consegui comecar a conversa a partir da sua escolha.'));
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    void sendStarterPrompt();
+  }, [busy, liaSession, starterStorageKey, startingLia]);
 
   useEffect(() => {
     if (!sessionStorageKey) {
@@ -176,6 +232,8 @@ export default function DashboardChat() {
   const memory = liaSession?.memory;
   const isReturning = Boolean(memory && !memory.is_first_contact);
   const memorySummary = memory?.recent_summary ?? memory?.summary ?? null;
+  const recentConversations = memory?.recent_conversations ?? [];
+  const latestReport = memory?.latest_report ?? null;
 
   return (
     <Layout immersive>
@@ -184,12 +242,12 @@ export default function DashboardChat() {
           <div className="companion-header companion-header-immersive">
             <CompanionAvatar returning={isReturning} />
             <div className="companion-text">
-              <span className="pill">{isReturning ? 'Retomada com contexto' : 'Primeira conversa'}</span>
-              <h2>{isReturning ? 'Seguimos do seu jeito' : 'Vamos com calma'}</h2>
+              <span className="pill">{isReturning ? 'De volta por aqui' : 'Comecando'}</span>
+              <h2>{isReturning ? 'Bom te ver de novo' : 'Pode ficar a vontade'}</h2>
               <p>
                 {isReturning
-                  ? 'A Lia guarda so o contexto importante, para voce nao precisar recomecar do zero.'
-                  : 'Depois do login, a Lia vira seu ponto de partida e vai te conhecendo aos poucos.'}
+                  ? 'Se quiser, voce pode continuar de onde parou ou trazer outra coisa.'
+                  : 'Pode comecar como for mais natural pra voce. A Lia acompanha a conversa a partir disso.'}
               </p>
             </div>
           </div>
@@ -206,6 +264,19 @@ export default function DashboardChat() {
                   ))}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+
+          {recentConversations.length > 1 ? (
+            <div className="lia-memory-strip">
+              <p>Nas ultimas conversas, a Lia guardou estes pontos para continuar com mais contexto:</p>
+              <div className="lia-topic-list" aria-label="Memoria breve das ultimas conversas">
+                {recentConversations.slice(0, 3).map((item) => (
+                  <span key={`${item.created_at}-${item.summary}`} className="pill subtle">
+                    {item.summary}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -248,6 +319,11 @@ export default function DashboardChat() {
             {!startingLia && liaSession?.completed ? (
               <div className="chat-composer">
                 <p className="chat-hint">Esse check-in foi concluido. Se quiser, a Lia pode recomecar com voce.</p>
+                {latestReport ? (
+                  <div className="lia-memory-strip">
+                    <p>{latestReport}</p>
+                  </div>
+                ) : null}
                 <button type="button" className="chat-submit chat-restart" onClick={() => void handleRestart()}>
                   Novo check-in
                 </button>

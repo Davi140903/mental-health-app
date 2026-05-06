@@ -1,7 +1,6 @@
 ﻿from __future__ import annotations
 
 import json
-import os
 import re
 import secrets
 import socket
@@ -14,451 +13,71 @@ from hashlib import sha256
 from typing import Any, Generator, Literal
 from urllib import error as urllib_error
 from urllib import request as urllib_request
-from uuid import uuid4
-
 from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    create_engine,
-    inspect,
-    select,
-    text,
+from sqlalchemy import inspect, select, text
+from sqlalchemy.orm import Session
+
+from app.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    EMAIL_VERIFICATION_CODE_TTL_MINUTES,
+    EMAIL_VERIFICATION_DEBUG,
+    FRONTEND_ORIGINS,
+    LIA_AI_UNAVAILABLE_DETAIL,
+    OLLAMA_BASE_URL,
+    OLLAMA_MODEL,
+    OLLAMA_TIMEOUT_SECONDS,
+    QUESTIONNAIRE_CONFIG,
+    RESEND_API_KEY,
+    RESEND_API_URL,
+    RESEND_FROM_EMAIL,
+    RESEND_FROM_NAME,
+    SECRET_KEY,
+    SEEDED_CONTENTS,
+    SMTP_FROM_EMAIL,
+    SMTP_FROM_NAME,
+    SMTP_HOST,
+    SMTP_PASSWORD,
+    SMTP_PORT,
+    SMTP_USERNAME,
+    SMTP_USE_SSL,
+    SMTP_USE_TLS,
+    env_flag,
 )
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-
-
-def load_local_env_file() -> None:
-    env_path = os.path.join(os.path.dirname(__file__), ".env")
-    if not os.path.exists(env_path):
-        return
-
-    with open(env_path, "r", encoding="utf-8") as env_file:
-        for raw_line in env_file:
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            if key:
-                os.environ[key] = value
-
-
-load_local_env_file()
-
-
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mental_health.db")
-SECRET_KEY = os.getenv("SECRET_KEY", "troque-esta-chave-em-producao")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-FRONTEND_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
-OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))
-EMAIL_VERIFICATION_CODE_TTL_MINUTES = int(os.getenv("EMAIL_VERIFICATION_CODE_TTL_MINUTES", "10"))
-EMAIL_VERIFICATION_DEBUG = os.getenv("EMAIL_VERIFICATION_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME).strip()
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Mental Health App").strip() or "Mental Health App"
-SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes", "on"}
-SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").strip().lower() in {"1", "true", "yes", "on"}
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
-RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
-RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
-RESEND_FROM_NAME = os.getenv("RESEND_FROM_NAME", "Mental Health App").strip() or "Mental Health App"
-LIA_AI_UNAVAILABLE_DETAIL = (
-    "A Lia precisa do Ollama ativo para responder agora. Inicie o Ollama e tente novamente."
+from app.db import SessionLocal, ensure_utc, engine, pwd_context, utcnow
+from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, QuestionnaireResult, User
+from app.schemas import (
+    CodeRequestOut,
+    DashboardOut,
+    DashboardStatOut,
+    EducationalContentOut,
+    EmailCodeRequest,
+    ExportDataOut,
+    LiaAnalysis,
+    LiaMemorySnapshot,
+    LiaRecentInteraction,
+    LiaSessionState,
+    LiaTranscriptMessage,
+    LiaTurnInput,
+    LiaTurnOut,
+    LoginCodeRequest,
+    LoginData,
+    MoodEntryCreate,
+    MoodEntryOut,
+    MoodHistoryPoint,
+    ProfileUpdate,
+    QuestionnaireResultOut,
+    QuestionnaireSubmission,
+    RecommendationOut,
+    TokenOut,
+    UsuarioCreate,
+    UsuarioOut,
 )
 
-QUESTIONNAIRE_CONFIG = {
-    "phq9": {
-        "title": "PHQ-9",
-        "question_count": 9,
-        "severity": [
-            (0, 4, "Sintomas minimos"),
-            (5, 9, "Sintomas leves"),
-            (10, 14, "Sintomas moderados"),
-            (15, 19, "Sintomas moderadamente graves"),
-            (20, 27, "Sintomas graves"),
-        ],
-    },
-    "gad7": {
-        "title": "GAD-7",
-        "question_count": 7,
-        "severity": [
-            (0, 4, "Ansiedade minima"),
-            (5, 9, "Ansiedade leve"),
-            (10, 14, "Ansiedade moderada"),
-            (15, 21, "Ansiedade grave"),
-        ],
-    },
-}
-
-SEEDED_CONTENTS = [
-    {
-        "slug": "rotina-de-autocuidado",
-        "titulo": "Rotina curta de autocuidado",
-        "categoria": "Autocuidado",
-        "resumo": "Passos simples para organizar sono, alimentacao, movimento e pausas ao longo do dia.",
-        "conteudo": (
-            "Monte uma rotina minima de autocuidado com horarios razoaveis para dormir, pequenas pausas "
-            "durante o dia, hidratacao e uma atividade fisica leve. Mudancas pequenas e consistentes "
-            "costumam ser mais sustentaveis do que metas muito ambiciosas."
-        ),
-        "nivel": "geral",
-        "questionario_tipo": None,
-    },
-    {
-        "slug": "respiracao-4-6",
-        "titulo": "Tecnica de respiracao 4-6",
-        "categoria": "Ansiedade",
-        "resumo": "Uma estrategia rapida para desacelerar quando o corpo estiver muito ativado.",
-        "conteudo": (
-            "Inspire pelo nariz contando quatro segundos e solte o ar lentamente por seis segundos. "
-            "Repita por dois a cinco minutos e observe a diminuicao gradual da tensao corporal."
-        ),
-        "nivel": "leve",
-        "questionario_tipo": "gad7",
-    },
-    {
-        "slug": "registro-de-pensamentos",
-        "titulo": "Registro de pensamentos automaticos",
-        "categoria": "Reestruturacao cognitiva",
-        "resumo": "Estruture uma situacao, o pensamento associado e uma resposta mais equilibrada.",
-        "conteudo": (
-            "Quando perceber uma emocao intensa, descreva a situacao, identifique o pensamento automatico "
-            "que surgiu e tente formular uma interpretacao alternativa mais realista e gentil."
-        ),
-        "nivel": "moderado",
-        "questionario_tipo": "phq9",
-    },
-    {
-        "slug": "sinais-de-alerta",
-        "titulo": "Quando buscar ajuda profissional",
-        "categoria": "Orientacao",
-        "resumo": "Sinais de alerta que indicam a importancia de procurar psicologo, psiquiatra ou CAPS.",
-        "conteudo": (
-            "Procure apoio profissional quando os sintomas estiverem frequentes, afetarem estudo, trabalho, "
-            "sono, relacionamento ou funcionamento diario. Em situacoes de crise ou risco imediato, busque "
-            "ajuda emergencial local imediatamente."
-        ),
-        "nivel": "alto",
-        "questionario_tipo": None,
-    },
-    {
-        "slug": "higiene-do-sono",
-        "titulo": "Boas praticas de higiene do sono",
-        "categoria": "Sono",
-        "resumo": "Ajustes ambientais e comportamentais para melhorar regularidade e qualidade do sono.",
-        "conteudo": (
-            "Evite telas antes de dormir, reduza cafeina no fim do dia, mantenha horario regular e deixe o "
-            "ambiente escuro e silencioso. O sono influencia diretamente humor, energia e ansiedade."
-        ),
-        "nivel": "geral",
-        "questionario_tipo": None,
-    },
-    {
-        "slug": "micro-pausas",
-        "titulo": "Micro pausas para regular o dia",
-        "categoria": "Bem-estar",
-        "resumo": "Pequenas pausas intencionais ajudam a reduzir sobrecarga mental e fisica.",
-        "conteudo": (
-            "A cada bloco de trabalho ou estudo, faca uma pausa breve para alongar, respirar e sair do modo "
-            "automatico. Esse intervalo curto ajuda a reduzir fadiga cognitiva e irritabilidade."
-        ),
-        "nivel": "geral",
-        "questionario_tipo": None,
-    },
-]
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def ensure_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    email = Column(String, unique=True, nullable=False, index=True)
-    nome = Column(String, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    consentimento_lgpd = Column(Boolean, nullable=False, default=True)
-    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-
-
-class EmailVerificationCode(Base):
-    __tablename__ = "email_verification_codes"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    email = Column(String, nullable=False, index=True)
-    purpose = Column(String, nullable=False, index=True)
-    code_hash = Column(String, nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    consumed_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
-
-
-class MoodEntry(Base):
-    __tablename__ = "mood_entries"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    valor = Column(Integer, nullable=False)
-    nota = Column(Text, nullable=True)
-    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
-
-
-class QuestionnaireResult(Base):
-    __tablename__ = "questionnaire_results"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    tipo = Column(String, nullable=False, index=True)
-    respostas = Column(JSON, nullable=False)
-    pontuacao = Column(Integer, nullable=False)
-    classificacao = Column(String, nullable=False)
-    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
-
-
-class EducationalContent(Base):
-    __tablename__ = "educational_contents"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    slug = Column(String, unique=True, nullable=False, index=True)
-    titulo = Column(String, nullable=False)
-    categoria = Column(String, nullable=False)
-    resumo = Column(Text, nullable=False)
-    conteudo = Column(Text, nullable=False)
-    nivel = Column(String, nullable=False, default="geral")
-    questionario_tipo = Column(String, nullable=True)
-    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-
-
-class LiaUserMemory(Base):
-    __tablename__ = "lia_user_memories"
-
-    usuario_id = Column(String, ForeignKey("users.id"), primary_key=True)
-    resumo = Column(Text, nullable=True)
-    resumo_recente = Column(Text, nullable=True)
-    topicos = Column(JSON, nullable=False, default=list)
-    total_conversas = Column(Integer, nullable=False, default=0)
-    ultimo_humor_valor = Column(Integer, nullable=True)
-    primeiro_contato_concluido = Column(Boolean, nullable=False, default=False)
-    criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-    atualizado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
-
-
-class UsuarioCreate(BaseModel):
-    email: EmailStr
-    nome: str = Field(min_length=2, max_length=120)
-    password: str = Field(min_length=6, max_length=100)
-    consentimento_lgpd: bool
-    codigo: str = Field(min_length=6, max_length=6)
-
-
-class LoginData(BaseModel):
-    email: EmailStr
-    password: str
-    codigo: str = Field(min_length=6, max_length=6)
-
-
-class EmailCodeRequest(BaseModel):
-    email: EmailStr
-
-
-class LoginCodeRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=6, max_length=100)
-
-
-class CodeRequestOut(BaseModel):
-    detail: str
-    expires_in_minutes: int
-    debug_code: str | None = None
-
-
-class UsuarioOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    email: EmailStr
-    nome: str
-    consentimento_lgpd: bool
-    criado_em: datetime
-
-
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-class ProfileUpdate(BaseModel):
-    nome: str = Field(min_length=2, max_length=120)
-    consentimento_lgpd: bool
-
-
-class MoodEntryCreate(BaseModel):
-    valor: int = Field(ge=1, le=5)
-    nota: str | None = Field(default=None, max_length=500)
-
-
-class MoodEntryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    valor: int
-    nota: str | None
-    criado_em: datetime
-
-
-class QuestionnaireSubmission(BaseModel):
-    respostas: list[int]
-
-
-class QuestionnaireResultOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    tipo: str
-    respostas: list[int]
-    pontuacao: int
-    classificacao: str
-    criado_em: datetime
-
-
-class EducationalContentOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    slug: str
-    titulo: str
-    categoria: str
-    resumo: str
-    conteudo: str
-    nivel: str
-    questionario_tipo: str | None
-    criado_em: datetime
-
-
-class DashboardStatOut(BaseModel):
-    total_registros_humor: int
-    media_humor_7_dias: float | None
-    triagens_realizadas: int
-    ultima_triagem_phq9: int | None
-    ultima_triagem_gad7: int | None
-
-
-class MoodHistoryPoint(BaseModel):
-    data: str
-    valor: int
-
-
-class RecommendationOut(BaseModel):
-    titulo: str
-    descricao: str
-    prioridade: Literal["baixa", "media", "alta"]
-
-
-class DashboardOut(BaseModel):
-    usuario: UsuarioOut
-    estatisticas: DashboardStatOut
-    ultimo_humor: MoodEntryOut | None
-    ultimos_questionarios: list[QuestionnaireResultOut]
-    historico_humor: list[MoodHistoryPoint]
-    recomendacoes: list[RecommendationOut]
-    conteudos_em_destaque: list[EducationalContentOut]
-
-
-class ExportDataOut(BaseModel):
-    usuario: UsuarioOut
-    humores: list[MoodEntryOut]
-    questionarios: list[QuestionnaireResultOut]
-    exportado_em: datetime
-
-
-class LiaTranscriptMessage(BaseModel):
-    role: Literal["assistant", "user"]
-    content: str = Field(min_length=1, max_length=2000)
-
-
-class LiaMemorySnapshot(BaseModel):
-    summary: str | None = None
-    recent_summary: str | None = None
-    topics: list[str] = Field(default_factory=list)
-    conversation_count: int = 0
-    is_first_contact: bool = True
-
-
-class LiaSessionState(BaseModel):
-    stage: Literal["opening", "support", "anxiety", "mood", "closing"] = "opening"
-    turn_count: int = Field(default=0, ge=0, le=12)
-    clarification_streak: int = Field(default=0, ge=0, le=6)
-    transcript: list[LiaTranscriptMessage] = Field(default_factory=list)
-    gad7_scores: list[int | None] = Field(default_factory=lambda: [None] * 7)
-    phq9_scores: list[int | None] = Field(default_factory=lambda: [None] * 9)
-    mood_value: int | None = Field(default=None, ge=1, le=5)
-    focus_kind: Literal["gad7", "phq9"] | None = None
-    completed: bool = False
-    saved_questionnaires: list[Literal["gad7", "phq9"]] = Field(default_factory=list)
-    saved_mood: bool = False
-    memory: LiaMemorySnapshot = Field(default_factory=LiaMemorySnapshot)
-
-
-class LiaTurnInput(BaseModel):
-    session: LiaSessionState
-    message: str = Field(min_length=1, max_length=2000)
-
-
-class LiaTurnOut(BaseModel):
-    session: LiaSessionState
-    refresh_dashboard: bool = False
-    using_ollama: bool = False
-
-
-class LiaAnalysis(BaseModel):
-    assistant_reply: str | None = Field(default=None, max_length=600)
-    reflection: str = Field(min_length=1, max_length=400)
-    next_question: str | None = Field(default=None, max_length=300)
-    risk_level: Literal["none", "attention", "urgent"] = "none"
-    mood_value: int | None = Field(default=None, ge=1, le=5)
-    gad7_scores: list[int | None] = Field(default_factory=lambda: [None] * 7)
-    phq9_scores: list[int | None] = Field(default_factory=lambda: [None] * 9)
-    ready_to_close: bool = False
-    recommended_stage: Literal["support", "anxiety", "mood", "closing"] = "support"
 
 
 def normalize_optional_text(value: str | None) -> str | None:
@@ -466,13 +85,6 @@ def normalize_optional_text(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
-
-
-def env_flag(name: str, default: bool = False) -> bool:
-    raw_value = os.getenv(name)
-    if raw_value is None:
-        return default
-    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 OLLAMA_ENABLED = env_flag("OLLAMA_ENABLED", True)
@@ -519,9 +131,31 @@ def get_first_name(name: str) -> str:
     return name.strip().split(" ")[0] if name.strip() else "voce"
 
 
-def build_lia_memory_snapshot(memory: LiaUserMemory | None) -> LiaMemorySnapshot:
+def build_lia_recent_interaction(interaction: LiaInteraction) -> LiaRecentInteraction:
+    return LiaRecentInteraction(
+        created_at=ensure_utc(interaction.created_at),
+        opening_label=normalize_optional_text(interaction.opening_label),
+        opening_value=normalize_optional_text(interaction.opening_value),
+        summary=normalize_optional_text(interaction.summary) or "Voce deixou um registro breve dessa conversa.",
+        report=normalize_optional_text(interaction.report),
+        topics=[str(item) for item in (interaction.topics or []) if str(item).strip()],
+    )
+
+
+def build_lia_memory_snapshot(
+    memory: LiaUserMemory | None,
+    recent_interactions: list[LiaInteraction] | None = None,
+) -> LiaMemorySnapshot:
+    normalized_interactions = [
+        build_lia_recent_interaction(interaction) for interaction in (recent_interactions or [])
+    ]
+    latest_report = normalized_interactions[0].report if normalized_interactions else None
+
     if memory is None:
-        return LiaMemorySnapshot()
+        return LiaMemorySnapshot(
+            recent_conversations=normalized_interactions,
+            latest_report=latest_report,
+        )
 
     return LiaMemorySnapshot(
         summary=normalize_optional_text(memory.resumo),
@@ -529,6 +163,8 @@ def build_lia_memory_snapshot(memory: LiaUserMemory | None) -> LiaMemorySnapshot
         topics=[str(item) for item in (memory.topicos or []) if str(item).strip()],
         conversation_count=max(int(memory.total_conversas or 0), 0),
         is_first_contact=not bool(memory.primeiro_contato_concluido),
+        recent_conversations=normalized_interactions,
+        latest_report=latest_report,
     )
 
 
@@ -536,6 +172,7 @@ def build_bootstrap_memory_snapshot(
     latest_mood: MoodEntry | None,
     latest_phq9: QuestionnaireResult | None,
     latest_gad7: QuestionnaireResult | None,
+    recent_interactions: list[LiaInteraction] | None = None,
 ) -> LiaMemorySnapshot:
     topics: list[str] = []
 
@@ -582,15 +219,30 @@ def build_bootstrap_memory_snapshot(
             topics=unique_topics,
             conversation_count=1,
             is_first_contact=False,
+            recent_conversations=[build_lia_recent_interaction(item) for item in (recent_interactions or [])],
+            latest_report=normalize_optional_text(recent_interactions[0].report) if recent_interactions else None,
         )
 
-    return LiaMemorySnapshot()
+    return LiaMemorySnapshot(
+        recent_conversations=[build_lia_recent_interaction(item) for item in (recent_interactions or [])],
+        latest_report=normalize_optional_text(recent_interactions[0].report) if recent_interactions else None,
+    )
+
+
+def list_recent_lia_interactions(db: Session, user_id: str, limit: int = 3) -> list[LiaInteraction]:
+    return db.scalars(
+        select(LiaInteraction)
+        .where(LiaInteraction.usuario_id == user_id)
+        .order_by(LiaInteraction.created_at.desc())
+        .limit(limit)
+    ).all()
 
 
 def get_lia_memory_snapshot(db: Session, current_user: User) -> LiaMemorySnapshot:
+    recent_interactions = list_recent_lia_interactions(db, current_user.id)
     memory = db.get(LiaUserMemory, current_user.id)
     if memory is not None:
-        return build_lia_memory_snapshot(memory)
+        return build_lia_memory_snapshot(memory, recent_interactions)
 
     latest_mood = db.scalar(
         select(MoodEntry)
@@ -606,7 +258,7 @@ def get_lia_memory_snapshot(db: Session, current_user: User) -> LiaMemorySnapsho
     ).all()
     latest_phq9 = latest_result_by_type(latest_results, "phq9")
     latest_gad7 = latest_result_by_type(latest_results, "gad7")
-    return build_bootstrap_memory_snapshot(latest_mood, latest_phq9, latest_gad7)
+    return build_bootstrap_memory_snapshot(latest_mood, latest_phq9, latest_gad7, recent_interactions)
 
 
 def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionState:
@@ -631,17 +283,26 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
             LiaTranscriptMessage(role="assistant", content=f"Oi, {first_name}. Eu sou a Lia."),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Esse pode ser nosso primeiro cuidado por aqui. Nao precisa acertar as palavras.",
+                content="Pode falar do seu jeito. Nao precisa pensar muito pra comecar.",
             ),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Como voce esta chegando hoje?",
+                content="Me conta, como voce ta hoje?",
             ),
         ]
 
     messages = [LiaTranscriptMessage(role="assistant", content=f"Oi de novo, {first_name}.")]
 
-    if memory.recent_summary:
+    latest_interaction = memory.recent_conversations[0] if memory.recent_conversations else None
+
+    if latest_interaction and latest_interaction.summary:
+        messages.append(
+            LiaTranscriptMessage(
+                role="assistant",
+                content=f"Da ultima vez, ficou comigo que {latest_interaction.summary[0:180].rstrip('.')}.",
+            )
+        )
+    elif memory.recent_summary:
         messages.append(
             LiaTranscriptMessage(
                 role="assistant",
@@ -659,7 +320,7 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
     messages.append(
         LiaTranscriptMessage(
             role="assistant",
-            content="Podemos retomar de onde voce parou ou comecar do zero. Como voce chega hoje?",
+            content="Podemos retomar de onde voce parou ou comecar de outro ponto. O que faz mais sentido hoje?",
         )
     )
     return messages
@@ -947,12 +608,67 @@ def build_clarification_reply(session: LiaSessionState) -> str:
     return stage_replies[reply_index]
 
 
+def build_unsure_reply(session: LiaSessionState) -> str:
+    stage_replies = {
+        "support": [
+            "Tudo bem nao saber dizer agora. Se ficar mais facil, voce pode escolher uma dessas: foi mais cansaco, frustracao ou vontade de se afastar um pouco.",
+            "Sem problema. Se quiser, me responde do jeito mais simples: isso teve mais cara de cansaco, chateacao ou pressao?",
+        ],
+        "anxiety": [
+            "Tudo bem nao conseguir explicar de cara. Se ajudar, voce pode me dizer so qual chega mais perto: cabeca cheia, pressao por critica ou cansaco acumulado.",
+            "Sem problema. Pode escolher so uma direcao pra gente continuar: isso parece mais frustracao, preocupacao ou desgaste?",
+        ],
+        "mood": [
+            "Tudo bem se isso ainda estiver meio embaralhado. Se ficar mais facil, voce pode me dizer se foi mais cansaco, desanimo ou irritacao.",
+            "Sem problema. Se quiser, escolhe so o que chega mais perto agora: falta de energia, vontade de sumir um pouco ou chateacao.",
+        ],
+        "closing": [
+            "Tudo bem nao fechar isso certinho agora. Se quiser, me deixa so uma pista: foi mais cansaco, pressao ou tristeza?",
+        ],
+    }
+    options = stage_replies.get(session.stage) or stage_replies["support"]
+    reply_index = min(max(session.clarification_streak - 1, 0), len(options) - 1)
+    return options[reply_index]
+
+
+def should_offer_pause(session: LiaSessionState, context: dict[str, Any]) -> bool:
+    return bool(context["unsure"] and not session.pause_used and not session.pause_offer_pending)
+
+
+def build_pause_offer_reply() -> str:
+    return "Se voce quiser, eu posso te tirar disso por alguns segundos com uma pergunta bem leve. Quer?"
+
+
+def build_pause_message(session: LiaSessionState) -> str:
+    light_value = normalize_optional_text(session.memory.light_prompt_value)
+    if light_value:
+        return (
+            f"Entao vamos por um assunto leve so por alguns segundos: o que voce mais curte em {light_value}?"
+        )
+    return "Entao me responde uma bem simples, sem pensar muito: qual foi a ultima coisa pequena que te deu um minimo de alivio hoje?"
+
+
+def build_pause_decline_reply(session: LiaSessionState) -> str:
+    return "Tudo bem. A gente segue sem mudar o assunto. Se quiser, pode me responder do jeito mais simples que vier."
+
+
+def is_affirmative_pause_reply(context: dict[str, Any]) -> bool:
+    return bool(context["short_yes"] or contains_exact_phrase(context["latest_text"], ["quero", "pode", "pode sim", "sim quero"]))
+
+
 def get_recent_transcript_by_role(
     session: LiaSessionState,
     role: Literal["assistant", "user"],
     limit: int = 3,
 ) -> list[str]:
     return [item.content for item in session.transcript if item.role == role][-limit:]
+
+
+def latest_assistant_message(session: LiaSessionState) -> str | None:
+    for item in reversed(session.transcript):
+        if item.role == "assistant":
+            return item.content
+    return None
 
 
 def extract_duration_phrase(text_value: str) -> str | None:
@@ -980,6 +696,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
     combined_text = normalize_for_match(" ".join(recent_user_messages))
     latest_text = normalize_for_match(user_message)
     latest_trimmed = latest_text.strip()
+    latest_compact = re.sub(r"[^a-z ]", "", latest_trimmed).strip()
     unwell = contains_any(
         latest_text,
         [
@@ -1003,6 +720,15 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
     positive = not unwell and (
         contains_exact_phrase(latest_text, ["estou bem", "to bem", "estou ok", "tudo bem", "mais leve", "tranquilo", "tranquila", "em paz"])
     )
+    unsure = latest_compact in {
+        "nao sei",
+        "nao sei dizer",
+        "sei la",
+        "nao tenho certeza",
+        "dificil dizer",
+        "dificil explicar",
+        "nao consigo explicar",
+    }
 
     return {
         "latest_text": latest_text,
@@ -1061,11 +787,12 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         ),
         "quick_pass": contains_any(latest_text, ["rapidinho", "so quis passar", "so passei", "so passar por aqui", "so vim passar", "so vim aqui"]),
         "asks_to_talk": contains_any(latest_text, ["quero conversar", "so queria conversar", "so quero conversar", "queria desabafar"]),
-        "short_yes": latest_trimmed in {"sim", "s", "isso", "por alguns minutos sim", "sim, por alguns minutos"},
-        "short_no": latest_trimmed in {"nao", "não"},
-        "short_both": latest_trimmed in {"os dois", "os dois juntos", "nos dois"},
-        "short_body": latest_trimmed in {"no corpo", "mais no corpo"},
-        "short_mind": latest_trimmed in {"na mente", "na cabeca", "nos pensamentos", "mais na mente"},
+        "unsure": unsure,
+        "short_yes": latest_compact in {"sim", "s", "isso", "por alguns minutos sim", "sim por alguns minutos"},
+        "short_no": latest_compact in {"nao"},
+        "short_both": latest_compact in {"os dois", "os dois juntos", "nos dois"},
+        "short_body": latest_compact in {"no corpo", "mais no corpo"},
+        "short_mind": latest_compact in {"na mente", "na cabeca", "nos pensamentos", "mais na mente"},
         "stuck_without_improvement": contains_any(
             latest_text,
             [
@@ -1194,7 +921,6 @@ PASSIVE_LIA_REPLY_FRAGMENTS = [
 ]
 
 SUPPORTIVE_VALIDATION_FRAGMENTS = [
-    "sinto muito",
     "entendo",
     "faz sentido",
     "deve estar",
@@ -1271,6 +997,23 @@ WEAK_COACHING_QUESTION_FRAGMENTS = [
     "quais sao os momentos que voce mais aprecia",
     "projeto ou uma atividade",
 ]
+
+THERAPEUTIC_STYLE_FRAGMENTS = [
+    "sinto muito que esteja assim",
+    "sinto muito que isso esteja",
+    "tenta nao se cobrar",
+    "nao precisa se cobrar",
+    "na sua mente, no corpo ou nos dois",
+    "na sua mente, no seu corpo ou nos dois",
+    "na sua mente ou no seu corpo",
+    "esse pode ser nosso primeiro cuidado",
+    "eu fico com voce nessa parte",
+]
+
+
+def reply_has_therapeutic_style(text_value: str) -> bool:
+    normalized = normalize_for_match(text_value)
+    return any(fragment in normalized for fragment in THERAPEUTIC_STYLE_FRAGMENTS)
 
 DISTRESS_ASSUMPTION_FRAGMENTS = [
     "sinto muito",
@@ -1528,7 +1271,7 @@ def build_contextual_reflection(
     duration = context["duration"]
 
     if risk_level == "urgent":
-        return "Sinto muito que isso esteja tao pesado. O mais importante agora e a sua seguranca."
+        return "Isso parece serio. O mais importante agora e a sua seguranca."
 
     if session.turn_count == 1 and context["positive"]:
         return "Que bom ler isso."
@@ -1536,20 +1279,23 @@ def build_contextual_reflection(
     if session.turn_count == 1 and context["mixed_feeling"]:
         return "Entendi. Parece um daqueles dias em que voce nao esta mal de um jeito claro, mas tambem nao esta leve."
 
+    if context["unsure"]:
+        return "Tudo bem. Nem sempre isso vem claro na hora."
+
     if session.turn_count == 1 and context["creative"]:
         return "Isso soa delicado."
 
     if context["mentions_help"] and session.turn_count == 1:
-        return "Tudo bem pedir ajuda. Vamos entender isso juntas, sem pressa."
+        return "Tudo bem falar disso aqui. A gente pode ir por partes."
 
     if session.turn_count == 1 and context["ending"] and context["pressure"]:
-        return "Entendi. Passar por um termino enquanto voce ainda lida com tanta pressao deve mexer bastante."
+        return "Entendi. Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
 
     if session.turn_count == 1 and context["ending"]:
-        return "Entendi. Um termino pode baguncar bastante por dentro, mesmo quando a gente tenta seguir."
+        return "Entendi. Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir."
 
     if session.turn_count == 1 and context["pressure"] and context["worn_out"]:
-        return "Entendi. Ser pressionado por tanto tempo e chegar nesse nivel de desgaste pesa bastante."
+        return "Entendi. Parece que voce ja vem segurando isso ha tempo e chegou cansado."
 
     if session.turn_count == 1 and context["pressure"]:
         return "Entendi. Parece que voce vem lidando com muita pressao ultimamente."
@@ -1558,10 +1304,10 @@ def build_contextual_reflection(
         return "Entendi. Parece que voce chegou bem no limite nesses ultimos dias."
 
     if session.turn_count == 1 and context["ansiedade"]:
-        return "Entendi. Parece que a ansiedade tem pesado bastante em voce ultimamente."
+        return "Entendi. Parece que sua cabeca nao tem dado muito descanso ultimamente."
 
     if session.turn_count == 1 and context["tristeza"]:
-        return "Entendi. Parece que existe um peso emocional importante ai dentro agora."
+        return "Entendi. Tem um peso ai que nao parece pequeno."
 
     if session.turn_count == 1 and not session.memory.is_first_contact and session.memory.recent_summary:
         return "Obrigada por retomar isso comigo. A gente pode seguir daqui com calma."
@@ -1585,7 +1331,7 @@ def build_contextual_reflection(
         return "Entendi. Parece que essa pressao toda ja esta te deixando bem esgotado."
 
     if session.stage == "anxiety" and context["pressure"]:
-        return "Entendi. Faz sentido seu corpo e sua mente sentirem depois de tanta pressao."
+        return "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito."
 
     if session.stage == "anxiety" and context["worn_out"]:
         return "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa."
@@ -1603,7 +1349,7 @@ def build_contextual_reflection(
         return "Entendi. Isso parece estar alcancando tambem seu humor e sua disposicao."
 
     if session.stage == "mood" and context["pressure"] and context["worn_out"]:
-        return "Entendi. Quando a pressao vai se acumulando assim, e comum corpo e humor sentirem juntos."
+        return "Entendi. Quando vai acumulando assim, o dia inteiro acaba sentindo junto."
 
     if session.stage == "support" and context["positive"]:
         return "Que bom saber disso."
@@ -1633,38 +1379,43 @@ def build_contextual_question(
 ) -> str | None:
     context = build_lia_context(session, user_message)
 
+    if context["unsure"]:
+        return None
+
     if stage == "support":
         if context["positive"]:
             return "Quer so passar aqui rapidinho hoje ou tem algo que voce queira dividir mesmo assim?"
         if context["mixed_feeling"]:
-            return "O que deixou o dia mais pesado para voce: cansaco, preocupacao ou outra coisa?"
+            return "O que mais te pegou hoje?"
+        if context["unwell"]:
+            return "Se quiser, me conta o que mais te pegou hoje."
         if context["creative"]:
             return "Flores te passam calma ou essa imagem apareceu por algum motivo especial?"
         if context["mentions_help"] or context["asks_to_talk"]:
-            return "Quer me contar o que esta mais vivo em voce agora?"
+            return "Quer me contar o que mais esta batendo forte ai agora?"
         if session.turn_count == 1:
-            return "Se quiser, me conta o que mais ocupou sua mente hoje."
+            return "Se quiser, me conta o que mais ficou na sua cabeca hoje."
         return None
 
     if stage == "anxiety":
         if context["mentions_help"] and session.turn_count == 1:
-            return "O que tem te incomodado mais agora: a sensacao no corpo, os pensamentos ou os dois juntos?"
+            return "O que esta mais dificil nisso agora?"
         if session.turn_count == 1 and context["ending"] and context["pressure"]:
             return "Desde esse termino, o que mais tem pesado: a saudade, a ansiedade ou a pressao do dia a dia?"
         if session.turn_count == 1 and context["ending"]:
             return "Desde que isso aconteceu, o que mais tem pesado: saudade, ansiedade ou sensacao de vazio?"
         if session.turn_count == 1 and context["pressure"] and context["worn_out"]:
-            return "Essa pressao vem mais como preocupacao constante, cansaco extremo ou os dois?"
+            return "Quando isso aperta, o que pesa mais pra voce?"
         if session.turn_count == 1 and context["pressure"]:
             if context["work_study"]:
                 return "Essa pressao vem mais do trabalho, dos estudos ou da expectativa que colocam sobre voce?"
-            return "Essa pressao aparece mais como preocupacao constante, irritacao ou sensacao de estar no limite?"
+            return "Essa pressao aparece mais em que momento do seu dia?"
         if session.turn_count == 1 and context["worn_out"]:
-            return "Esse desgaste tem vindo mais como ansiedade no corpo, mente acelerada ou falta de energia?"
+            return "Esse cansaco tem mais cara de esgotamento, preocupacao ou um pouco dos dois?"
         if session.turn_count == 1 and context["ansiedade"]:
-            return "Quando essa ansiedade vem, ela pesa mais no corpo, nos pensamentos ou nos dois?"
+            return "Quando isso vem, o que voce percebe primeiro?"
         if session.turn_count == 1 and context["tristeza"]:
-            return "Isso tem aparecido mais como tristeza, desanimo ou vontade de se afastar?"
+            return "O que mais tem vindo junto com isso?"
         if session.turn_count == 1 and not session.memory.is_first_contact:
             return "Desde a ultima vez, o que parece mais forte agora: ansiedade, cansaco ou pressao do dia a dia?"
         if context["short_both"] and session.turn_count <= 3:
@@ -1674,11 +1425,11 @@ def build_contextual_question(
         if context["short_mind"]:
             return "Quando pesa mais na mente, vem como preocupacao constante, pensamentos acelerados ou medo de algo ruim?"
         if context["pressure"] and context["worn_out"]:
-            return "Nessa pressao toda, o que pesa mais agora: mente acelerada, corpo tenso ou falta de energia?"
+            return "No meio dessa pressao toda, o que mais te desgasta?"
         if context["pressure"]:
-            return "Quando essa pressao aperta, ela pesa mais na sua mente, no corpo ou nos dois?"
+            return "Quando essa pressao aperta, como isso aparece mais pra voce?"
         if context["worn_out"]:
-            return "Esse esgotamento aparece mais como cansaco no corpo, irritacao ou mente acelerada?"
+            return "Esse esgotamento aparece mais como cansaco, irritacao ou cabeca cheia?"
         if context["palpitacao"] and session.turn_count <= 2:
             return "Quando isso acontece, vem junto com medo, aperto no peito ou preocupacao dificil de desligar?"
         if context["latest_duration"] == "por alguns minutos" and context["palpitacao"]:
@@ -1688,11 +1439,11 @@ def build_contextual_question(
         if context["duration"] and not context["controlar"] and not context["medo"]:
             return "Isso costuma aparecer em momentos especificos ou pode surgir mesmo sem um gatilho claro?"
         if context["controlar"] or context["relaxar"]:
-            return "Quando isso aparece, sua mente fica cheia de preocupacoes ou o peso maior fica no corpo?"
+            return "Quando isso aparece, o que voce sente que muda primeiro?"
         if context["medo"]:
             return "Quando isso vem, parece que algo ruim pode acontecer?"
         if session.turn_count == 1:
-            return "Se voce pudesse resumir, o que mais esta pesando nisso agora: seus pensamentos, suas emocoes ou o que anda acontecendo no seu dia a dia?"
+            return "Se voce fosse resumir em uma frase, o que mais esta pesando nisso agora?"
         return default_next_question("anxiety", session.turn_count)
 
     if stage == "mood":
@@ -1725,37 +1476,40 @@ def build_contextual_support(
     if stage == "closing":
         return None
 
+    if context["unsure"]:
+        return build_unsure_reply(session)
+
     if stage == "support":
         if context["positive"]:
-            return "Se estiver sendo um dia melhor, vale deixar esse respiro existir sem procurar problema onde nao tem."
+            return "Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo."
         if context["mixed_feeling"]:
-            return "Nao precisa decidir agora se hoje foi bom ou ruim. A gente pode olhar so a parte que mais incomodou."
+            return "Nao precisa definir o dia inteiro agora. A gente pode olhar so a parte que mais ficou com voce."
         if context["creative"]:
-            return "Nao precisa transformar isso em problema para conversar comigo. A gente pode ficar nessa imagem por um instante."
+            return "Nao precisa transformar isso em problema. A gente pode partir dessa imagem mesmo."
         if session.turn_count == 1:
-            return "Voce nao precisa chegar aqui ja com tudo organizado."
+            return "Pode falar do jeito que vier."
         return None
 
     if stage == "anxiety":
         if context["pressure"] and context["work_study"]:
-            return "Por enquanto, nao tenta resolver o dia inteiro. Vamos so localizar onde essa pressao aperta mais."
+            return "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje."
         if context["pressure"] or context["worn_out"]:
-            return "Se fizer sentido, tenta pensar so no proximo passo pequeno de hoje, nao em dar conta de tudo de uma vez."
+            return "Pode me contar isso sem precisar deixar tudo bem explicado."
         if context["palpitacao"] or context["ansiedade"] or context["controlar"] or context["relaxar"] or context["short_both"]:
-            return "Enquanto me responde, tenta soltar o ar um pouco mais devagar do que puxou. Isso costuma ajudar o corpo a baixar o alerta."
+            return "Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar."
         if context["medo"]:
-            return "Quando o corpo entra em alerta, ajuda lembrar que voce nao precisa vencer isso inteiro agora, so atravessar este momento."
+            return "Vamos so ficar no que esta acontecendo agora, sem tentar resolver tudo de uma vez."
 
     if stage == "mood":
         if context["interesse"] or contains_any(context["latest_text"], ["nao estou com vontade", "sem vontade", "nao tenho vontade"]):
-            return "Quando a vontade some, vale reduzir a meta do dia para o minimo viavel, nao para perfeicao."
+            return "Tudo bem se hoje as coisas estiverem saindo em outro ritmo."
         if context["sono"] or context["energia"] or context["stuck_without_improvement"] or context["worn_out"]:
-            return "Se seu corpo anda sem responder, talvez o foco agora seja ritmo e descanso, nao cobranca."
+            return "Quando o cansaco acumula, ate falar disso ja pode parecer muito."
         if context["tristeza"]:
-            return "Voce nao precisa resolver isso inteiro hoje. A gente pode olhar uma camada de cada vez."
+            return "A gente pode pegar isso por partes."
 
     if session.turn_count == 1:
-        return "A gente pode ir por partes. Voce nao precisa organizar tudo sozinho agora."
+        return "Pode ir por partes, do jeito que for mais facil."
 
     return None
 
@@ -2103,16 +1857,16 @@ Regras:
 - nesses casos, assistant_reply deve obrigatoriamente trazer 3 coisas na mesma mensagem: reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e uma pergunta curta que conduza a conversa;
 - o apoio vem antes de qualquer orientacao; nao pule direto para dica, tarefa ou solucao;
 - nao use respostas vagas como "estou aqui para ouvir" ou "como posso te ajudar" sem tomar iniciativa;
-- se o usuario disser "nao estou me sentindo muito bem", uma boa direcao seria algo como: "Sinto muito que esteja assim. Por agora, tenta nao se cobrar para explicar tudo de uma vez. Isso pesa mais na sua mente, no seu corpo ou no ritmo dos seus dias?";
-- se o usuario pedir ajuda, uma boa direcao seria algo como: "Eu posso caminhar com voce por partes. Se puder, solta o ar devagar uma vez antes de me responder. O que esta mais dificil agora: preocupacao, cansaco ou falta de vontade?";
+- se o usuario disser "nao estou me sentindo muito bem", uma boa direcao seria algo como: "Entendi. Parece que hoje ficou pesado pra voce. Pode me contar do jeito que vier: o que mais te pegou nisso?";
+- se o usuario pedir ajuda, uma boa direcao seria algo como: "Tudo bem. Me fala qual parte disso esta mais dificil de carregar agora.";
 - nao minimize com frases como "e natural sentir-se assim de vez em quando" ou "todo mundo passa por isso";
 - evite tom de coach, autoajuda ou produtividade;
 - nao use frases como "vou sugerir", "vou dar um conselho", "pense em uma tarefa", "tome um cafe", "tome um cha", "faca uma caminhada", "veja um video engracado";
 - nao elogie nem celebre de forma exagerada; prefira calma, presenca e delicadeza;
-- nao faca perguntas de coaching futuro, como "o que voce pode fazer amanha?" ou "qual atividade te faria bem?". Prefira perguntas observacionais e clinicas disfarcadas de conversa;
+- nao faca perguntas de coaching futuro, como "o que voce pode fazer amanha?" ou "qual atividade te faria bem?". Prefira perguntas simples, concretas e humanas;
 - evite duas perguntas na mesma resposta;
 - evite perguntas amplas como "o que e mais importante hoje?" ou "o que voce faz para relaxar?" quando a conversa ainda precisa mapear sintomas;
-- nas fases iniciais, priorize perguntas como: pesa mais na mente ou no corpo, ha quanto tempo isso vem, o sono mudou, a energia caiu, a vontade diminuiu, o humor ficou mais pesado;
+- nas fases iniciais, priorize perguntas como: o que mais pegou, quando isso costuma apertar, o que mudou no dia, no sono, na energia ou na vontade;
 - use null com generosidade nos scores. So marque 0 quando houver negacao explicita. Nao preencha itens nao mencionados;
 - nas primeiras 2 ou 3 mensagens, nao preencha muitos itens de uma vez. Avance aos poucos;
 - se o usuario negar autoagressao, nao trate isso como urgencia;
@@ -2259,8 +2013,8 @@ def generate_lia_plain_reply(
     elif user_needs_active_guidance(session, user_message):
         extra_style_hint = (
             "O usuario nao esta bem e precisa de iniciativa. Primeiro reconheca a experiencia concreta dele, "
-            "depois ofereca presenca ou permissao curta, e so entao faca uma pergunta observacional sobre mente, corpo, sono, energia, vontade ou humor. "
-            "Evite conselhos prontos."
+            "depois ofereca presenca curta, e so entao faca uma pergunta simples e humana sobre o que mais pesou hoje. "
+            "Evite conselhos prontos, tom de psicologo e perguntas como 'mente ou corpo'."
         )
     elif stage == "closing":
         extra_style_hint = "A conversa ja reuniu contexto suficiente. Feche com sintese curta e um proximo passo simples."
@@ -2449,6 +2203,22 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
     gad7_scores: list[int | None] = [None] * 7
     phq9_scores: list[int | None] = [None] * 9
 
+    recent_assistant = normalize_for_match(latest_assistant_message(session) or "")
+    if session.pause_used and "assunto leve" in recent_assistant:
+        reflection = "Entendi. Obrigado por me contar isso."
+        support = "Se quiser, a gente pode voltar para o que estava pesando antes e seguir por ali."
+        return LiaAnalysis(
+            assistant_reply=join_reply_parts(reflection, support, None),
+            reflection=reflection,
+            next_question=None,
+            risk_level="none",
+            mood_value=session.mood_value,
+            gad7_scores=gad7_scores,
+            phq9_scores=phq9_scores,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
     risk_level: Literal["none", "attention", "urgent"] = "none"
     if any(term in text_value for term in ["me matar", "suicid", "sumir", "nao quero viver", "me machucar"]):
         risk_level = "urgent"
@@ -2531,6 +2301,8 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
         raise ValueError("Ollama returned an unusable assistant reply")
 
     analysis.assistant_reply = normalize_optional_text(analysis.assistant_reply) or analysis.assistant_reply
+    if reply_has_therapeutic_style(analysis.assistant_reply):
+        raise ValueError("Ollama returned an overly therapeutic assistant reply")
     analysis.reflection = normalize_optional_text(analysis.reflection) or analysis.assistant_reply
     analysis.next_question = normalize_optional_text(analysis.next_question)
     normalized_user_message = normalize_optional_text(user_message) or ""
@@ -2605,6 +2377,10 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
 
 
 def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
+    return fallback_lia_analysis(session, user_message), False
+
+
+def analyze_lia_turn_with_llm(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
     last_error: Exception | None = None
     recent_assistant_messages = [normalize_for_match(item) for item in get_recent_transcript_by_role(session, "assistant", 2)]
 
@@ -2732,6 +2508,21 @@ def build_memory_source_text(session: LiaSessionState) -> str:
     return normalize_for_match(" ".join(user_messages))
 
 
+def build_opening_context(session: LiaSessionState) -> str | None:
+    light_value = normalize_optional_text(session.memory.light_prompt_value)
+    if light_value:
+        return light_value
+    first_user_message = next(
+        (
+            normalize_optional_text(item.content)
+            for item in session.transcript
+            if item.role == "user" and normalize_optional_text(item.content)
+        ),
+        None,
+    )
+    return first_user_message
+
+
 def derive_memory_topics(session: LiaSessionState) -> list[str]:
     text_value = build_memory_source_text(session)
     gad_score = sum(score or 0 for score in session.gad7_scores)
@@ -2805,6 +2596,83 @@ def build_memory_summary(topics: list[str]) -> str | None:
     return "Temas que costumam voltar por aqui: " + ", ".join(topics[:3]) + "."
 
 
+def build_interaction_summary(session: LiaSessionState, topics: list[str]) -> str:
+    opening_context = build_opening_context(session)
+    note = build_lia_note(session.transcript)
+
+    if topics:
+        if len(topics) == 1:
+            base = f"o tema mais forte da conversa foi {topics[0]}"
+        elif len(topics) == 2:
+            base = f"os temas que mais apareceram foram {topics[0]} e {topics[1]}"
+        else:
+            base = f"os temas que mais apareceram foram {', '.join(topics[:3])}"
+    else:
+        base = "voce deixou um retrato curto, mas importante, de como vinha se sentindo"
+
+    if opening_context:
+        return f"partimos de {opening_context} e {base}"
+    if note:
+        return base
+    return "voce fez um check-in breve e deixou pontos importantes registrados"
+
+
+def build_psychologist_report(session: LiaSessionState, topics: list[str]) -> str:
+    opening_context = build_opening_context(session)
+    note = build_lia_note(session.transcript)
+    mood_value = infer_mood_value(session)
+    mood_label = {
+        1: "muito baixo",
+        2: "baixo",
+        3: "intermediario",
+        4: "mais estavel",
+        5: "positivo",
+    }.get(mood_value, "intermediario")
+
+    parts: list[str] = []
+    if opening_context:
+        parts.append(f"Abertura do dia: {opening_context}.")
+    if note:
+        parts.append(f"Fala principal do usuario: {note}.")
+    if topics:
+        parts.append(f"Temas que apareceram: {', '.join(topics[:4])}.")
+    parts.append(f"Humor inferido ao fim da conversa: {mood_label}.")
+
+    if session.pause_used:
+        parts.append("Houve uma pausa leve com permissao do usuario para aliviar o ritmo da conversa.")
+
+    gad_score = sum(score or 0 for score in session.gad7_scores)
+    phq_score = sum(score or 0 for score in session.phq9_scores)
+    if gad_score >= 8 or phq_score >= 8:
+        attention_items: list[str] = []
+        if gad_score >= 8:
+            attention_items.append("ansiedade")
+        if phq_score >= 8:
+            attention_items.append("humor e energia")
+        parts.append(f"Pontos que merecem atencao no acompanhamento: {', '.join(attention_items)}.")
+
+    return " ".join(parts)
+
+
+def save_lia_interaction(
+    db: Session,
+    current_user: User,
+    session: LiaSessionState,
+    topics: list[str],
+) -> LiaInteraction:
+    interaction = LiaInteraction(
+        usuario_id=current_user.id,
+        opening_label=normalize_optional_text(session.memory.light_prompt_label),
+        opening_value=normalize_optional_text(session.memory.light_prompt_value),
+        summary=build_interaction_summary(session, topics),
+        report=build_psychologist_report(session, topics),
+        topics=topics,
+        mood_value=infer_mood_value(session),
+    )
+    db.add(interaction)
+    return interaction
+
+
 def merge_memory_topics(existing_topics: list[str], new_topics: list[str]) -> list[str]:
     merged = [str(item) for item in new_topics if str(item).strip()]
     for item in existing_topics:
@@ -2833,7 +2701,8 @@ def upsert_lia_memory(db: Session, current_user: User, session: LiaSessionState)
     memory.atualizado_em = utcnow()
 
     db.add(memory)
-    snapshot = build_lia_memory_snapshot(memory)
+    recent_interactions = list_recent_lia_interactions(db, current_user.id)
+    snapshot = build_lia_memory_snapshot(memory, recent_interactions)
     session.memory = snapshot
     return snapshot
 
@@ -2877,6 +2746,8 @@ def save_lia_session_results(db: Session, current_user: User, session: LiaSessio
         session.saved_mood = True
         refresh_dashboard = True
 
+    topics = derive_memory_topics(session)
+    save_lia_interaction(db, current_user, session, topics)
     upsert_lia_memory(db, current_user, session)
     refresh_dashboard = True
 
@@ -3510,11 +3381,13 @@ def export_profile_data(
         .where(QuestionnaireResult.usuario_id == current_user.id)
         .order_by(QuestionnaireResult.criado_em.desc())
     ).all()
+    lia_interactions = list_recent_lia_interactions(db, current_user.id, limit=20)
 
     return ExportDataOut(
         usuario=current_user,
         humores=moods,
         questionarios=questionnaire_results,
+        lia_interacoes=[build_lia_recent_interaction(item) for item in lia_interactions],
         exportado_em=utcnow(),
     )
 
@@ -3526,6 +3399,9 @@ def delete_profile(
 ) -> Response:
     db.query(MoodEntry).filter(MoodEntry.usuario_id == current_user.id).delete()
     db.query(QuestionnaireResult).filter(QuestionnaireResult.usuario_id == current_user.id).delete()
+    db.query(LiaInteraction).filter(LiaInteraction.usuario_id == current_user.id).delete()
+    db.query(LiaUserMemory).filter(LiaUserMemory.usuario_id == current_user.id).delete()
+    db.query(EmailVerificationCode).filter(EmailVerificationCode.email == current_user.email).delete()
     db.delete(current_user)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -3642,6 +3518,25 @@ def lia_message(
     session.transcript.append(LiaTranscriptMessage(role="user", content=message_text))
     session.clarification_streak = 0
     session.turn_count += 1
+    using_ollama = False
+
+    context = build_lia_context(session, message_text)
+
+    if session.pause_offer_pending:
+        session.pause_offer_pending = False
+        if is_affirmative_pause_reply(context):
+            session.pause_used = True
+            assistant_text = build_pause_message(session)
+        else:
+            assistant_text = build_pause_decline_reply(session)
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        return LiaTurnOut(session=session, refresh_dashboard=False, using_ollama=False)
+
+    if should_offer_pause(session, context):
+        session.pause_offer_pending = True
+        assistant_text = build_pause_offer_reply()
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        return LiaTurnOut(session=session, refresh_dashboard=False, using_ollama=False)
 
     try:
         analysis, using_ollama = analyze_lia_turn(session, message_text)
