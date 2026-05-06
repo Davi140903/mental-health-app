@@ -153,6 +153,23 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertFalse(main.should_close_lia_session(session, analysis, "anxiety", enough_distress_data=True))
 
+    def test_energy_question_does_not_repeat_identically(self) -> None:
+        session = self.build_session(stage="mood", turn_count=3)
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+            )
+        ]
+
+        next_question = main.build_contextual_question(session, "acho que muito trabalho", "mood")
+
+        self.assertIsNotNone(next_question)
+        self.assertNotEqual(
+            next_question,
+            "Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

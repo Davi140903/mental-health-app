@@ -671,6 +671,19 @@ def latest_assistant_message(session: LiaSessionState) -> str | None:
     return None
 
 
+def question_was_recently_used(session: LiaSessionState, question: str) -> bool:
+    normalized_question = normalize_for_match(question)
+    recent_assistant_messages = get_recent_transcript_by_role(session, "assistant", limit=4)
+    return any(normalized_question in normalize_for_match(message) for message in recent_assistant_messages)
+
+
+def first_fresh_question(session: LiaSessionState, options: list[str]) -> str:
+    for option in options:
+        if not question_was_recently_used(session, option):
+            return option
+    return options[0]
+
+
 def extract_duration_phrase(text_value: str) -> str | None:
     if contains_any(text_value, ["meses", "alguns meses", "ha meses", "faz meses"]):
         return "ha alguns meses"
@@ -1464,7 +1477,14 @@ def build_contextual_question(
         if context["sono"] and not context["energia"]:
             return "E alem do sono, sua energia durante o dia ficou mais baixa?"
         if context["energia"] and not context["interesse"]:
-            return "Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?"
+            return first_fresh_question(
+                session,
+                [
+                    "Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+                    "Quando esse cansaco vem, ele pesa mais na sua energia ou na vontade de fazer as coisas?",
+                    "Isso ficou mais com cara de cansaco fisico ou de desanimo para tocar o dia?",
+                ],
+            )
         if context["tristeza"] or context["interesse"]:
             return "Isso tem aparecido na maior parte dos dias ou varia bastante?"
         return default_next_question("mood", session.turn_count)
@@ -1655,7 +1675,7 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
     if stage == "mood":
         if turn_count <= 3:
             return "E nesses dias, como ficaram seu sono e sua energia?"
-        return "Voce percebeu menos vontade de fazer as coisas ou se sentiu mais para baixo?"
+        return "Isso te deixou mais sem energia, mais para baixo ou os dois ao mesmo tempo?"
 
     return None
 
