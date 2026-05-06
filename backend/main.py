@@ -635,21 +635,56 @@ def should_offer_pause(session: LiaSessionState, context: dict[str, Any]) -> boo
     return bool(context["unsure"] and not session.pause_used and not session.pause_offer_pending)
 
 
-def build_pause_offer_reply() -> str:
-    return "Se voce quiser, eu posso te tirar disso por alguns segundos com uma pergunta bem leve. Quer?"
+def build_pause_offer_reply(session: LiaSessionState) -> str:
+    light_value = normalize_optional_text(session.memory.light_prompt_value)
+    if not light_value:
+        return "Se voce quiser, eu posso mudar um pouco o rumo por alguns segundos com uma pergunta bem leve. Quer?"
+
+    if "filme" in light_value or "serie" in light_value:
+        return "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de filmes e series, tipo anime, comedia ou algo que te prende facil. Pode ser?"
+    if "musica" in light_value:
+        return "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de musica, tipo o que voce mais curte ouvir. Pode ser?"
+    if "esporte" in light_value:
+        return "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de esporte, so pra dar uma respirada. Pode ser?"
+    if "comida" in light_value:
+        return "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de comida, so pra dar uma respirada. Pode ser?"
+    return f"Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa sobre {light_value}. Pode ser?"
 
 
 def build_pause_message(session: LiaSessionState) -> str:
     light_value = normalize_optional_text(session.memory.light_prompt_value)
     if light_value:
+        if "filme" in light_value or "serie" in light_value:
+            return "Voce tinha escolhido filmes e series. O que te prende mais facil nisso: anime, suspense, comedia ou outra coisa?"
+        if "musica" in light_value:
+            return "Voce tinha escolhido musica. O que voce mais curte nela: letra, ritmo, artista ou o clima que ela cria?"
+        if "esporte" in light_value:
+            return "Voce tinha escolhido esporte. O que te prende mais nisso: assistir, jogar ou acompanhar um time?"
+        if "comida" in light_value:
+            return "Voce tinha escolhido comida. Tem alguma que sempre melhora um pouco o seu dia?"
         return (
-            f"Entao vamos por um assunto leve so por alguns segundos: o que voce mais curte em {light_value}?"
+            f"Voce tinha escolhido {light_value}. O que mais te prende nisso?"
         )
     return "Entao me responde uma bem simples, sem pensar muito: qual foi a ultima coisa pequena que te deu um minimo de alivio hoje?"
 
 
 def build_pause_decline_reply(session: LiaSessionState) -> str:
     return "Tudo bem. A gente segue sem mudar o assunto. Se quiser, pode me responder do jeito mais simples que vier."
+
+
+def build_post_pause_reply(session: LiaSessionState, user_message: str) -> str:
+    normalized_message = normalize_for_match(user_message)
+    light_value = normalize_optional_text(session.memory.light_prompt_value)
+
+    if light_value and ("filme" in light_value or "serie" in light_value):
+        if "anime" in normalized_message:
+            return "Boa. Anime costuma prender por bastante tempo mesmo. Se quiser, a gente pode voltar para o que estava pesando antes."
+        return "Entendi. Parece um assunto que te puxa com facilidade. Se quiser, a gente pode voltar para o que estava pesando antes."
+
+    if light_value and "musica" in light_value:
+        return "Entendi. Musica costuma abrir um respiro rapido mesmo. Se quiser, a gente pode voltar para o que estava pesando antes."
+
+    return "Entendi. Bom ter um assunto mais leve no meio disso. Se quiser, a gente pode voltar para o que estava pesando antes."
 
 
 def is_affirmative_pause_reply(context: dict[str, Any]) -> bool:
@@ -2300,11 +2335,12 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
     phq9_scores: list[int | None] = [None] * 9
 
     recent_assistant = normalize_for_match(latest_assistant_message(session) or "")
-    if session.pause_used and "assunto leve" in recent_assistant:
-        reflection = "Entendi. Obrigado por me contar isso."
-        support = "Se quiser, a gente pode voltar para o que estava pesando antes e seguir por ali."
+    if session.pause_used and (
+        "voce tinha escolhido" in recent_assistant or "assunto leve" in recent_assistant
+    ):
+        reflection = build_post_pause_reply(session, user_message)
         return LiaAnalysis(
-            assistant_reply=join_reply_parts(reflection, support, None),
+            assistant_reply=reflection,
             reflection=reflection,
             next_question=None,
             risk_level="none",
@@ -3630,7 +3666,7 @@ def lia_message(
 
     if should_offer_pause(session, context):
         session.pause_offer_pending = True
-        assistant_text = build_pause_offer_reply()
+        assistant_text = build_pause_offer_reply(session)
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
         return LiaTurnOut(session=session, refresh_dashboard=False, using_ollama=False)
 

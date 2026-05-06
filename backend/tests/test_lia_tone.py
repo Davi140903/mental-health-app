@@ -72,7 +72,7 @@ class LiaToneTests(unittest.TestCase):
         context = main.build_lia_context(session, "nao sei dizer")
 
         self.assertTrue(main.should_offer_pause(session, context))
-        self.assertIn("quer", main.normalize_for_match(main.build_pause_offer_reply()))
+        self.assertIn("quer", main.normalize_for_match(main.build_pause_offer_reply(session)))
 
         session.pause_offer_pending = True
         yes_context = main.build_lia_context(session, "sim")
@@ -85,7 +85,31 @@ class LiaToneTests(unittest.TestCase):
 
         lowered = main.normalize_for_match(main.build_pause_message(session))
         self.assertIn("musica", lowered)
-        self.assertIn("o que voce mais curte", lowered)
+        self.assertIn("voce tinha escolhido", lowered)
+
+    def test_pause_offer_mentions_saved_topic(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.memory.light_prompt_value = "filmes e series"
+
+        lowered = main.normalize_for_match(main.build_pause_offer_reply(session))
+        self.assertIn("filmes e series", lowered)
+        self.assertIn("anime", lowered)
+
+    def test_post_pause_reply_can_acknowledge_topic(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        session.pause_used = True
+        session.memory.light_prompt_value = "filmes e series"
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Voce tinha escolhido filmes e series. O que te prende mais facil nisso: anime, suspense, comedia ou outra coisa?",
+            )
+        ]
+
+        analysis = main.fallback_lia_analysis(session, "gosto de assistir animes")
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertIn("anime", lowered)
+        self.assertIn("voltar para o que estava pesando", lowered)
 
     def test_interaction_summary_and_report_keep_simple_context(self) -> None:
         session = self.build_session(stage="support", turn_count=4)
