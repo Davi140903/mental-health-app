@@ -250,6 +250,35 @@ class LiaToneTests(unittest.TestCase):
         self.assertEqual(session.topic_states["frequency_duration"].value, "varia bastante")
         self.assertNotEqual(main.next_lia_topic(session), "frequency_duration")
 
+    def test_quick_pass_message_does_not_trigger_distress_question(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        analysis = main.fallback_lia_analysis(session, "so quis passar aqui rapidinho")
+
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertIn("podemos deixar por aqui", lowered)
+        self.assertNotIn("desgasta", lowered)
+        self.assertNotIn("o que mais pesou", lowered)
+
+    def test_no_issue_message_can_close_lightly(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        analysis = main.fallback_lia_analysis(session, "nao tem nada pegando, so quis passar aqui")
+
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertIn("podemos deixar por aqui", lowered)
+        self.assertNotIn("desgasta", lowered)
+
+    def test_stop_signal_gets_simple_closing(self) -> None:
+        session = self.build_session(stage="mood", turn_count=5)
+        session.current_topic = "closing"
+        main.update_topic_state(session, "main_focus", "trabalho")
+        main.update_topic_state(session, "distress_nature", "desanimo")
+        main.update_topic_state(session, "functional_impact", "sono e energia")
+        main.update_topic_state(session, "frequency_duration", "na maior parte dos dias")
+        analysis = main.fallback_lia_analysis(session, "acho que ja estou bem por agora")
+
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertTrue("fechar por aqui" in lowered or "parar por aqui" in lowered)
+
 
 if __name__ == "__main__":
     unittest.main()

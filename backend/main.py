@@ -755,6 +755,11 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
 
     update_topic_state(session, "opening_state", latest_text, 0.6)
 
+    if context["quick_pass"] or context["no_issue"] or context["wants_to_stop"]:
+        if session.turn_count >= 1:
+            update_topic_state(session, "user_summary", latest_text, 0.7)
+        return
+
     if not session.topic_states["main_focus"].filled and (
         context["work_study"]
         or context["pressure"]
@@ -775,16 +780,24 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
         nature_parts.append("desanimo")
     if context["energia"] or context["worn_out"]:
         nature_parts.append("cansaco")
+    if context["irritabilidade"]:
+        nature_parts.append("irritacao")
     if contains_any(context["latest_text"], ["insuficiente", "sem animo", "desanimo", "falta de animo", "me sentir pequeno"]):
         nature_parts.append("desanimo")
     if nature_parts:
         update_topic_state(session, "distress_nature", ", ".join(dict.fromkeys(nature_parts)), 0.8)
+    elif contains_any(context["latest_text"], ["pressao", "preocupacao", "irritacao", "cansaco", "desanimo"]):
+        update_topic_state(session, "distress_nature", latest_text, 0.7)
 
     context_parts: list[str] = []
     if context["work_study"]:
         context_parts.append("trabalho ou estudos")
     if context["relationship"]:
         context_parts.append("relacionamentos")
+    if contains_any(context["latest_text"], ["rotina", "dia a dia"]):
+        context_parts.append("rotina")
+    if contains_any(context["latest_text"], ["corpo", "fisico"]):
+        context_parts.append("corpo")
     if context["pressure"] and not context_parts:
         context_parts.append("rotina e cobranca")
     if context_parts:
@@ -801,9 +814,13 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
         impact_parts.append("vontade")
     if context["tristeza"]:
         impact_parts.append("humor")
+    if context["concentracao"]:
+        impact_parts.append("foco")
+    if contains_any(context["latest_text"], ["corpo", "fisico"]):
+        impact_parts.append("corpo")
     if impact_parts:
         update_topic_state(session, "functional_impact", ", ".join(dict.fromkeys(impact_parts)), 0.85)
-    elif contains_any(context["latest_text"], ["insuficiente", "nao consigo", "sem animo", "sem vontade"]):
+    elif contains_any(context["latest_text"], ["insuficiente", "nao consigo", "sem animo", "sem vontade", "humor", "foco"]):
         update_topic_state(session, "functional_impact", latest_text, 0.7)
 
     if context["duration"]:
@@ -821,6 +838,8 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
             "de vez em quando",
             "alguns dias sim",
             "depende do dia",
+            "semana passada",
+            "uns dias mais, outros menos",
         ],
     ):
         update_topic_state(session, "frequency_duration", latest_text, 0.75)
@@ -914,6 +933,19 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             ],
         )
     )
+    no_issue = contains_any(
+        latest_text,
+        [
+            "nao tem nada pegando",
+            "nao tem nada me pegando",
+            "so quis passar aqui",
+            "so queria passar aqui",
+            "so passei aqui",
+            "so vim ver",
+            "so vim testar",
+            "so pra ver como voce tava respondendo",
+        ],
+    )
     unsure = latest_compact in {
         "nao sei",
         "nao sei dizer",
@@ -973,6 +1005,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "concentracao": contains_any(combined_text, ["concentr", "foco", "estudar", "trabalho"]),
         "irritabilidade": contains_any(combined_text, ["irrit", "raiva", "estress"]),
         "positive": positive,
+        "no_issue": no_issue,
         "unwell": unwell,
         "mixed_feeling": contains_any(latest_text, ["mais ou menos", "meio assim", "nem bem nem mal", "entre bem e mal"]),
         "creative": contains_any(
@@ -980,6 +1013,19 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             ["flores", "flor", "ceu", "mar", "musica", "chuva", "vento", "sol", "silencio", "recolher", "quietude"],
         ),
         "quick_pass": contains_any(latest_text, ["rapidinho", "so quis passar", "so passei", "so passar por aqui", "so vim passar", "so vim aqui"]),
+        "wants_to_stop": contains_any(
+            latest_text,
+            [
+                "acho que ja estou bem por agora",
+                "acho que estou bem por agora",
+                "ja estou bem por agora",
+                "por agora ta bom",
+                "por agora esta bom",
+                "quero parar por aqui",
+                "podemos parar por aqui",
+                "acho que ja deu por hoje",
+            ],
+        ),
         "asks_to_talk": contains_any(latest_text, ["quero conversar", "so queria conversar", "so quero conversar", "queria desabafar"]),
         "unsure": unsure,
         "short_yes": latest_compact in {"sim", "s", "isso", "por alguns minutos sim", "sim por alguns minutos"},
@@ -1397,6 +1443,16 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
             POSITIVE_QUICK_PASS_FRAGMENTS + ["que bom", "bom ler", "leve", "quando quiser", "volta quando quiser"],
         )
 
+    if context["no_issue"]:
+        if contains_any(normalized, DISTRESS_ASSUMPTION_FRAGMENTS) or contains_any(
+            normalized, GENERIC_MINIMIZING_FRAGMENTS + GUIDED_QUESTION_FRAGMENTS
+        ):
+            return False
+        return contains_any(
+            normalized,
+            ["tudo certo", "passar aqui", "quando quiser", "volta quando quiser", "respiro", "sem problema"],
+        )
+
     if context["positive"]:
         if contains_any(normalized, DISTRESS_ASSUMPTION_FRAGMENTS) or contains_any(
             normalized, GENERIC_MINIMIZING_FRAGMENTS
@@ -1466,6 +1522,12 @@ def build_contextual_reflection(
 
     if risk_level == "urgent":
         return "Isso parece serio. O mais importante agora e a sua seguranca."
+
+    if context["no_issue"]:
+        return "Tudo certo."
+
+    if context["wants_to_stop"]:
+        return "Entendi."
 
     if session.turn_count == 1 and context["positive"]:
         return "Que bom ler isso."
@@ -1576,6 +1638,14 @@ def build_contextual_question(
 ) -> str | None:
     context = build_lia_context(session, user_message)
     topic = session.current_topic
+
+    if context["wants_to_stop"]:
+        remember_question_intent(session, "closing")
+        return "Podemos fechar por aqui hoje, se voce quiser."
+
+    if context["quick_pass"] or context["no_issue"]:
+        remember_question_intent(session, "closing")
+        return "Podemos deixar por aqui hoje, se voce quiser."
 
     if topic == "closing":
         remember_question_intent(session, "closing")
@@ -1776,6 +1846,10 @@ def build_contextual_support(
         return build_unsure_reply(session)
 
     if stage == "support":
+        if context["wants_to_stop"]:
+            return "Podemos encerrar sem problema."
+        if context["no_issue"]:
+            return "Pode deixar isso ser so um respiro por hoje."
         if context["positive"]:
             return "Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo."
         if context["quick_pass"]:
@@ -1819,6 +1893,17 @@ def should_close_lia_session(
     enough_distress_data: bool,
 ) -> bool:
     if analysis.risk_level == "urgent":
+        return True
+
+    latest_user_message = normalize_optional_text(
+        next((item.content for item in reversed(session.transcript) if item.role == "user"), None)
+    ) or ""
+    latest_context = build_lia_context(session, latest_user_message)
+
+    if latest_context["quick_pass"] or latest_context["no_issue"]:
+        return count_meaningful_user_messages(session) >= 2
+
+    if latest_context["wants_to_stop"] and count_meaningful_user_messages(session) >= 3:
         return True
 
     if effective_stage not in {"anxiety", "mood", "closing"}:
@@ -3969,36 +4054,42 @@ def lia_message(
         and phq_positive >= 1
     ) or (session.turn_count >= 5 and has_anxiety_context and has_mood_context)
     should_close = should_close_lia_session(session, analysis, effective_stage, enough_distress_data)
+    latest_context = build_lia_context(session, message_text)
 
     if should_close and not analysis.ready_to_close:
         closing_reply: str | None = None
-        closing_session = session.model_copy(deep=True)
-        closing_session.stage = "closing"
-        try:
-            closing_analysis = call_ollama_for_lia(
-                closing_session,
-                retry_hint=(
-                    "Voce ja reuniu contexto suficiente. Reescreva assistant_reply como um fechamento natural, "
-                    "acolhedor, sem nova investigacao longa e com um proximo passo simples para hoje."
-                ),
-                forced_stage="closing",
-            )
-            closing_reply = normalize_optional_text(closing_analysis.assistant_reply)
-        except Exception:
-            closing_reply = None
-        if not closing_reply:
+        if latest_context["quick_pass"] or latest_context["no_issue"]:
+            closing_reply = "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta."
+        elif latest_context["wants_to_stop"]:
+            closing_reply = "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo."
+        else:
+            closing_session = session.model_copy(deep=True)
+            closing_session.stage = "closing"
             try:
-                closing_reply = generate_lia_plain_reply(
+                closing_analysis = call_ollama_for_lia(
                     closing_session,
-                    message_text,
-                    stage="closing",
                     retry_hint=(
-                        "Voce ja reuniu contexto suficiente. Feche com acolhimento, uma sintese curta e um passo simples para hoje."
+                        "Voce ja reuniu contexto suficiente. Reescreva assistant_reply como um fechamento natural, "
+                        "acolhedor, sem nova investigacao longa e com um proximo passo simples para hoje."
                     ),
-                    repair_reason="fechamento natural da conversa",
+                    forced_stage="closing",
                 )
+                closing_reply = normalize_optional_text(closing_analysis.assistant_reply)
             except Exception:
                 closing_reply = None
+            if not closing_reply:
+                try:
+                    closing_reply = generate_lia_plain_reply(
+                        closing_session,
+                        message_text,
+                        stage="closing",
+                        retry_hint=(
+                            "Voce ja reuniu contexto suficiente. Feche com acolhimento, uma sintese curta e um passo simples para hoje."
+                        ),
+                        repair_reason="fechamento natural da conversa",
+                    )
+                except Exception:
+                    closing_reply = None
         if closing_reply:
             analysis.assistant_reply = closing_reply
 

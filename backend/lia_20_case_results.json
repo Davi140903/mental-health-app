@@ -1,0 +1,1068 @@
+{
+  "summary": {
+    "completed": 11,
+    "weak_closing": 4,
+    "not_completed": 9,
+    "light_flow_contaminated_by_distress": 1
+  },
+  "results": [
+    {
+      "name": "leve_rapido_positivo",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": false,
+        "distress_nature": false,
+        "distress_context": false,
+        "functional_impact": false,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+      "turns": 2,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Hoje eu to melhor.",
+          "assistant": "Que bom ler isso. Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Queria so passar por aqui rapidinho.",
+          "assistant": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "cansaco_trabalho",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Oi, Davi. Eu sou a Lia. Entendi que o cansaco e o sono ruim tem sido um desafio para voce nos últimos dias. Pode falar mais sobre isso?",
+      "turns": 5,
+      "bad_patterns": [
+        "weak_closing"
+      ],
+      "conversation": [
+        {
+          "user": "Estou cansado.",
+          "assistant": "Entendi. O impacto disso no seu corpo parece estar pesando em voce. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Acho que muito trabalho.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Mais na vontade de fazer as coisas.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Meu sono ta ruim e a energia baixa.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Na maior parte dos dias.",
+          "assistant": "Oi, Davi. Eu sou a Lia. Entendi que o cansaco e o sono ruim tem sido um desafio para voce nos últimos dias. Pode falar mais sobre isso?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "criticas_pessoais",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Isso parece estar fazendo muito mal pra voce. Pode falar um pouco sobre isso? Qual parte da vida ou do trabalho que você sente que não está indo bem?",
+      "turns": 6,
+      "bad_patterns": [
+        "weak_closing"
+      ],
+      "conversation": [
+        {
+          "user": "To mal hoje.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "As pessoas criticando a forma como eu faco as coisas.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Isso tem mais cara de cansaco, pressao ou desanimo?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "Nao sei dizer.",
+          "assistant": "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de filmes e series, tipo anime, comedia ou algo que te prende facil. Pode ser?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "sim",
+          "assistant": "Voce tinha escolhido filmes e series. O que te prende mais facil nisso: anime, suspense, comedia ou outra coisa?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "Gosto de assistir animes.",
+          "assistant": "Boa. Anime costuma prender por bastante tempo mesmo. Se quiser, a gente pode voltar para o que estava pesando antes.",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "Acho que o que mais pesou foi me sentir insuficiente.",
+          "assistant": "Entendi. Isso parece estar fazendo muito mal pra voce. Pode falar um pouco sobre isso? Qual parte da vida ou do trabalho que você sente que não está indo bem?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "ansiedade_mente_nao_desliga",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Estou ansioso.",
+          "assistant": "Entendi. Parece que sua cabeca nao tem dado muito descanso ultimamente. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Minha cabeca nao desliga.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Mais preocupacao.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Vem mais da rotina e do trabalho.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega no sono e no foco.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Quase todo dia.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "sono_baguncado",
+      "completed": false,
+      "final_topic": "concrete_example",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Nao estou muito bem.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Meu sono ta bem baguncado.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais cansaco e irritacao.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Acho que vem da rotina.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega na energia.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Varia bastante.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+          "topic": "concrete_example",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "tristeza_desanimo",
+      "completed": false,
+      "final_topic": "distress_context",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": false,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Levar isso ha alguns dias realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To meio pra baixo.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Sem vontade de fazer nada.",
+          "assistant": "Entendi. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Mais desanimo.",
+          "assistant": "Entendi. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Nao sei bem de onde vem.",
+          "assistant": "Entendi. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Pega na vontade e no humor.",
+          "assistant": "Entendi. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Na maior parte dos dias.",
+          "assistant": "Entendi. Levar isso ha alguns dias realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "leve_curioso",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": false,
+        "distress_nature": false,
+        "distress_context": false,
+        "functional_impact": false,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+      "turns": 2,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To bem hoje.",
+          "assistant": "Que bom ler isso. Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Passei aqui so pra ver como voce tava respondendo.",
+          "assistant": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "travado_sem_pausa",
+      "completed": false,
+      "final_topic": "concrete_example",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. Levar isso ha alguns dias realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Nao sei explicar.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "nao",
+          "assistant": "Entendi. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Acho que e cansaco.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Mais da rotina.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega na energia.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Alguns dias sim.",
+          "assistant": "Entendi. Levar isso ha alguns dias realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+          "topic": "concrete_example",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "travado_com_pausa_esporte",
+      "completed": false,
+      "final_topic": "concrete_example",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. Tem alguma cena do seu dia que mostra bem como isso apareceu?",
+      "turns": 8,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To estranho hoje.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Nao sei dizer.",
+          "assistant": "Se voce quiser, eu posso mudar um pouco de assunto e te perguntar uma coisa de esporte, so pra dar uma respirada. Pode ser?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "sim",
+          "assistant": "Voce tinha escolhido esporte. O que te prende mais nisso: assistir, jogar ou acompanhar um time?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Gosto de futebol.",
+          "assistant": "Entendi. Bom ter um assunto mais leve no meio disso. Se quiser, a gente pode voltar para o que estava pesando antes.",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais pressao mesmo.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Do trabalho.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Teve alguma situacao recente que resume bem isso?",
+          "topic": "concrete_example",
+          "completed": false
+        },
+        {
+          "user": "Pega no foco.",
+          "assistant": "Entendi. Se voce quiser, me da um exemplo pequeno de quando isso bateu mais forte.",
+          "topic": "concrete_example",
+          "completed": false
+        },
+        {
+          "user": "Faz tempo.",
+          "assistant": "Entendi. Tem alguma cena do seu dia que mostra bem como isso apareceu?",
+          "topic": "concrete_example",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "irritacao",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Parece que o trabalho tem sido um peso pra você há muito tempo. Pode falar mais sobre como isso afetou seu humor e corpo?",
+      "turns": 6,
+      "bad_patterns": [
+        "weak_closing"
+      ],
+      "conversation": [
+        {
+          "user": "To sem paciencia.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Qualquer coisa me irrita.",
+          "assistant": "Entendi. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais irritacao.",
+          "assistant": "Entendi. O que mais te pegou nesse dia?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Acho que vem do trabalho.",
+          "assistant": "Entendi. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega no humor e no corpo.",
+          "assistant": "Entendi. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Quase sempre.",
+          "assistant": "Entendi. Parece que o trabalho tem sido um peso pra você há muito tempo. Pode falar mais sobre como isso afetou seu humor e corpo?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "inseguranca",
+      "completed": false,
+      "final_topic": "concrete_example",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Teve alguma situacao recente que resume bem isso?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To me sentindo insuficiente.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "As cobrancas tao pesando.",
+          "assistant": "Entendi. Pode me contar isso sem precisar deixar tudo bem explicado. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Mais desanimo.",
+          "assistant": "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Vem muito do trabalho.",
+          "assistant": "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega na vontade.",
+          "assistant": "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Ultimamente.",
+          "assistant": "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Teve alguma situacao recente que resume bem isso?",
+          "topic": "concrete_example",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "concentracao_estudo",
+      "completed": false,
+      "final_topic": "distress_nature",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": false,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. O que parece mais forte nisso: preocupacao, cansaco ou falta de animo?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Nao consigo focar.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Minha cabeca dispersa muito.",
+          "assistant": "Entendi. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais ansiedade.",
+          "assistant": "Entendi. O que mais te pegou nesse dia?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Acho que estudos.",
+          "assistant": "Entendi. Isso tem mais cara de cansaco, pressao ou desanimo?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "Pega no foco.",
+          "assistant": "Entendi. Se voce fosse dar um nome pra isso agora, o que chegaria mais perto?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "Todo dia.",
+          "assistant": "Entendi. O que parece mais forte nisso: preocupacao, cansaco ou falta de animo?",
+          "topic": "distress_nature",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "relacao_afetiva",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "Terminei um relacionamento.",
+          "assistant": "Entendi. Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Isso mexeu muito comigo.",
+          "assistant": "Entendi. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais tristeza.",
+          "assistant": "Entendi. A gente pode pegar isso por partes. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Vem dessa situacao mesmo.",
+          "assistant": "Entendi. A gente pode pegar isso por partes. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega no sono e no humor.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Desde semana passada.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "rotina_sobrecarga",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+      "turns": 6,
+      "bad_patterns": [
+        "weak_closing"
+      ],
+      "conversation": [
+        {
+          "user": "To sobrecarregado.",
+          "assistant": "Entendi. Parece que voce chegou bem no limite nesses ultimos dias. Pode falar do jeito que vier. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "E tudo ao mesmo tempo.",
+          "assistant": "Entendi. Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Mais pressao.",
+          "assistant": "Entendi. Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Rotina e trabalho.",
+          "assistant": "Entendi. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega em energia e vontade.",
+          "assistant": "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Todo dia.",
+          "assistant": "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "melhorando_mas_cansado",
+      "completed": false,
+      "final_topic": "user_summary",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. O que voce gostaria que ficasse mais claro sobre esse momento?",
+      "turns": 6,
+      "bad_patterns": [
+        "light_flow_contaminated_by_distress"
+      ],
+      "conversation": [
+        {
+          "user": "Hoje eu to melhor, mas cansado.",
+          "assistant": "Que bom ler isso. Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Acho que foi a semana pesada.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Mais cansaco.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Do trabalho.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Se eu fosse resumir o que voce me contou ate aqui, o que nao poderia faltar?",
+          "topic": "user_summary",
+          "completed": false
+        },
+        {
+          "user": "Pega na energia.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Antes de fechar, tem alguma parte disso que voce acha importante nao deixar passar?",
+          "topic": "user_summary",
+          "completed": false
+        },
+        {
+          "user": "Varia bastante.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. O que voce gostaria que ficasse mais claro sobre esse momento?",
+          "topic": "user_summary",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "usuario_monossilabico",
+      "completed": false,
+      "final_topic": "distress_nature",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": false,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": false
+      },
+      "last_reply": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. O que parece mais forte nisso: preocupacao, cansaco ou falta de animo?",
+      "turns": 5,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "mal",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "sim",
+          "assistant": "Entendi. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "trabalho",
+          "assistant": "Entendi. Isso tem mais cara de cansaco, pressao ou desanimo?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "sono",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Se voce fosse dar um nome pra isso agora, o que chegaria mais perto?",
+          "topic": "distress_nature",
+          "completed": false
+        },
+        {
+          "user": "quase sempre",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. O que parece mais forte nisso: preocupacao, cansaco ou falta de animo?",
+          "topic": "distress_nature",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "usuario_criativo",
+      "completed": false,
+      "final_topic": "distress_context",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": false,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Levar isso ha alguns dias realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To meio nublado.",
+          "assistant": "Entendi. Isso tudo parece estar pesando em voce. Pode falar do jeito que vier. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Como se eu tivesse sem cor hoje.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Mais desanimo.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Nao sei bem de onde vem.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Pega no humor.",
+          "assistant": "Entendi. Levar isso desde hoje realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Uns dias mais, outros menos.",
+          "assistant": "Entendi. Levar isso ha alguns dias realmente desgasta. Tudo bem se hoje as coisas estiverem saindo em outro ritmo. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "name": "corpo_e_tensao",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": true,
+        "user_summary": true
+      },
+      "last_reply": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To tenso.",
+          "assistant": "Entendi. Parece que sua cabeca nao tem dado muito descanso ultimamente. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Sinto o corpo travado.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Mais ansiedade.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Vem muito da rotina.",
+          "assistant": "Entendi. Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar. Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Pega no corpo e no sono.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Faz tempo.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "usuario_quer_parar",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": true,
+        "distress_nature": true,
+        "distress_context": true,
+        "functional_impact": true,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo.",
+      "turns": 6,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To cansado.",
+          "assistant": "Entendi. O impacto disso no seu corpo parece estar pesando em voce. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+          "topic": "distress_context",
+          "completed": false
+        },
+        {
+          "user": "Muito trabalho.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso foi mais de hoje ou ja vem de outros dias?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Mais vontade baixa.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Tem quanto tempo que isso ta te acompanhando desse jeito?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Sono ruim.",
+          "assistant": "Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+          "topic": "frequency_duration",
+          "completed": false
+        },
+        {
+          "user": "Na maior parte dos dias.",
+          "assistant": "Entendi. Levar isso ha alguns dias realmente desgasta. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Teve alguma situacao recente que resume bem isso?",
+          "topic": "concrete_example",
+          "completed": false
+        },
+        {
+          "user": "Acho que ja estou bem por agora.",
+          "assistant": "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo.",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "name": "leve_sem_problema",
+      "completed": true,
+      "final_topic": "closing",
+      "topics_filled": {
+        "opening_state": true,
+        "main_focus": false,
+        "distress_nature": false,
+        "distress_context": false,
+        "functional_impact": false,
+        "frequency_duration": true,
+        "concrete_example": false,
+        "user_summary": true
+      },
+      "last_reply": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+      "turns": 2,
+      "bad_patterns": [],
+      "conversation": [
+        {
+          "user": "To tranquilo hoje.",
+          "assistant": "Que bom ler isso. Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo. O que mais ficou na sua cabeca hoje?",
+          "topic": "main_focus",
+          "completed": false
+        },
+        {
+          "user": "Nao tem nada pegando, so quis passar aqui.",
+          "assistant": "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta.",
+          "topic": "closing",
+          "completed": true
+        }
+      ]
+    }
+  ]
+}
