@@ -893,6 +893,12 @@ TOPIC_FLOW = [
 
 
 def next_lia_topic(session: LiaSessionState) -> str:
+    if recent_intent_count(session, "distress_nature") >= 2 and not session.topic_states["distress_nature"].filled:
+        update_topic_state(session, "distress_nature", "nao especificado", 0.4)
+
+    if recent_intent_count(session, "distress_context") >= 2 and not session.topic_states["distress_context"].filled:
+        update_topic_state(session, "distress_context", "contexto nao identificado", 0.4)
+
     if (
         session.topic_states["main_focus"].filled
         and session.topic_states["distress_nature"].filled
@@ -901,7 +907,7 @@ def next_lia_topic(session: LiaSessionState) -> str:
     ):
         if recent_intent_count(session, "concrete_example") >= 2 and not session.topic_states["concrete_example"].filled:
             update_topic_state(session, "concrete_example", "nao detalhado", 0.4)
-        if recent_intent_count(session, "user_summary") >= 2 and not session.topic_states["user_summary"].filled:
+        if recent_intent_count(session, "user_summary") >= 1 and not session.topic_states["user_summary"].filled:
             update_topic_state(session, "user_summary", "resumo breve pendente", 0.4)
 
     for topic in TOPIC_FLOW:
@@ -956,7 +962,19 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             "ando mal",
         ],
     )
-    positive = not unwell and (
+    positive = not unwell and not contains_any(
+        latest_text,
+        [
+            "cansad",
+            "sobrecarreg",
+            "desanim",
+            "triste",
+            "ansios",
+            "pressao",
+            "mal",
+            "sem vontade",
+        ],
+    ) and (
         contains_exact_phrase(
             latest_text,
             [
@@ -1963,6 +1981,12 @@ def should_close_lia_session(
     meaningful_messages = count_meaningful_user_messages(session)
     if meaningful_messages < 3 or session.turn_count < 4:
         return False
+
+    if session.turn_count >= 6:
+        return True
+
+    if session.current_topic in {"concrete_example", "user_summary"} and recent_intent_count(session, session.current_topic) >= 2:
+        return True
 
     topics = derive_memory_topics(session)
     if not topics and sum(score or 0 for score in session.gad7_scores + session.phq9_scores) < 4:
@@ -4122,7 +4146,7 @@ def lia_message(
     should_close = should_close_lia_session(session, analysis, effective_stage, enough_distress_data)
     latest_context = build_lia_context(session, message_text)
 
-    if should_close and not analysis.ready_to_close:
+    if should_close:
         closing_reply: str | None = build_simple_closing_reply(session, message_text)
         if closing_reply:
             analysis.assistant_reply = closing_reply
