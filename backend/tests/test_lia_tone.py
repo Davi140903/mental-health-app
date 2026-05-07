@@ -300,6 +300,20 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("podemos fechar por aqui", lowered)
         self.assertNotIn("pode falar mais", lowered)
 
+    def test_mood_support_phrase_can_vary_after_recent_use(self) -> None:
+        session = self.build_session(stage="mood", turn_count=4)
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Quando o cansaco acumula, ate falar disso ja pode parecer muito.",
+            )
+        ]
+
+        support = main.build_contextual_support(session, "meu sono ta ruim e minha energia baixa", "mood")
+
+        self.assertIsNotNone(support)
+        self.assertNotEqual(support, "Quando o cansaco acumula, ate falar disso ja pode parecer muito.")
+
 
 if __name__ == "__main__":
     unittest.main()

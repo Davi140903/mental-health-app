@@ -726,6 +726,17 @@ def first_fresh_question(session: LiaSessionState, options: list[str]) -> str:
     return options[0]
 
 
+def first_fresh_phrase(session: LiaSessionState, options: list[str]) -> str:
+    recent_assistant_messages = [
+        normalize_for_match(message) for message in get_recent_transcript_by_role(session, "assistant", limit=4)
+    ]
+    for option in options:
+        normalized_option = normalize_for_match(option)
+        if not any(normalized_option in message for message in recent_assistant_messages):
+            return option
+    return options[0]
+
+
 def remember_question_intent(session: LiaSessionState, intent: str) -> None:
     session.recent_question_intents = [*session.recent_question_intents[-4:], intent]
 
@@ -1648,7 +1659,14 @@ def build_contextual_reflection(
         return "Entendi. Parece que essa pressao toda ja esta te deixando bem esgotado."
 
     if session.stage == "anxiety" and context["pressure"]:
-        return "Entendi. Depois de tanta pressao, uma hora isso aparece de algum jeito."
+        return first_fresh_phrase(
+            session,
+            [
+                "Entendi. Essa pressao parece estar cobrando um preco ai.",
+                "Entendi. Isso soa como algo que foi pesando aos poucos.",
+                "Entendi. Quando isso vai acumulando, uma hora aparece de algum jeito.",
+            ],
+        )
 
     if session.stage == "anxiety" and context["worn_out"]:
         return "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa."
@@ -1660,13 +1678,34 @@ def build_contextual_reflection(
         return "Entendi. Isso parece te deixar em um modo de alerta bem desconfortavel."
 
     if session.stage == "mood" and context["sono"] and context["energia"]:
-        return "Obrigada por explicar melhor. Quando sono e energia sentem, o dia todo costuma pesar."
+        return first_fresh_phrase(
+            session,
+            [
+                "Obrigada por explicar melhor. Quando sono e energia sentem, o dia todo costuma pesar.",
+                "Entendi. Quando sono e energia saem do lugar, o resto do dia costuma sentir junto.",
+                "Entendi. Sono ruim e energia baixa acabam mexendo com tudo ao redor.",
+            ],
+        )
 
     if session.stage == "mood" and (context["tristeza"] or context["interesse"]):
-        return "Entendi. Isso parece estar alcancando tambem seu humor e sua disposicao."
+        return first_fresh_phrase(
+            session,
+            [
+                "Entendi. Isso parece estar alcancando tambem seu humor e sua disposicao.",
+                "Entendi. Isso nao ficou so no cansaco; parece que bateu tambem no jeito de levar o dia.",
+                "Entendi. Isso parece estar mexendo tambem com seu animo.",
+            ],
+        )
 
     if session.stage == "mood" and context["pressure"] and context["worn_out"]:
-        return "Entendi. Quando vai acumulando assim, o dia inteiro acaba sentindo junto."
+        return first_fresh_phrase(
+            session,
+            [
+                "Entendi. Quando vai acumulando assim, o dia inteiro acaba sentindo junto.",
+                "Entendi. Quando isso aperta por muito tempo, o corpo e o humor acabam entrando no meio.",
+                "Entendi. Isso parece estar transbordando para o resto do dia.",
+            ],
+        )
 
     if session.stage == "support" and context["positive"]:
         return "Que bom saber disso."
@@ -1678,7 +1717,14 @@ def build_contextual_reflection(
         return "Gostei dessa imagem que veio agora."
 
     if duration and session.turn_count > 1:
-        return f"Entendi. Levar isso {duration} realmente desgasta."
+        return first_fresh_phrase(
+            session,
+            [
+                f"Entendi. Levar isso {duration} realmente desgasta.",
+                f"Entendi. Estar com isso {duration} ja pesa de outro jeito.",
+                f"Entendi. Quando isso vem acontecendo {duration}, e natural que va cansando.",
+            ],
+        )
 
     if session.turn_count == 1:
         topic = capitalize_first(build_opening_topic(context))
@@ -1932,9 +1978,23 @@ def build_contextual_support(
 
     if stage == "mood":
         if context["interesse"] or contains_any(context["latest_text"], ["nao estou com vontade", "sem vontade", "nao tenho vontade"]):
-            return "Tudo bem se hoje as coisas estiverem saindo em outro ritmo."
+            return first_fresh_phrase(
+                session,
+                [
+                    "Tudo bem se hoje as coisas estiverem saindo em outro ritmo.",
+                    "Nao precisa se cobrar para encaixar tudo no mesmo ritmo de sempre.",
+                    "Pode ir me contando isso sem pressa.",
+                ],
+            )
         if context["sono"] or context["energia"] or context["stuck_without_improvement"] or context["worn_out"]:
-            return "Quando o cansaco acumula, ate falar disso ja pode parecer muito."
+            return first_fresh_phrase(
+                session,
+                [
+                    "Quando o cansaco acumula, ate falar disso ja pode parecer muito.",
+                    "Quando isso vai pesando, ate colocar em palavras pode cansar.",
+                    "Quando o corpo ja vem gasto, ate explicar isso direito fica mais puxado.",
+                ],
+            )
         if context["tristeza"]:
             return "A gente pode pegar isso por partes."
 
