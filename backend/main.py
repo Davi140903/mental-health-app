@@ -760,6 +760,35 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
             update_topic_state(session, "user_summary", latest_text, 0.7)
         return
 
+    current_topic = session.current_topic
+    if current_topic == "distress_nature" and contains_any(
+        context["latest_text"], ["ansiedade", "preocupacao", "cansaco", "desanimo", "irritacao", "pressao"]
+    ):
+        update_topic_state(session, "distress_nature", latest_text, 0.9)
+    if current_topic == "distress_context" and contains_any(
+        context["latest_text"], ["trabalho", "estudo", "faculdade", "rotina", "relacionamento", "corpo", "critica", "cobranca"]
+    ):
+        update_topic_state(session, "distress_context", latest_text, 0.9)
+    if current_topic == "functional_impact" and contains_any(
+        context["latest_text"], ["sono", "energia", "vontade", "foco", "humor", "corpo"]
+    ):
+        update_topic_state(session, "functional_impact", latest_text, 0.9)
+    if current_topic == "frequency_duration" and contains_any(
+        context["latest_text"],
+        [
+            "hoje",
+            "dias",
+            "semanas",
+            "meses",
+            "todo dia",
+            "quase sempre",
+            "varia",
+            "ultimamente",
+            "faz tempo",
+        ],
+    ):
+        update_topic_state(session, "frequency_duration", latest_text, 0.9)
+
     if not session.topic_states["main_focus"].filled and (
         context["work_study"]
         or context["pressure"]
@@ -864,6 +893,17 @@ TOPIC_FLOW = [
 
 
 def next_lia_topic(session: LiaSessionState) -> str:
+    if (
+        session.topic_states["main_focus"].filled
+        and session.topic_states["distress_nature"].filled
+        and session.topic_states["functional_impact"].filled
+        and session.topic_states["frequency_duration"].filled
+    ):
+        if recent_intent_count(session, "concrete_example") >= 2 and not session.topic_states["concrete_example"].filled:
+            update_topic_state(session, "concrete_example", "nao detalhado", 0.4)
+        if recent_intent_count(session, "user_summary") >= 2 and not session.topic_states["user_summary"].filled:
+            update_topic_state(session, "user_summary", "resumo breve pendente", 0.4)
+
     for topic in TOPIC_FLOW:
         if not session.topic_states[topic].filled:
             return topic
@@ -3269,6 +3309,32 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
     ]
 
 
+def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> str:
+    context = build_lia_context(session, user_message)
+    if context["quick_pass"] or context["no_issue"]:
+        return "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta."
+    if context["wants_to_stop"]:
+        return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo."
+
+    summary_parts: list[str] = []
+    main_focus = normalize_optional_text(session.topic_states["main_focus"].value)
+    impact = normalize_optional_text(session.topic_states["functional_impact"].value)
+    frequency = normalize_optional_text(session.topic_states["frequency_duration"].value)
+
+    if main_focus:
+        summary_parts.append(main_focus)
+    if impact:
+        summary_parts.append(f"mexendo em {impact}")
+    if frequency:
+        summary_parts.append(f"aparecendo {frequency}")
+
+    if summary_parts:
+        summary_text = ", ".join(summary_parts[:3])
+        return f"Entendi. Hoje ficou mais claro esse ponto de {summary_text}. Ja consegui organizar bem o que apareceu. Podemos fechar por aqui."
+
+    return "Entendi. Ja consegui organizar bem o que apareceu hoje. Podemos fechar por aqui."
+
+
 def ensure_database_shape() -> None:
     Base.metadata.create_all(bind=engine)
 
@@ -4057,39 +4123,7 @@ def lia_message(
     latest_context = build_lia_context(session, message_text)
 
     if should_close and not analysis.ready_to_close:
-        closing_reply: str | None = None
-        if latest_context["quick_pass"] or latest_context["no_issue"]:
-            closing_reply = "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta."
-        elif latest_context["wants_to_stop"]:
-            closing_reply = "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo."
-        else:
-            closing_session = session.model_copy(deep=True)
-            closing_session.stage = "closing"
-            try:
-                closing_analysis = call_ollama_for_lia(
-                    closing_session,
-                    retry_hint=(
-                        "Voce ja reuniu contexto suficiente. Reescreva assistant_reply como um fechamento natural, "
-                        "acolhedor, sem nova investigacao longa e com um proximo passo simples para hoje."
-                    ),
-                    forced_stage="closing",
-                )
-                closing_reply = normalize_optional_text(closing_analysis.assistant_reply)
-            except Exception:
-                closing_reply = None
-            if not closing_reply:
-                try:
-                    closing_reply = generate_lia_plain_reply(
-                        closing_session,
-                        message_text,
-                        stage="closing",
-                        retry_hint=(
-                            "Voce ja reuniu contexto suficiente. Feche com acolhimento, uma sintese curta e um passo simples para hoje."
-                        ),
-                        repair_reason="fechamento natural da conversa",
-                    )
-                except Exception:
-                    closing_reply = None
+        closing_reply: str | None = build_simple_closing_reply(session, message_text)
         if closing_reply:
             analysis.assistant_reply = closing_reply
 

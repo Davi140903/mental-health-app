@@ -279,6 +279,27 @@ class LiaToneTests(unittest.TestCase):
         lowered = main.normalize_for_match(analysis.assistant_reply or "")
         self.assertTrue("fechar por aqui" in lowered or "parar por aqui" in lowered)
 
+    def test_short_topic_answer_can_fill_current_topic(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=3)
+        session.current_topic = "distress_nature"
+
+        main.infer_topic_states(session, "pressao")
+
+        self.assertTrue(session.topic_states["distress_nature"].filled)
+        self.assertEqual(session.topic_states["distress_nature"].value, "pressao")
+
+    def test_simple_closing_reply_sounds_final(self) -> None:
+        session = self.build_session(stage="mood", turn_count=5)
+        main.update_topic_state(session, "main_focus", "cansaco")
+        main.update_topic_state(session, "functional_impact", "sono e energia")
+        main.update_topic_state(session, "frequency_duration", "na maior parte dos dias")
+
+        reply = main.build_simple_closing_reply(session, "na maior parte dos dias")
+        lowered = main.normalize_for_match(reply)
+
+        self.assertIn("podemos fechar por aqui", lowered)
+        self.assertNotIn("pode falar mais", lowered)
+
 
 if __name__ == "__main__":
     unittest.main()
