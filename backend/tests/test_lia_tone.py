@@ -194,6 +194,62 @@ class LiaToneTests(unittest.TestCase):
             "Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
         )
 
+    def test_topic_states_progress_with_user_messages(self) -> None:
+        session = self.build_session(stage="support", turn_count=0)
+
+        main.infer_topic_states(session, "estou cansado com muito trabalho")
+        main.infer_topic_states(session, "isso mexe no meu sono e na minha energia")
+        main.infer_topic_states(session, "ja vem acontecendo na maior parte dos dias")
+
+        self.assertTrue(session.topic_states["main_focus"].filled)
+        self.assertTrue(session.topic_states["functional_impact"].filled)
+        self.assertTrue(session.topic_states["frequency_duration"].filled)
+
+    def test_next_lia_topic_moves_forward(self) -> None:
+        session = self.build_session(stage="support", turn_count=0)
+        main.update_topic_state(session, "opening_state", "cansado")
+        main.update_topic_state(session, "main_focus", "trabalho")
+
+        self.assertEqual(main.next_lia_topic(session), "distress_nature")
+
+    def test_varia_bastante_fills_frequency_and_advances(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=5)
+        session.current_topic = "frequency_duration"
+        session.transcript = [
+            main.LiaTranscriptMessage(role="assistant", content="Oi, Davi. Eu sou a Lia."),
+            main.LiaTranscriptMessage(role="user", content="Estou meio cansado."),
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Entendi. Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+            ),
+            main.LiaTranscriptMessage(
+                role="user",
+                content="Mais na vontade de fazer as coisas. Parece que eu travo antes de comecar.",
+            ),
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Entendi. E nisso tudo, como tem ficado seu sono e sua energia?",
+            ),
+            main.LiaTranscriptMessage(
+                role="user",
+                content="Meu sono ta baguncado e a energia bem baixa. Acordo ja meio sem animo.",
+            ),
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Entendi. Isso tem aparecido na maior parte dos dias ou varia bastante?",
+            ),
+        ]
+        main.update_topic_state(session, "opening_state", "estou meio cansado")
+        main.update_topic_state(session, "main_focus", "cansaco e pouca vontade")
+        main.update_topic_state(session, "distress_nature", "desanimo")
+        main.update_topic_state(session, "functional_impact", "sono, energia e vontade")
+
+        main.infer_topic_states(session, "varia bastante")
+
+        self.assertTrue(session.topic_states["frequency_duration"].filled)
+        self.assertEqual(session.topic_states["frequency_duration"].value, "varia bastante")
+        self.assertNotEqual(main.next_lia_topic(session), "frequency_duration")
+
 
 if __name__ == "__main__":
     unittest.main()

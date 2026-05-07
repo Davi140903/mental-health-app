@@ -60,6 +60,7 @@ from app.schemas import (
     LiaMemorySnapshot,
     LiaRecentInteraction,
     LiaSessionState,
+    LiaTopicState,
     LiaTranscriptMessage,
     LiaTurnInput,
     LiaTurnOut,
@@ -264,6 +265,7 @@ def get_lia_memory_snapshot(db: Session, current_user: User) -> LiaMemorySnapsho
 def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionState:
     return LiaSessionState(
         stage="opening",
+        current_topic="opening_state",
         transcript=[],
         gad7_scores=[None] * 7,
         phq9_scores=[None] * 9,
@@ -515,6 +517,11 @@ def contains_exact_phrase(text_value: str, phrases: list[str]) -> bool:
     return any(re.search(rf"\b{re.escape(phrase)}\b", text_value) for phrase in phrases)
 
 
+def contains_risk_phrase(text_value: str, phrases: list[str]) -> bool:
+    normalized = f" {normalize_for_match(text_value)} "
+    return any(f" {normalize_for_match(phrase)} " in normalized for phrase in phrases)
+
+
 def normalize_for_match(text_value: str) -> str:
     normalized = unicodedata.normalize("NFKD", text_value.lower())
     return normalized.encode("ascii", "ignore").decode("ascii")
@@ -719,6 +726,131 @@ def first_fresh_question(session: LiaSessionState, options: list[str]) -> str:
     return options[0]
 
 
+def remember_question_intent(session: LiaSessionState, intent: str) -> None:
+    session.recent_question_intents = [*session.recent_question_intents[-4:], intent]
+
+
+def recent_intent_count(session: LiaSessionState, intent: str) -> int:
+    return sum(1 for item in session.recent_question_intents[-3:] if item == intent)
+
+
+def update_topic_state(session: LiaSessionState, key: str, value: str | None, confidence: float = 0.7) -> None:
+    if key not in session.topic_states:
+        return
+    cleaned = normalize_optional_text(value)
+    if not cleaned:
+        return
+    session.topic_states[key] = LiaTopicState(
+        filled=True,
+        confidence=max(session.topic_states[key].confidence, confidence),
+        value=cleaned,
+    )
+
+
+def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
+    context = build_lia_context(session, user_message)
+    latest_text = normalize_optional_text(user_message)
+    if not latest_text:
+        return
+
+    update_topic_state(session, "opening_state", latest_text, 0.6)
+
+    if not session.topic_states["main_focus"].filled and (
+        context["work_study"]
+        or context["pressure"]
+        or context["ansiedade"]
+        or context["tristeza"]
+        or context["energia"]
+        or context["interesse"]
+        or contains_any(context["latest_text"], ["critic", "insuficiente", "cobranc", "sobrecarreg", "desanimo"])
+    ):
+        update_topic_state(session, "main_focus", latest_text, 0.8)
+
+    nature_parts: list[str] = []
+    if context["pressure"]:
+        nature_parts.append("pressao")
+    if context["ansiedade"]:
+        nature_parts.append("ansiedade")
+    if context["tristeza"] or context["interesse"]:
+        nature_parts.append("desanimo")
+    if context["energia"] or context["worn_out"]:
+        nature_parts.append("cansaco")
+    if contains_any(context["latest_text"], ["insuficiente", "sem animo", "desanimo", "falta de animo", "me sentir pequeno"]):
+        nature_parts.append("desanimo")
+    if nature_parts:
+        update_topic_state(session, "distress_nature", ", ".join(dict.fromkeys(nature_parts)), 0.8)
+
+    context_parts: list[str] = []
+    if context["work_study"]:
+        context_parts.append("trabalho ou estudos")
+    if context["relationship"]:
+        context_parts.append("relacionamentos")
+    if context["pressure"] and not context_parts:
+        context_parts.append("rotina e cobranca")
+    if context_parts:
+        update_topic_state(session, "distress_context", ", ".join(dict.fromkeys(context_parts)), 0.75)
+    elif contains_any(context["latest_text"], ["critic", "cobranc"]):
+        update_topic_state(session, "distress_context", "criticas e cobranca", 0.7)
+
+    impact_parts: list[str] = []
+    if context["sono"]:
+        impact_parts.append("sono")
+    if context["energia"]:
+        impact_parts.append("energia")
+    if context["interesse"]:
+        impact_parts.append("vontade")
+    if context["tristeza"]:
+        impact_parts.append("humor")
+    if impact_parts:
+        update_topic_state(session, "functional_impact", ", ".join(dict.fromkeys(impact_parts)), 0.85)
+    elif contains_any(context["latest_text"], ["insuficiente", "nao consigo", "sem animo", "sem vontade"]):
+        update_topic_state(session, "functional_impact", latest_text, 0.7)
+
+    if context["duration"]:
+        update_topic_state(session, "frequency_duration", context["duration"], 0.8)
+    elif contains_any(
+        context["latest_text"],
+        [
+            "maior parte dos dias",
+            "todo dia",
+            "quase sempre",
+            "faz tempo",
+            "ultimamente",
+            "varia bastante",
+            "varia",
+            "de vez em quando",
+            "alguns dias sim",
+            "depende do dia",
+        ],
+    ):
+        update_topic_state(session, "frequency_duration", latest_text, 0.75)
+
+    if len(tokenize_for_match(latest_text)) >= 6:
+        update_topic_state(session, "concrete_example", latest_text, 0.65)
+
+    if session.turn_count >= 4 and len(tokenize_for_match(latest_text)) >= 5:
+        update_topic_state(session, "user_summary", latest_text, 0.55)
+
+
+TOPIC_FLOW = [
+    "opening_state",
+    "main_focus",
+    "distress_nature",
+    "distress_context",
+    "functional_impact",
+    "frequency_duration",
+    "concrete_example",
+    "user_summary",
+]
+
+
+def next_lia_topic(session: LiaSessionState) -> str:
+    for topic in TOPIC_FLOW:
+        if not session.topic_states[topic].filled:
+            return topic
+    return "closing"
+
+
 def extract_duration_phrase(text_value: str) -> str | None:
     if contains_any(text_value, ["meses", "alguns meses", "ha meses", "faz meses"]):
         return "ha alguns meses"
@@ -766,7 +898,21 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         ],
     )
     positive = not unwell and (
-        contains_exact_phrase(latest_text, ["estou bem", "to bem", "estou ok", "tudo bem", "mais leve", "tranquilo", "tranquila", "em paz"])
+        contains_exact_phrase(
+            latest_text,
+            [
+                "estou bem",
+                "to bem",
+                "estou ok",
+                "tudo bem",
+                "mais leve",
+                "tranquilo",
+                "tranquila",
+                "em paz",
+                "to melhor",
+                "estou melhor",
+            ],
+        )
     )
     unsure = latest_compact in {
         "nao sei",
@@ -1324,6 +1470,9 @@ def build_contextual_reflection(
     if session.turn_count == 1 and context["positive"]:
         return "Que bom ler isso."
 
+    if context["quick_pass"] and context["positive"]:
+        return "Que bom ler isso."
+
     if session.turn_count == 1 and context["mixed_feeling"]:
         return "Entendi. Parece um daqueles dias em que voce nao esta mal de um jeito claro, mas tambem nao esta leve."
 
@@ -1426,12 +1575,98 @@ def build_contextual_question(
     stage: Literal["support", "anxiety", "mood", "closing"],
 ) -> str | None:
     context = build_lia_context(session, user_message)
+    topic = session.current_topic
+
+    if topic == "closing":
+        remember_question_intent(session, "closing")
+        if context["quick_pass"] or context["positive"]:
+            return "Podemos parar por aqui hoje, se voce quiser."
+        return "Acho que ja consegui montar um retrato bom do que apareceu hoje. Quer encerrar por aqui?"
+
+    if topic == "main_focus":
+        remember_question_intent(session, "main_focus")
+        return first_fresh_question(
+            session,
+            [
+                "O que mais ficou na sua cabeca hoje?",
+                "Se tivesse que apontar uma coisa, o que mais pesou hoje?",
+                "O que mais te pegou nesse dia?",
+            ],
+        )
+
+    if topic == "distress_nature":
+        remember_question_intent(session, "distress_nature")
+        return first_fresh_question(
+            session,
+            [
+                "Isso tem mais cara de cansaco, pressao ou desanimo?",
+                "Se voce fosse dar um nome pra isso agora, o que chegaria mais perto?",
+                "O que parece mais forte nisso: preocupacao, cansaco ou falta de animo?",
+            ],
+        )
+
+    if topic == "distress_context":
+        remember_question_intent(session, "distress_context")
+        return first_fresh_question(
+            session,
+            [
+                "Isso parece vir mais do trabalho, da rotina ou de alguma situacao especifica?",
+                "Voce sente que isso tem mais a ver com o que esta acontecendo no seu dia ou com algo que ja vem se acumulando?",
+                "Quando voce pensa nisso, o que mais aparece junto: rotina, cobranca ou alguma situacao concreta?",
+            ],
+        )
+
+    if topic == "functional_impact":
+        remember_question_intent(session, "functional_impact")
+        return first_fresh_question(
+            session,
+            [
+                "Onde isso mais bate em voce: sono, energia, vontade ou foco?",
+                "O que isso mais mexe no seu dia a dia agora?",
+                "No fim das contas, isso pesa mais no seu corpo, na sua energia ou na sua vontade de fazer as coisas?",
+            ],
+        )
+
+    if topic == "frequency_duration":
+        remember_question_intent(session, "frequency_duration")
+        return first_fresh_question(
+            session,
+            [
+                "Isso foi mais de hoje ou ja vem de outros dias?",
+                "Tem quanto tempo que isso ta te acompanhando desse jeito?",
+                "Isso aparece so em alguns momentos ou ja vem ficando frequente?",
+            ],
+        )
+
+    if topic == "concrete_example":
+        remember_question_intent(session, "concrete_example")
+        return first_fresh_question(
+            session,
+            [
+                "Teve alguma situacao recente que resume bem isso?",
+                "Se voce quiser, me da um exemplo pequeno de quando isso bateu mais forte.",
+                "Tem alguma cena do seu dia que mostra bem como isso apareceu?",
+            ],
+        )
+
+    if topic == "user_summary":
+        remember_question_intent(session, "user_summary")
+        return first_fresh_question(
+            session,
+            [
+                "Se eu fosse resumir o que voce me contou ate aqui, o que nao poderia faltar?",
+                "Antes de fechar, tem alguma parte disso que voce acha importante nao deixar passar?",
+                "O que voce gostaria que ficasse mais claro sobre esse momento?",
+            ],
+        )
 
     if context["unsure"]:
         return None
 
     if stage == "support":
         if context["positive"]:
+            if context["quick_pass"]:
+                return "Podemos deixar por aqui hoje, se voce quiser."
             return "Quer so passar aqui rapidinho hoje ou tem algo que voce queira dividir mesmo assim?"
         if context["mixed_feeling"]:
             return "O que mais te pegou hoje?"
@@ -1543,6 +1778,8 @@ def build_contextual_support(
     if stage == "support":
         if context["positive"]:
             return "Se hoje estiver mais leve, tudo bem deixar isso ser so um respiro mesmo."
+        if context["quick_pass"]:
+            return "Tudo bem passar por aqui so pra dar um respiro."
         if context["mixed_feeling"]:
             return "Nao precisa definir o dia inteiro agora. A gente pode olhar so a parte que mais ficou com voce."
         if context["creative"]:
@@ -1585,9 +1822,17 @@ def should_close_lia_session(
         return True
 
     if effective_stage not in {"anxiety", "mood", "closing"}:
+        if session.current_topic == "closing" and count_meaningful_user_messages(session) >= 2:
+            return True
         return False
 
     if not enough_distress_data:
+        if session.current_topic == "closing" and count_meaningful_user_messages(session) >= 3:
+            return True
+        return False
+
+    required_topics = ["main_focus", "distress_nature", "functional_impact", "frequency_duration"]
+    if any(not session.topic_states[key].filled for key in required_topics):
         return False
 
     meaningful_messages = count_meaningful_user_messages(session)
@@ -1598,7 +1843,7 @@ def should_close_lia_session(
     if not topics and sum(score or 0 for score in session.gad7_scores + session.phq9_scores) < 4:
         return False
 
-    return bool(analysis.ready_to_close or session.turn_count >= 6)
+    return bool(session.current_topic == "closing" or analysis.ready_to_close or session.turn_count >= 6)
 
 
 def ensure_lia_continuation(
@@ -1635,6 +1880,22 @@ def ensure_lia_continuation(
         )
     analysis.next_question = fallback_question
     return analysis
+
+
+def sync_lia_stage(session: LiaSessionState, analysis: LiaAnalysis) -> None:
+    session.current_topic = next_lia_topic(session)
+    if session.current_topic == "closing":
+        session.stage = "closing"
+        return
+
+    if session.current_topic in {"opening_state", "main_focus", "distress_context", "concrete_example", "user_summary"}:
+        session.stage = "support"
+    elif session.current_topic in {"distress_nature", "frequency_duration"}:
+        session.stage = "anxiety"
+    else:
+        session.stage = "mood"
+
+    analysis.recommended_stage = session.stage
 
 
 def join_reply_parts(reflection: str, support: str | None = None, question: str | None = None) -> str:
@@ -2352,7 +2613,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         )
 
     risk_level: Literal["none", "attention", "urgent"] = "none"
-    if any(term in text_value for term in ["me matar", "suicid", "sumir", "nao quero viver", "me machucar"]):
+    if contains_risk_phrase(text_value, ["me matar", "suicid", "sumir", "nao quero viver", "me machucar"]):
         risk_level = "urgent"
 
     if any(term in text_value for term in ["ansios", "nervos", "tenso", "panico", "preocup"]):
@@ -2386,7 +2647,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         phq9_scores[6] = 2
     if any(term in text_value for term in ["devagar", "travado", "agitado"]):
         phq9_scores[7] = 1
-    if any(term in text_value for term in ["morrer", "sumir", "nao queria estar aqui", "me machucar"]):
+    if contains_risk_phrase(text_value, ["morrer", "sumir", "nao queria estar aqui", "me machucar"]):
         phq9_scores[8] = 2
         risk_level = "urgent"
 
@@ -3651,6 +3912,8 @@ def lia_message(
     session.clarification_streak = 0
     session.turn_count += 1
     using_ollama = False
+    infer_topic_states(session, message_text)
+    session.current_topic = next_lia_topic(session)
 
     context = build_lia_context(session, message_text)
 
@@ -3685,6 +3948,7 @@ def lia_message(
         session.mood_value = analysis.mood_value
 
     effective_stage = infer_effective_stage(session, analysis, message_text)
+    sync_lia_stage(session, analysis)
     gad_answered = count_answered_scores(session.gad7_scores)
     phq_answered = count_answered_scores(session.phq9_scores)
     gad_positive = count_positive_scores(session.gad7_scores)
@@ -3740,10 +4004,11 @@ def lia_message(
 
     if should_close:
         session.stage = "closing"
+        session.current_topic = "closing"
         session.focus_kind = "phq9"
         session.completed = True
     else:
-        recommended_stage = effective_stage
+        recommended_stage = analysis.recommended_stage
         session.stage = recommended_stage
         if session.stage == "anxiety":
             session.focus_kind = "gad7"

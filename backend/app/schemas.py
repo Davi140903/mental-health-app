@@ -149,6 +149,12 @@ class LiaRecentInteraction(BaseModel):
     topics: list[str] = Field(default_factory=list)
 
 
+class LiaTopicState(BaseModel):
+    filled: bool = False
+    confidence: float = Field(default=0, ge=0, le=1)
+    value: str | None = None
+
+
 class LiaMemorySnapshot(BaseModel):
     summary: str | None = None
     recent_summary: str | None = None
@@ -163,6 +169,17 @@ class LiaMemorySnapshot(BaseModel):
 
 class LiaSessionState(BaseModel):
     stage: Literal["opening", "support", "anxiety", "mood", "closing"] = "opening"
+    current_topic: Literal[
+        "opening_state",
+        "main_focus",
+        "distress_nature",
+        "distress_context",
+        "functional_impact",
+        "frequency_duration",
+        "concrete_example",
+        "user_summary",
+        "closing",
+    ] = "opening_state"
     turn_count: int = Field(default=0, ge=0, le=12)
     clarification_streak: int = Field(default=0, ge=0, le=6)
     transcript: list[LiaTranscriptMessage] = Field(default_factory=list)
@@ -175,6 +192,19 @@ class LiaSessionState(BaseModel):
     saved_mood: bool = False
     pause_offer_pending: bool = False
     pause_used: bool = False
+    recent_question_intents: list[str] = Field(default_factory=list)
+    topic_states: dict[str, LiaTopicState] = Field(
+        default_factory=lambda: {
+            "opening_state": LiaTopicState(),
+            "main_focus": LiaTopicState(),
+            "distress_nature": LiaTopicState(),
+            "distress_context": LiaTopicState(),
+            "functional_impact": LiaTopicState(),
+            "frequency_duration": LiaTopicState(),
+            "concrete_example": LiaTopicState(),
+            "user_summary": LiaTopicState(),
+        }
+    )
     memory: LiaMemorySnapshot = Field(default_factory=LiaMemorySnapshot)
 
 

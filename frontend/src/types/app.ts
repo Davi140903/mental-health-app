@@ -2,6 +2,16 @@ import type { Usuario } from './auth';
 
 export type QuestionnaireKind = 'phq9' | 'gad7';
 export type LiaStage = 'opening' | 'support' | 'anxiety' | 'mood' | 'closing';
+export type LiaTopicKey =
+  | 'opening_state'
+  | 'main_focus'
+  | 'distress_nature'
+  | 'distress_context'
+  | 'functional_impact'
+  | 'frequency_duration'
+  | 'concrete_example'
+  | 'user_summary'
+  | 'closing';
 
 export interface MoodEntry {
   id: string;
@@ -91,6 +101,12 @@ export interface LiaRecentInteraction {
   topics: string[];
 }
 
+export interface LiaTopicState {
+  filled: boolean;
+  confidence: number;
+  value: string | null;
+}
+
 export interface LiaMemorySnapshot {
   summary: string | null;
   recent_summary: string | null;
@@ -105,6 +121,7 @@ export interface LiaMemorySnapshot {
 
 export interface LiaSession {
   stage: LiaStage;
+  current_topic: LiaTopicKey;
   turn_count: number;
   clarification_streak?: number;
   transcript: LiaTranscriptMessage[];
@@ -117,6 +134,8 @@ export interface LiaSession {
   saved_mood: boolean;
   pause_offer_pending?: boolean;
   pause_used?: boolean;
+  recent_question_intents?: string[];
+  topic_states: Record<string, LiaTopicState>;
   memory: LiaMemorySnapshot;
 }
 
