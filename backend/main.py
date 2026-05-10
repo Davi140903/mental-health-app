@@ -3612,11 +3612,11 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
 def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
-    if context["sleep"] or context["energy"]:
+    if context["sono"] or context["energia"]:
         return "Entendi. Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
-    if context["irritability"]:
+    if context["irritabilidade"]:
         return "Entendi. Essa irritacao junto com o afastamento parece ser uma parte importante do que ficou. Quando voce percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciencia com as pessoas?"
-    if context["worry"] or context["anxiety"]:
+    if context["controlar"] or context["ansiedade"]:
         return "Entendi. Essa cabeca que nao desliga parece estar acompanhando voce depois do trabalho tambem. O que costuma ficar repetindo mais quando voce chega em casa?"
     return "Entendi. Pode me contar so mais esse pedaco. O que voce acha importante a Lia guardar sobre isso?"
 
@@ -4471,6 +4471,28 @@ def lia_message(
     session.current_topic = next_lia_topic(session)
 
     context = build_lia_context(session, message_text)
+
+    if session.followup_mode:
+        remaining_turns = max(int(session.followup_turns_left or 0) - 1, 0)
+        session.followup_turns_left = remaining_turns
+
+        if remaining_turns > 0:
+            assistant_text = build_followup_continuation_reply(session, message_text)
+            session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+            refresh_dashboard = save_lia_session_draft(db, current_user, session)
+            return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
+
+        assistant_text = build_simple_closing_reply(session, message_text)
+        session.stage = "closing"
+        session.current_topic = "closing"
+        session.focus_kind = "phq9"
+        session.completed = True
+        session.followup_mode = False
+        session.followup_turns_left = 0
+        session.followup_finished = True
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        refresh_dashboard = save_lia_session_results(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     if session.pause_offer_pending:
         session.pause_offer_pending = False
