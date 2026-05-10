@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy import inspect, select, text
+from sqlalchemy import inspect, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -4225,14 +4225,40 @@ def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | Non
     )
 
 
-def ensure_default_triage_slots(db: Session) -> None:
-    existing_slot = db.scalar(select(PsychologistSlot.id).limit(1))
-    if existing_slot:
+def ensure_triage_slots(db: Session) -> None:
+    psychologists = db.scalars(select(User).where(User.role == "psychologist").order_by(User.nome.asc())).all()
+    psychologist_names = [user.nome.strip() for user in psychologists if normalize_optional_text(user.nome)]
+    if not psychologist_names:
         return
 
+    valid_names = set(psychologist_names)
     now = utcnow().replace(minute=0, second=0, microsecond=0)
+
+    stale_available_slots = db.scalars(
+        select(PsychologistSlot)
+        .where(PsychologistSlot.available.is_(True))
+        .where(PsychologistSlot.starts_at >= now)
+    ).all()
+    changed = False
+    for slot in stale_available_slots:
+        if slot.psychologist_name not in valid_names:
+            db.delete(slot)
+            changed = True
+
+    if changed:
+        db.commit()
+
+    future_slots = db.scalars(
+        select(PsychologistSlot)
+        .where(PsychologistSlot.starts_at >= now)
+        .where(PsychologistSlot.psychologist_name.in_(psychologist_names))
+    ).all()
+    existing_keys = {(slot.psychologist_name, ensure_utc(slot.starts_at)) for slot in future_slots}
+    available_count = sum(1 for slot in future_slots if slot.available)
+    if available_count >= 12:
+        return
+
     start_base = now + timedelta(days=1)
-    psychologist_names = ["Dra. Helena", "Dr. Caio", "Dra. Marina"]
     slots: list[PsychologistSlot] = []
 
     for day_offset in range(0, 6):
@@ -4240,15 +4266,19 @@ def ensure_default_triage_slots(db: Session) -> None:
         for hour in (9, 11, 14, 16):
             slot_start = day.replace(hour=hour)
             slot_end = slot_start + timedelta(minutes=50)
-            psychologist_name = psychologist_names[(day_offset + hour) % len(psychologist_names)]
-            slots.append(
-                PsychologistSlot(
-                    psychologist_name=psychologist_name,
-                    starts_at=slot_start,
-                    ends_at=slot_end,
-                    available=True,
+            for psychologist_name in psychologist_names:
+                key = (psychologist_name, ensure_utc(slot_start))
+                if key in existing_keys:
+                    continue
+                slots.append(
+                    PsychologistSlot(
+                        psychologist_name=psychologist_name,
+                        starts_at=slot_start,
+                        ends_at=slot_end,
+                        available=True,
+                    )
                 )
-            )
+                existing_keys.add(key)
 
     db.add_all(slots)
     db.commit()
@@ -4816,10 +4846,11 @@ def list_triage_slots(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[TriageSlotOut]:
-    ensure_default_triage_slots(db)
+    ensure_triage_slots(db)
     slots = db.scalars(
         select(PsychologistSlot)
         .where(PsychologistSlot.available.is_(True))
+        .where(PsychologistSlot.starts_at >= utcnow())
         .order_by(PsychologistSlot.starts_at.asc())
         .limit(12)
     ).all()
@@ -4917,6 +4948,14 @@ def list_psychologist_triage_requests(
         .order_by(TriageRequest.requested_at.desc())
         .limit(80)
     )
+
+    if has_role(current_user, "psychologist") and not has_role(current_user, "admin"):
+        query = query.where(
+            or_(
+                TriageRequest.status == "pending",
+                TriageRequest.psychologist_name == current_user.nome,
+            )
+        )
 
     if status_filter:
         normalized_status = normalize_optional_text(status_filter)
