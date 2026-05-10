@@ -6,6 +6,7 @@ import type {
   LiaTurnResponse,
   MoodEntry,
   MoodEntryCreate,
+  PsychologistTriageRequest,
   QuestionnaireKind,
   QuestionnaireResult,
   QuestionnaireSubmission,
@@ -80,6 +81,13 @@ export const appService = {
     const response = await api.post<TriageRequest>('/triage/schedule', {
       request_id: requestId,
       slot_id: slotId,
+    });
+    return response.data;
+  },
+
+  async listPsychologistTriageRequests(status?: string): Promise<PsychologistTriageRequest[]> {
+    const response = await api.get<PsychologistTriageRequest[]>('/psychologist/triage-requests', {
+      params: status ? { status } : undefined,
     });
     return response.data;
   },

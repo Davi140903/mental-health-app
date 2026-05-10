@@ -81,6 +81,7 @@ from app.schemas import (
     TriageRequestOut,
     TriageScheduleInput,
     TriageSlotOut,
+    PsychologistTriageRequestOut,
     UsuarioCreate,
     UsuarioOut,
 )
@@ -4149,6 +4150,23 @@ def build_triage_request_out(request: TriageRequest | None) -> TriageRequestOut 
     )
 
 
+def build_psychologist_triage_request_out(
+    request: TriageRequest,
+    user: User,
+    interaction: LiaInteraction | None,
+) -> PsychologistTriageRequestOut:
+    return PsychologistTriageRequestOut(
+        id=request.id,
+        status=request.status,
+        requested_at=ensure_utc(request.requested_at),
+        scheduled_for=ensure_utc(request.scheduled_for) if request.scheduled_for else None,
+        psychologist_name=normalize_optional_text(request.psychologist_name),
+        notes=normalize_optional_text(request.notes),
+        user=UsuarioOut.model_validate(user),
+        interaction=build_lia_recent_interaction(interaction) if interaction else None,
+    )
+
+
 def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | None:
     return db.scalar(
         select(TriageRequest)
@@ -4758,5 +4776,30 @@ def schedule_triage_request(
     db.commit()
     db.refresh(request)
     return build_triage_request_out(request)
+
+
+@app.get("/psychologist/triage-requests", response_model=list[PsychologistTriageRequestOut])
+def list_psychologist_triage_requests(
+    status_filter: str | None = Query(default=None, alias="status"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[PsychologistTriageRequestOut]:
+    allowed_statuses = {"pending", "scheduled", "completed", "cancelled"}
+    query = (
+        select(TriageRequest, User, LiaInteraction)
+        .join(User, TriageRequest.usuario_id == User.id)
+        .outerjoin(LiaInteraction, TriageRequest.lia_interaction_id == LiaInteraction.id)
+        .order_by(TriageRequest.requested_at.desc())
+        .limit(80)
+    )
+
+    if status_filter:
+        normalized_status = normalize_optional_text(status_filter)
+        if normalized_status not in allowed_statuses:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status de triagem invalido.")
+        query = query.where(TriageRequest.status == normalized_status)
+
+    rows = db.execute(query).all()
+    return [build_psychologist_triage_request_out(request, user, interaction) for request, user, interaction in rows]
 
 

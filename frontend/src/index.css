@@ -759,6 +759,261 @@ a {
   min-width: 0;
 }
 
+.psychologist-app-shell {
+  min-height: 100vh;
+  color: #243b49;
+  background:
+    radial-gradient(circle at top, rgba(205, 226, 239, 0.7), transparent 34%),
+    linear-gradient(180deg, #f6fbfd 0%, #eaf4f8 100%);
+}
+
+.psychologist-topbar,
+.psychologist-page {
+  width: min(1080px, calc(100% - 1.5rem));
+  margin: 0 auto;
+}
+
+.psychologist-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 0 1rem;
+}
+
+.psychologist-topbar h1 {
+  margin: 0.3rem 0 0.1rem;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.psychologist-topbar p {
+  margin: 0;
+  color: #5f7480;
+}
+
+.role-pill,
+.status-badge,
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.role-pill {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #dcecf4;
+  color: #315d74;
+}
+
+.psychologist-ghost-button {
+  background: rgba(70, 127, 157, 0.1);
+  color: #315d74;
+  border: 1px solid rgba(70, 127, 157, 0.14);
+}
+
+.psychologist-ghost-button:hover:enabled {
+  background: rgba(70, 127, 157, 0.18);
+}
+
+.psychologist-page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 2.75rem;
+}
+
+.psychologist-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.psychologist-metric,
+.psychologist-workspace,
+.triage-request-card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(56, 104, 130, 0.1);
+  box-shadow: 0 18px 45px rgba(53, 91, 111, 0.08);
+}
+
+.psychologist-metric,
+.triage-request-card {
+  border-radius: 18px;
+}
+
+.psychologist-metric {
+  padding: 1.15rem;
+}
+
+.psychologist-metric span,
+.field-label {
+  color: #617783;
+}
+
+.psychologist-metric strong {
+  display: block;
+  margin: 0.2rem 0;
+  color: #243b49;
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.psychologist-metric p {
+  margin: 0;
+  color: #617783;
+}
+
+.psychologist-workspace {
+  border-radius: 22px;
+  padding: 1.2rem;
+}
+
+.psychologist-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.psychologist-toolbar h2 {
+  margin-bottom: 0.2rem;
+}
+
+.psychologist-toolbar p {
+  margin: 0;
+  color: #617783;
+}
+
+.segmented-control {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: #e6f2f7;
+  border: 1px solid rgba(70, 127, 157, 0.12);
+}
+
+.segmented-control button {
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: transparent;
+  color: #527083;
+}
+
+.segmented-control button.active {
+  background: #ffffff;
+  color: #285872;
+  box-shadow: 0 8px 20px rgba(53, 91, 111, 0.08);
+}
+
+.triage-request-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.triage-request-card {
+  padding: 1rem;
+}
+
+.triage-request-header,
+.triage-request-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.triage-request-header {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.32fr);
+  align-items: start;
+  margin-bottom: 0.9rem;
+}
+
+.triage-request-header h3 {
+  margin: 0.35rem 0 0.1rem;
+}
+
+.triage-request-header p,
+.triage-time span,
+.triage-time strong,
+.triage-request-grid p,
+.triage-report p {
+  margin: 0;
+}
+
+.triage-request-header p,
+.triage-time span,
+.triage-request-grid p,
+.triage-report p {
+  color: #5f7480;
+}
+
+.triage-time {
+  text-align: right;
+}
+
+.triage-time strong {
+  display: block;
+  color: #243b49;
+}
+
+.status-badge {
+  padding: 0.32rem 0.58rem;
+  border-radius: 999px;
+}
+
+.status-pending {
+  background: #fff5d9;
+  color: #856420;
+}
+
+.status-scheduled {
+  background: #dcecf4;
+  color: #315d74;
+}
+
+.status-completed {
+  background: #e6f2ea;
+  color: #3f7152;
+}
+
+.status-cancelled {
+  background: #f8e5e3;
+  color: #8a4b43;
+}
+
+.triage-request-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0.8rem 0;
+  border-top: 1px solid rgba(56, 104, 130, 0.1);
+  border-bottom: 1px solid rgba(56, 104, 130, 0.1);
+}
+
+.triage-report {
+  padding-top: 0.85rem;
+}
+
+.triage-report p {
+  margin-top: 0.25rem;
+}
+
+.triage-topic-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.triage-topic-row span {
+  padding: 0.32rem 0.58rem;
+  border-radius: 999px;
+  background: #eef6fa;
+  color: #537284;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .focus-card,
 .question-card,
 .result-card,
@@ -1035,15 +1290,29 @@ a {
   .split-layout,
   .split-fields,
   .metric-strip,
-  .lia-action-row {
+  .lia-action-row,
+  .psychologist-summary-grid,
+  .triage-request-header,
+  .triage-request-grid {
     grid-template-columns: 1fr;
+  }
+
+  .triage-time {
+    text-align: left;
   }
 }
 
 @media (max-width: 720px) {
-  .topbar {
+  .topbar,
+  .psychologist-topbar,
+  .psychologist-toolbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .segmented-control {
+    width: 100%;
+    overflow-x: auto;
   }
 
   .companion-header {
@@ -1070,7 +1339,9 @@ a {
 
   .page-container,
   .topbar,
-  .nav-strip {
+  .nav-strip,
+  .psychologist-topbar,
+  .psychologist-page {
     width: min(100%, calc(100% - 1rem));
   }
 }

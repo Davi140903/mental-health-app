@@ -174,3 +174,14 @@ export interface TriageRequest {
   slot_id?: number | null;
   lia_interaction_id?: string | null;
 }
+
+export interface PsychologistTriageRequest {
+  id: string;
+  status: string;
+  requested_at: string;
+  scheduled_for?: string | null;
+  psychologist_name?: string | null;
+  notes?: string | null;
+  user: Usuario;
+  interaction?: LiaRecentInteraction | null;
+}

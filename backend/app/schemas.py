@@ -268,6 +268,17 @@ class TriageRequestOut(BaseModel):
     lia_interaction_id: str | None = None
 
 
+class PsychologistTriageRequestOut(BaseModel):
+    id: str
+    status: str
+    requested_at: datetime
+    scheduled_for: datetime | None = None
+    psychologist_name: str | None = None
+    notes: str | None = None
+    user: UsuarioOut
+    interaction: LiaRecentInteraction | None = None
+
+
 class LiaAnalysis(BaseModel):
     assistant_reply: str | None = Field(default=None, max_length=600)
     reflection: str = Field(min_length=1, max_length=400)

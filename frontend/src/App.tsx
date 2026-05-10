@@ -9,6 +9,7 @@ import Panel from './pages/Panel';
 import RecoverLogin from './pages/RecoverLogin';
 import PHQ9 from './pages/PHQ9';
 import Profile from './pages/Profile';
+import PsychologistDashboard from './pages/PsychologistDashboard';
 import Register from './pages/Register';
 import Contents from './pages/Contents';
 import DashboardChat from './pages/DashboardChat';
@@ -84,6 +85,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/psicologo"
+        element={
+          <PrivateRoute>
+            <PsychologistDashboard />
           </PrivateRoute>
         }
       />
