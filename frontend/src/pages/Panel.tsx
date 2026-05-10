@@ -144,20 +144,82 @@ export default function Panel() {
             <strong className="stat-value">{data.estatisticas.total_conversas_lia}</strong>
             <p>Historico que ajuda a dar continuidade ao seu cuidado.</p>
           </article>
-
-          <article className="section-card panel-stat-card">
-            <span className="stat-label">Triagens recentes</span>
-            <strong className="stat-value">{data.estatisticas.triagens_realizadas}</strong>
-            <p>Registros breves que ajudam a acompanhar como voce vem passando pelos dias.</p>
-          </article>
-        </section>
-
-        <section className="dashboard-grid">
           <article className="section-card">
             <div className="section-heading">
               <div>
-                <h3>Como esse periodo aparece no seu historico</h3>
-                <p className="section-copy">Um resumo simples do que mais vem aparecendo no seu acompanhamento.</p>
+                <h3>Cuidados que podem fazer sentido agora</h3>
+                <p className="section-copy">Sugestoes simples com base no que ja apareceu no seu acompanhamento.</p>
+              </div>
+            </div>
+
+            <div className="stack-list">
+              {data.recomendacoes.map((item) => (
+                <div key={`${item.titulo}-${item.prioridade}`} className="recommendation-card">
+                  <div className="recommendation-header">
+                    <strong>{item.titulo}</strong>
+                    <span className={`priority-tag ${item.prioridade}`}>{item.prioridade}</span>
+                  </div>
+                  <p>{item.descricao}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="panel-content-grid">
+          <article className="section-card">
+            <div className="section-heading">
+              <div>
+                <h3>Ultimas conversas com a Lia</h3>
+                <p className="section-copy">Trechos resumidos para voce lembrar do que ja foi dito por aqui, sem pesar demais.</p>
+              </div>
+            </div>
+
+            {data.memoria_lia.recent_conversations.length ? (
+              <div className="stack-list">
+                {data.memoria_lia.recent_conversations.map((item) => (
+                  <div key={`${item.created_at}-${item.summary}`} className="compact-card">
+                    <div className="recommendation-header">
+                      <strong>{formatDate(item.created_at)}</strong>
+                      {item.opening_value ? <span className="pill subtle">{item.opening_value}</span> : null}
+                    </div>
+                    <p>{item.summary}</p>
+                    {item.report ? <p className="panel-secondary-copy">{item.report}</p> : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">Depois das suas conversas com a Lia, os resumos mais importantes vao aparecer aqui.</div>
+            )}
+          </article>
+
+          <article className="section-card">
+            <div className="section-heading">
+              <div>
+                <h3>Conteudos para seguir por perto</h3>
+                <p className="section-copy">Sugestoes escolhidas a partir do que ja apareceu na sua jornada.</p>
+              </div>
+            </div>
+
+            <div className="stack-list">
+              {data.conteudos_em_destaque.map((content) => (
+                <div key={content.slug} className="compact-card">
+                  <div className="recommendation-header">
+                    <strong>{content.titulo}</strong>
+                    <span className="pill">{content.categoria}</span>
+                  </div>
+                  <p>{content.resumo}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="panel-content-grid">
+          <article className="section-card">
+            <div className="section-heading">
+              <div>
+                <h3>Um resumo simples do que mais vem aparecendo no seu acompanhamento.</h3>
               </div>
             </div>
 
@@ -232,107 +294,6 @@ export default function Panel() {
             <div className="summary-block calm-card">
               <span className="stat-label">Memoria breve da Lia</span>
               <p>{periodSummary}</p>
-            </div>
-          </article>
-        </section>
-
-        <section className="dashboard-grid">
-          <article className="section-card">
-            <div className="section-heading">
-              <div>
-                <h3>Historico de humor</h3>
-                <p className="section-copy">Uma leitura visual simples para acompanhar seus registros mais recentes.</p>
-              </div>
-            </div>
-
-            {data.historico_humor.length ? (
-              <div className="chart-bars compact-chart">
-                {data.historico_humor.map((point) => (
-                  <div key={`${point.data}-${point.valor}`} className="chart-bar-item">
-                    <div className="chart-bar-track">
-                      <div
-                        className="chart-bar-fill"
-                        style={{ height: `${Math.max(18, (point.valor / 5) * 100)}%` }}
-                        title={`${point.data}: ${point.valor}`}
-                      />
-                    </div>
-                    <strong>{point.valor}</strong>
-                    <span className="stat-label">{point.data}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">Seus registros de humor vao aparecer aqui conforme voce salvar novos apontamentos.</div>
-            )}
-          </article>
-
-          <article className="section-card">
-            <div className="section-heading">
-              <div>
-                <h3>Cuidados que podem fazer sentido agora</h3>
-                <p className="section-copy">Sugestoes simples com base no que ja apareceu no seu acompanhamento.</p>
-              </div>
-            </div>
-
-            <div className="stack-list">
-              {data.recomendacoes.map((item) => (
-                <div key={`${item.titulo}-${item.prioridade}`} className="recommendation-card">
-                  <div className="recommendation-header">
-                    <strong>{item.titulo}</strong>
-                    <span className={`priority-tag ${item.prioridade}`}>{item.prioridade}</span>
-                  </div>
-                  <p>{item.descricao}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="dashboard-grid">
-          <article className="section-card">
-            <div className="section-heading">
-              <div>
-                <h3>Ultimas conversas com a Lia</h3>
-                <p className="section-copy">Trechos resumidos para voce lembrar do que ja foi dito por aqui, sem pesar demais.</p>
-              </div>
-            </div>
-
-            {data.memoria_lia.recent_conversations.length ? (
-              <div className="stack-list">
-                {data.memoria_lia.recent_conversations.map((item) => (
-                  <div key={`${item.created_at}-${item.summary}`} className="compact-card">
-                    <div className="recommendation-header">
-                      <strong>{formatDate(item.created_at)}</strong>
-                      {item.opening_value ? <span className="pill subtle">{item.opening_value}</span> : null}
-                    </div>
-                    <p>{item.summary}</p>
-                    {item.report ? <p className="panel-secondary-copy">{item.report}</p> : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">Depois das suas conversas com a Lia, os resumos mais importantes vao aparecer aqui.</div>
-            )}
-          </article>
-
-          <article className="section-card">
-            <div className="section-heading">
-              <div>
-                <h3>Conteudos para seguir por perto</h3>
-                <p className="section-copy">Sugestoes escolhidas a partir do que ja apareceu na sua jornada.</p>
-              </div>
-            </div>
-
-            <div className="stack-list">
-              {data.conteudos_em_destaque.map((content) => (
-                <div key={content.slug} className="compact-card">
-                  <div className="recommendation-header">
-                    <strong>{content.titulo}</strong>
-                    <span className="pill">{content.categoria}</span>
-                  </div>
-                  <p>{content.resumo}</p>
-                </div>
-              ))}
             </div>
           </article>
         </section>
