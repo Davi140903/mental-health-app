@@ -7,6 +7,7 @@ import type {
   MoodEntry,
   MoodEntryCreate,
   PsychologistTriageRequest,
+  PsychologistPatientDetail,
   AdminPsychologistInput,
   QuestionnaireKind,
   QuestionnaireResult,
@@ -91,6 +92,11 @@ export const appService = {
     const response = await api.get<PsychologistTriageRequest[]>('/psychologist/triage-requests', {
       params: status ? { status } : undefined,
     });
+    return response.data;
+  },
+
+  async getPsychologistPatientDetail(requestId: string): Promise<PsychologistPatientDetail> {
+    const response = await api.get<PsychologistPatientDetail>(`/psychologist/triage-requests/${requestId}/patient`);
     return response.data;
   },
 

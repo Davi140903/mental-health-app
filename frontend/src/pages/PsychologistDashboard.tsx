@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
-import type { PsychologistTriageRequest } from '../types/app';
+import type { PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
 
 const statusOptions = [
   { value: '', label: 'Todos' },
@@ -44,6 +44,22 @@ function extractMainText(request: PsychologistTriageRequest) {
   return source.length > 520 ? `${source.slice(0, 520).trim()}...` : source;
 }
 
+function questionnaireLabel(result: QuestionnaireResult) {
+  return result.tipo === 'phq9' ? 'PHQ-9' : 'GAD-7';
+}
+
+function moodLabel(value: number) {
+  const labels: Record<number, string> = {
+    1: 'Muito dificil',
+    2: 'Pesado',
+    3: 'Instavel',
+    4: 'Mais favoravel',
+    5: 'Bem',
+  };
+
+  return labels[value] ?? `${value}/5`;
+}
+
 export default function PsychologistDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +67,10 @@ export default function PsychologistDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [patientDetail, setPatientDetail] = useState<PsychologistPatientDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -88,6 +108,29 @@ export default function PsychologistDashboard() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleSelectRequest = async (request: PsychologistTriageRequest) => {
+    if (selectedRequestId === request.id) {
+      setSelectedRequestId(null);
+      setPatientDetail(null);
+      setDetailError('');
+      return;
+    }
+
+    setSelectedRequestId(request.id);
+    setDetailLoading(true);
+    setDetailError('');
+
+    try {
+      const detail = await appService.getPsychologistPatientDetail(request.id);
+      setPatientDetail(detail);
+    } catch {
+      setPatientDetail(null);
+      setDetailError('Nao foi possivel abrir os detalhes deste paciente agora.');
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   return (
@@ -155,8 +198,12 @@ export default function PsychologistDashboard() {
 
           <div className="triage-request-list">
             {requests.map((request) => (
-              <article key={request.id} className="triage-request-card">
-                <div className="triage-request-header">
+              <article
+                key={request.id}
+                className={`triage-request-card ${selectedRequestId === request.id ? 'active' : ''}`}
+              >
+                <button type="button" className="triage-request-main" onClick={() => void handleSelectRequest(request)}>
+                  <div className="triage-request-header">
                   <div>
                     <span className={`status-badge status-${request.status}`}>{statusLabel(request.status)}</span>
                     <h3>{request.user.nome}</h3>
@@ -194,6 +241,107 @@ export default function PsychologistDashboard() {
                     {request.interaction.topics.slice(0, 6).map((topic) => (
                       <span key={topic}>{topic}</span>
                     ))}
+                  </div>
+                ) : null}
+                </button>
+
+                {selectedRequestId === request.id ? (
+                  <div className="patient-detail-panel">
+                    {detailLoading ? <div className="empty-state">Abrindo detalhes do paciente...</div> : null}
+                    {detailError ? <div className="alert error">{detailError}</div> : null}
+
+                    {!detailLoading && patientDetail ? (
+                      <>
+                        <div className="patient-detail-header">
+                          <div>
+                            <span className="field-label">Preparacao para primeira consulta</span>
+                            <h4>{patientDetail.user.nome}</h4>
+                            <p>{patientDetail.user.email}</p>
+                          </div>
+                          <div className="triage-time">
+                            <span>Gerado em</span>
+                            <strong>{formatDateTime(patientDetail.generated_at)}</strong>
+                          </div>
+                        </div>
+
+                        <div className="patient-detail-grid">
+                          <section className="patient-detail-card wide">
+                            <span className="field-label">Relatorio da Lia</span>
+                            <p>
+                              {patientDetail.current_request.interaction?.report ??
+                                patientDetail.current_request.interaction?.summary ??
+                                'Ainda nao ha um relatorio detalhado da Lia para este pedido.'}
+                            </p>
+                          </section>
+
+                          <section className="patient-detail-card">
+                            <span className="field-label">Memoria breve</span>
+                            <p>
+                              {patientDetail.lia_memory.recent_summary ??
+                                patientDetail.lia_memory.summary ??
+                                'Ainda ha pouco historico acumulado deste paciente.'}
+                            </p>
+                            {patientDetail.lia_memory.topics.length ? (
+                              <div className="triage-topic-row compact-tags">
+                                {patientDetail.lia_memory.topics.slice(0, 8).map((topic) => (
+                                  <span key={topic}>{topic}</span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </section>
+
+                          <section className="patient-detail-card">
+                            <span className="field-label">Triagens recentes</span>
+                            {patientDetail.questionnaires.length ? (
+                              <div className="patient-mini-list">
+                                {patientDetail.questionnaires.slice(0, 5).map((item) => (
+                                  <div key={item.id}>
+                                    <strong>{questionnaireLabel(item)}</strong>
+                                    <span>
+                                      {item.pontuacao} pontos, {item.classificacao}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p>Nenhuma triagem PHQ/GAD registrada ainda.</p>
+                            )}
+                          </section>
+
+                          <section className="patient-detail-card">
+                            <span className="field-label">Humor recente</span>
+                            {patientDetail.moods.length ? (
+                              <div className="patient-mini-list">
+                                {patientDetail.moods.slice(0, 5).map((mood) => (
+                                  <div key={mood.id}>
+                                    <strong>{moodLabel(mood.valor)}</strong>
+                                    <span>{mood.nota || formatDateTime(mood.criado_em)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p>Nenhum registro de humor salvo ainda.</p>
+                            )}
+                          </section>
+
+                          <section className="patient-detail-card wide">
+                            <span className="field-label">Conversas recentes com a Lia</span>
+                            {patientDetail.lia_memory.recent_conversations.length ? (
+                              <div className="patient-conversation-list">
+                                {patientDetail.lia_memory.recent_conversations.slice(0, 4).map((interaction) => (
+                                  <article key={interaction.id ?? interaction.created_at}>
+                                    <strong>{formatDateTime(interaction.created_at)}</strong>
+                                    <p>{interaction.report ?? interaction.summary}</p>
+                                  </article>
+                                ))}
+                              </div>
+                            ) : (
+                              <p>Ainda nao ha conversas recentes para exibir.</p>
+                            )}
+                          </section>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 ) : null}
               </article>

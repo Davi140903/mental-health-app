@@ -186,6 +186,16 @@ export interface PsychologistTriageRequest {
   interaction?: LiaRecentInteraction | null;
 }
 
+export interface PsychologistPatientDetail {
+  user: Usuario;
+  current_request: PsychologistTriageRequest;
+  moods: MoodEntry[];
+  questionnaires: QuestionnaireResult[];
+  lia_memory: LiaMemorySnapshot;
+  triage_history: TriageRequest[];
+  generated_at: string;
+}
+
 export interface AdminPsychologistInput {
   email: string;
   nome: string;

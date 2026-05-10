@@ -85,6 +85,7 @@ from app.schemas import (
     TriageScheduleInput,
     TriageSlotOut,
     PsychologistTriageRequestOut,
+    PsychologistPatientDetailOut,
     UsuarioCreate,
     UsuarioOut,
 )
@@ -4216,6 +4217,14 @@ def build_psychologist_triage_request_out(
     )
 
 
+def psychologist_can_access_request(current_user: User, request: TriageRequest) -> bool:
+    if has_role(current_user, "admin"):
+        return True
+    if request.status == "pending":
+        return True
+    return normalize_optional_text(request.psychologist_name) == normalize_optional_text(current_user.nome)
+
+
 def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | None:
     return db.scalar(
         select(TriageRequest)
@@ -4965,5 +4974,57 @@ def list_psychologist_triage_requests(
 
     rows = db.execute(query).all()
     return [build_psychologist_triage_request_out(request, user, interaction) for request, user, interaction in rows]
+
+
+@app.get("/psychologist/triage-requests/{request_id}/patient", response_model=PsychologistPatientDetailOut)
+def get_psychologist_patient_detail(
+    request_id: str,
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> PsychologistPatientDetailOut:
+    row = db.execute(
+        select(TriageRequest, User, LiaInteraction)
+        .join(User, TriageRequest.usuario_id == User.id)
+        .outerjoin(LiaInteraction, TriageRequest.lia_interaction_id == LiaInteraction.id)
+        .where(TriageRequest.id == request_id)
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido de triagem nao encontrado.")
+
+    request, patient, interaction = row
+    if not psychologist_can_access_request(current_user, request):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voce nao tem acesso a este paciente.")
+
+    moods = db.scalars(
+        select(MoodEntry)
+        .where(MoodEntry.usuario_id == patient.id)
+        .order_by(MoodEntry.criado_em.desc())
+        .limit(14)
+    ).all()
+    questionnaires = db.scalars(
+        select(QuestionnaireResult)
+        .where(QuestionnaireResult.usuario_id == patient.id)
+        .order_by(QuestionnaireResult.criado_em.desc())
+        .limit(12)
+    ).all()
+    recent_interactions = list_recent_lia_interactions(db, patient.id, limit=6, finalized_only=False)
+    memory = db.get(LiaUserMemory, patient.id)
+    lia_memory = build_lia_memory_snapshot(memory, recent_interactions)
+    triage_history = db.scalars(
+        select(TriageRequest)
+        .where(TriageRequest.usuario_id == patient.id)
+        .order_by(TriageRequest.requested_at.desc())
+        .limit(6)
+    ).all()
+
+    return PsychologistPatientDetailOut(
+        user=patient,
+        current_request=build_psychologist_triage_request_out(request, patient, interaction),
+        moods=moods,
+        questionnaires=questionnaires,
+        lia_memory=lia_memory,
+        triage_history=[build_triage_request_out(item) for item in triage_history],
+        generated_at=utcnow(),
+    )
 
 

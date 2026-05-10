@@ -918,6 +918,27 @@ a {
   padding: 1rem;
 }
 
+.triage-request-card.active {
+  border-color: rgba(70, 127, 157, 0.24);
+  box-shadow: 0 22px 55px rgba(53, 91, 111, 0.13);
+}
+
+.triage-request-main {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  box-shadow: none;
+}
+
+.triage-request-main:hover:enabled {
+  background: transparent;
+  transform: none;
+}
+
 .admin-app-shell {
   min-height: 100vh;
   color: #3d2926;
@@ -1190,6 +1211,86 @@ a {
   color: #537284;
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.compact-tags {
+  margin-top: 0.65rem;
+}
+
+.patient-detail-panel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(56, 104, 130, 0.12);
+}
+
+.patient-detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.32fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.patient-detail-header h4 {
+  margin: 0.35rem 0 0.1rem;
+  font-size: 1.25rem;
+}
+
+.patient-detail-header p {
+  margin: 0;
+  color: #5f7480;
+}
+
+.patient-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.patient-detail-card {
+  padding: 0.95rem;
+  border-radius: 16px;
+  background: #f5fafc;
+  border: 1px solid rgba(56, 104, 130, 0.1);
+}
+
+.patient-detail-card.wide {
+  grid-column: 1 / -1;
+}
+
+.patient-detail-card p,
+.patient-mini-list span,
+.patient-conversation-list p {
+  color: #5f7480;
+}
+
+.patient-detail-card p {
+  margin: 0.35rem 0 0;
+}
+
+.patient-mini-list,
+.patient-conversation-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.patient-mini-list div,
+.patient-conversation-list article {
+  padding: 0.7rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(56, 104, 130, 0.08);
+}
+
+.patient-mini-list strong,
+.patient-mini-list span,
+.patient-conversation-list strong {
+  display: block;
+}
+
+.patient-conversation-list p {
+  margin: 0.25rem 0 0;
 }
 
 .focus-card,
@@ -1472,6 +1573,8 @@ a {
   .psychologist-summary-grid,
   .admin-summary-grid,
   .admin-workspace,
+  .patient-detail-header,
+  .patient-detail-grid,
   .triage-request-header,
   .triage-request-grid {
     grid-template-columns: 1fr;

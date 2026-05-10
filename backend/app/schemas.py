@@ -294,6 +294,16 @@ class PsychologistTriageRequestOut(BaseModel):
     interaction: LiaRecentInteraction | None = None
 
 
+class PsychologistPatientDetailOut(BaseModel):
+    user: UsuarioOut
+    current_request: PsychologistTriageRequestOut
+    moods: list[MoodEntryOut] = Field(default_factory=list)
+    questionnaires: list[QuestionnaireResultOut] = Field(default_factory=list)
+    lia_memory: LiaMemorySnapshot
+    triage_history: list[TriageRequestOut] = Field(default_factory=list)
+    generated_at: datetime
+
+
 class LiaAnalysis(BaseModel):
     assistant_reply: str | None = Field(default=None, max_length=600)
     reflection: str = Field(min_length=1, max_length=400)
