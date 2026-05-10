@@ -140,20 +140,6 @@ export default function Panel() {
 
         <section className="dashboard-metrics-grid">
           <article className="section-card panel-stat-card">
-            <span className="stat-label">Humor mais recente</span>
-            <strong className="stat-value">{formatMoodLabel(data.ultimo_humor?.valor ?? null)}</strong>
-            <p>{lastMoodDate}</p>
-          </article>
-
-          <article className="section-card panel-stat-card">
-            <span className="stat-label">Media de humor em 7 dias</span>
-            <strong className="stat-value">
-              {data.estatisticas.media_humor_7_dias !== null ? data.estatisticas.media_humor_7_dias.toFixed(1) : '--'}
-            </strong>
-            <p>Com base nos ultimos registros salvos no app.</p>
-          </article>
-
-          <article className="section-card panel-stat-card">
             <span className="stat-label">Conversas com a Lia</span>
             <strong className="stat-value">{data.estatisticas.total_conversas_lia}</strong>
             <p>Historico que ajuda a dar continuidade ao seu cuidado.</p>
@@ -203,8 +189,18 @@ export default function Panel() {
                   <strong>Ultimo registro de humor</strong>
                   <p>
                     {data.ultimo_humor
-                      ? `Seu ultimo apontamento ficou em ${data.ultimo_humor.valor} de 5, salvo em ${lastMoodDate}.`
+                      ? `Seu ultimo apontamento ficou em ${formatMoodLabel(data.ultimo_humor.valor).toLowerCase()}, salvo em ${lastMoodDate}.`
                       : 'Seu ultimo registro de humor vai aparecer aqui quando voce salvar um apontamento.'}
+                  </p>
+                </div>
+              </div>
+              <div className="list-row stretch">
+                <div>
+                  <strong>Media recente de humor</strong>
+                  <p>
+                    {data.estatisticas.media_humor_7_dias !== null
+                      ? `Nos ultimos dias, sua media ficou em ${data.estatisticas.media_humor_7_dias.toFixed(1)} de 5.`
+                      : 'Assim que voce acumular mais registros, a media recente vai aparecer aqui.'}
                   </p>
                 </div>
               </div>
