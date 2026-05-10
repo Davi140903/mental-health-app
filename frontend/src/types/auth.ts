@@ -34,6 +34,12 @@ export interface LoginCodeRequest {
   password: string;
 }
 
+export interface PasswordResetConfirm {
+  email: string;
+  codigo: string;
+  nova_senha: string;
+}
+
 export interface CodeRequestResponse {
   detail: string;
   expires_in_minutes: number;

@@ -5,6 +5,7 @@ import type {
   EmailCodeRequest,
   LoginCodeRequest,
   LoginData,
+  PasswordResetConfirm,
   ProfileUpdate,
   Usuario,
   UsuarioCreate,
@@ -20,6 +21,15 @@ export const authService = {
   async requestLoginCode(data: LoginCodeRequest): Promise<CodeRequestResponse> {
     const response = await api.post<CodeRequestResponse>('/auth/login/request-code', data);
     return response.data;
+  },
+
+  async requestPasswordResetCode(data: EmailCodeRequest): Promise<CodeRequestResponse> {
+    const response = await api.post<CodeRequestResponse>('/auth/password/request-code', data);
+    return response.data;
+  },
+
+  async resetPassword(data: PasswordResetConfirm): Promise<void> {
+    await api.post('/auth/password/reset', data);
   },
 
   async login(data: LoginData): Promise<AuthResponse> {

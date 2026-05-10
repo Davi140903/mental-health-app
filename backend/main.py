@@ -66,6 +66,8 @@ from app.schemas import (
     LiaTurnOut,
     LoginCodeRequest,
     LoginData,
+    PasswordResetCodeRequest,
+    PasswordResetConfirm,
     MoodEntryCreate,
     MoodEntryOut,
     MoodHistoryPoint,
@@ -3694,11 +3696,20 @@ def build_verification_email_subject(purpose: str) -> str:
         return "Codigo de verificacao para cadastro"
     if purpose == "login":
         return "Codigo de verificacao para login"
+    if purpose == "reset":
+        return "Codigo de verificacao para redefinir sua senha"
     return "Codigo de verificacao"
 
 
 def build_verification_email_body(code: str, purpose: str) -> str:
-    action_label = "concluir seu cadastro" if purpose == "register" else "entrar na sua conta"
+    if purpose == "register":
+        action_label = "concluir seu cadastro"
+    elif purpose == "login":
+        action_label = "entrar na sua conta"
+    elif purpose == "reset":
+        action_label = "redefinir sua senha"
+    else:
+        action_label = "continuar na sua conta"
     return (
         "Seu codigo de verificacao do Mental Health App e:\n\n"
         f"{code}\n\n"
@@ -3723,7 +3734,8 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
         "html": (
             "<p>Seu codigo de verificacao do Mental Health App e:</p>"
             f"<p style=\"font-size:28px;font-weight:700;letter-spacing:4px;\">{code}</p>"
-            f"<p>Use este codigo para {'concluir seu cadastro' if purpose == 'register' else 'entrar na sua conta'}."
+            f"<p>Use este codigo para "
+            f"{'concluir seu cadastro' if purpose == 'register' else 'entrar na sua conta' if purpose == 'login' else 'redefinir sua senha'}."
             f" Ele expira em {EMAIL_VERIFICATION_CODE_TTL_MINUTES} minutos.</p>"
             "<p>Se voce nao pediu este codigo, ignore este email.</p>"
         ),
@@ -4125,6 +4137,37 @@ def request_login_code(data: LoginCodeRequest, db: Session = Depends(get_db)) ->
         expires_in_minutes=EMAIL_VERIFICATION_CODE_TTL_MINUTES,
         debug_code=code if EMAIL_VERIFICATION_DEBUG else None,
     )
+
+
+@app.post("/auth/password/request-code", response_model=CodeRequestOut)
+def request_password_reset_code(data: PasswordResetCodeRequest, db: Session = Depends(get_db)) -> CodeRequestOut:
+    normalized_email = normalize_email(data.email)
+    user = get_user_by_email(db, normalized_email)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nao existe conta com este email.")
+
+    code = create_email_verification_code(db, normalized_email, "reset")
+    if not EMAIL_VERIFICATION_DEBUG:
+        send_verification_email(normalized_email, code, "reset")
+    return CodeRequestOut(
+        detail="Codigo de recuperacao enviado para o email informado.",
+        expires_in_minutes=EMAIL_VERIFICATION_CODE_TTL_MINUTES,
+        debug_code=code if EMAIL_VERIFICATION_DEBUG else None,
+    )
+
+
+@app.post("/auth/password/reset", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(data: PasswordResetConfirm, db: Session = Depends(get_db)) -> Response:
+    normalized_email = normalize_email(data.email)
+    user = get_user_by_email(db, normalized_email)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nao existe conta com este email.")
+
+    consume_email_verification_code(db, normalized_email, "reset", data.codigo)
+    user.hashed_password = hash_password(data.nova_senha)
+    db.add(user)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post("/auth/login", response_model=TokenOut)

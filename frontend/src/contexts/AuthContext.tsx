@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useState } from 'react';
 import { authService } from '../services/auth';
 import { AuthContext } from './auth-context';
-import type { ProfileUpdate, Usuario, UsuarioCreate } from '../types/auth';
+import type { PasswordResetConfirm, ProfileUpdate, Usuario, UsuarioCreate } from '../types/auth';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
@@ -52,6 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const requestLoginCode = async (email: string, password: string) =>
     authService.requestLoginCode({ email, password });
+
+  const requestPasswordResetCode = async (email: string) => authService.requestPasswordResetCode({ email });
+
+  const resetPassword = async (data: PasswordResetConfirm) => {
+    await authService.resetPassword(data);
+  };
 
   const login = async (email: string, password: string, codigo: string) => {
     setLoading(true);
@@ -108,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         requestRegisterCode,
         requestLoginCode,
+        requestPasswordResetCode,
+        resetPassword,
         login,
         register,
         refreshUser,

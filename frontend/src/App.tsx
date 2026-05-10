@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import GAD7 from './pages/GAD7';
 import Humor from './pages/Humor';
 import Login from './pages/Login';
+import RecoverLogin from './pages/RecoverLogin';
 import PHQ9 from './pages/PHQ9';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
@@ -47,6 +48,14 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/recover"
+        element={
+          <PublicRoute>
+            <RecoverLogin />
           </PublicRoute>
         }
       />

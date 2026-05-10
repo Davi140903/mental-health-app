@@ -140,6 +140,9 @@ export default function Login() {
         <p className="auth-footer">
           Ainda nao tem conta? <Link to="/register">Criar conta</Link>
         </p>
+        <p className="auth-footer">
+          Esqueceu a senha? <Link to="/recover">Recuperar acesso</Link>
+        </p>
       </div>
     </div>
   );

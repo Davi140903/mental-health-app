@@ -29,6 +29,16 @@ class LoginCodeRequest(BaseModel):
     password: str = Field(min_length=6, max_length=100)
 
 
+class PasswordResetCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    codigo: str = Field(min_length=6, max_length=6)
+    nova_senha: str = Field(min_length=6, max_length=100)
+
+
 class CodeRequestOut(BaseModel):
     detail: str
     expires_in_minutes: int
