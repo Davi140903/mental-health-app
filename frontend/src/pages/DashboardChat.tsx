@@ -188,17 +188,15 @@ export default function DashboardChat() {
       return;
     }
 
-    const lastAssistantMessage = liaSession.transcript[liaSession.transcript.length - 1];
-    const nextTranscript =
-      lastAssistantMessage?.role === 'assistant' && lastAssistantMessage.content.includes('continuar conversando')
-        ? [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voce daqui.' }]
-        : [...liaSession.transcript];
+    const nextTranscript = [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voce daqui.' }];
 
     setTriageRequest(null);
     setTriageSlots([]);
     setLiaSession({
       ...liaSession,
       completed: false,
+      followup_mode: true,
+      followup_turns_left: 2,
       transcript: nextTranscript,
     });
   };

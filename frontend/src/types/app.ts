@@ -140,6 +140,8 @@ export interface LiaSession {
   completed: boolean;
   saved_questionnaires: QuestionnaireKind[];
   saved_mood: boolean;
+  followup_mode?: boolean;
+  followup_turns_left?: number;
   pause_offer_pending?: boolean;
   pause_used?: boolean;
   recent_question_intents?: string[];

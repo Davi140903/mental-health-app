@@ -287,6 +287,8 @@ def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionStat
         completed=False,
         saved_questionnaires=[],
         saved_mood=False,
+        followup_mode=False,
+        followup_turns_left=0,
         memory=memory or LiaMemorySnapshot(),
     )
 
@@ -3597,6 +3599,9 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
     if context["wants_to_stop"]:
         return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo. Se depois voce quiser retomar, eu continuo daqui com voce."
 
+    if session.followup_mode and (session.followup_turns_left or 0) <= 0:
+        return "Obrigada por continuar comigo mais um pouco. Agora sim, acho melhor a gente parar por aqui por hoje. Se depois voce quiser retomar, eu sigo com voce de onde isso ficou."
+
     return "Obrigada por me contar isso. Ja consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se voce quiser. Se ainda fizer sentido, voce tambem pode continuar conversando comigo."
 
 
@@ -4490,6 +4495,13 @@ def lia_message(
         and phq_positive >= 1
     ) or (session.turn_count >= 5 and has_anxiety_context and has_mood_context)
     should_close = should_close_lia_session(session, analysis, effective_stage, enough_distress_data)
+    if session.followup_mode:
+        current_followup_turns = max(int(session.followup_turns_left or 0) - 1, 0)
+        session.followup_turns_left = current_followup_turns
+        if current_followup_turns > 0:
+            should_close = False
+        else:
+            should_close = True
     latest_context = build_lia_context(session, message_text)
 
     if should_close:
@@ -4502,6 +4514,8 @@ def lia_message(
         session.current_topic = "closing"
         session.focus_kind = "phq9"
         session.completed = True
+        session.followup_mode = False
+        session.followup_turns_left = 0
     else:
         recommended_stage = analysis.recommended_stage
         session.stage = recommended_stage

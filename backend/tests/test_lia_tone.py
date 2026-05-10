@@ -301,6 +301,56 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("podemos fechar por aqui", lowered)
         self.assertNotIn("pode falar mais", lowered)
 
+    def test_followup_closing_reply_can_be_more_final(self) -> None:
+        session = self.build_session(stage="closing", turn_count=6)
+        session.followup_mode = True
+        session.followup_turns_left = 0
+
+        reply = main.build_simple_closing_reply(session, "tem mais uma coisa")
+        lowered = main.normalize_for_match(reply)
+
+        self.assertIn("agora sim", lowered)
+        self.assertIn("parar por aqui", lowered)
+
+    def test_followup_mode_keeps_conversation_open_for_extra_turn(self) -> None:
+        session = self.build_session(stage="closing", turn_count=6)
+        session.current_topic = "closing"
+        session.followup_mode = True
+        session.followup_turns_left = 2
+        session.transcript = [
+            main.LiaTranscriptMessage(role="assistant", content="Podemos fechar por aqui."),
+            main.LiaTranscriptMessage(role="assistant", content="Pode continuar. Eu sigo com voce daqui."),
+        ]
+
+        analysis = main.LiaAnalysis(
+            assistant_reply="Entendi. O que mais tem pesado nisso desde que voce voltou a falar?",
+            reflection="Entendi.",
+            next_question="O que mais tem pesado nisso desde que voce voltou a falar?",
+            risk_level="none",
+            mood_value=2,
+            gad7_scores=[2, None, None, None, None, None, None],
+            phq9_scores=[None, 2, None, 2, None, None, None, None, None],
+            ready_to_close=True,
+            recommended_stage="support",
+        )
+
+        data = main.LiaTurnInput(session=session, message="O que mais tem me pegado e a irritacao.")
+        user = main.User(nome="Davi", email="davi@example.com", hashed_password="x")
+
+        with patch.object(main, "should_offer_pause", return_value=False), patch.object(
+            main, "analyze_lia_turn", return_value=(analysis, False)
+        ), patch.object(main, "should_close_lia_session", return_value=True), patch.object(
+            main, "save_lia_session_draft", return_value=True
+        ) as draft_mock, patch.object(main, "save_lia_session_results", return_value=True) as result_mock:
+            response = main.lia_message(data, current_user=user, db=None)
+
+        self.assertFalse(response.session.completed)
+        self.assertTrue(response.session.followup_mode)
+        self.assertEqual(response.session.followup_turns_left, 1)
+        self.assertEqual(response.session.transcript[-1].content, analysis.assistant_reply)
+        draft_mock.assert_called_once()
+        result_mock.assert_not_called()
+
     def test_mood_support_phrase_can_vary_after_recent_use(self) -> None:
         session = self.build_session(stage="mood", turn_count=4)
         session.transcript = [

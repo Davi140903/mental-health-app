@@ -208,6 +208,8 @@ class LiaSessionState(BaseModel):
     completed: bool = False
     saved_questionnaires: list[Literal["gad7", "phq9"]] = Field(default_factory=list)
     saved_mood: bool = False
+    followup_mode: bool = False
+    followup_turns_left: int = Field(default=0, ge=0, le=3)
     pause_offer_pending: bool = False
     pause_used: bool = False
     recent_question_intents: list[str] = Field(default_factory=list)
