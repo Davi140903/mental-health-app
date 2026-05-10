@@ -685,6 +685,10 @@ a {
   border-top: 1px solid rgba(69, 95, 85, 0.08);
 }
 
+.panel-story-block {
+  margin-bottom: 0.75rem;
+}
+
 .hero-actions {
   display: flex;
   gap: 0.65rem;

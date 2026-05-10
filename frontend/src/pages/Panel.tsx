@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { appService } from '../services/app';
-import type { DashboardData, QuestionnaireResult } from '../types/app';
+import type { DashboardData } from '../types/app';
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -27,12 +27,20 @@ function formatMoodLabel(value: number | null) {
   return 'Mais favoravel';
 }
 
-function formatQuestionnaireLabel(result: QuestionnaireResult | null | undefined) {
-  if (!result) {
-    return 'Ainda nao realizado';
-  }
+function normalizeTopicLabel(topic: string) {
+  const normalized = topic.trim().toLowerCase();
+  const topicMap: Record<string, string> = {
+    ansiedade: 'cabeca acelerada',
+    'pressao do dia a dia': 'dias mais pesados',
+    'trabalho ou estudos': 'rotina e cobrancas',
+    sono: 'sono',
+    humor: 'como voce tem se sentido',
+    energia: 'energia',
+    relacionamentos: 'relacoes e convivio',
+    'corpo em alerta': 'corpo em alerta',
+  };
 
-  return result.classificacao;
+  return topicMap[normalized] ?? topic;
 }
 
 export default function Panel() {
@@ -67,15 +75,6 @@ export default function Panel() {
     };
   }, []);
 
-  const lastPhq9 = useMemo(
-    () => data?.ultimos_questionarios.find((item) => item.tipo === 'phq9') ?? null,
-    [data?.ultimos_questionarios],
-  );
-  const lastGad7 = useMemo(
-    () => data?.ultimos_questionarios.find((item) => item.tipo === 'gad7') ?? null,
-    [data?.ultimos_questionarios],
-  );
-
   const conversationHighlights = useMemo(() => {
     if (!data) {
       return [];
@@ -83,8 +82,8 @@ export default function Panel() {
 
     return Array.from(
       new Set([
-        ...data.memoria_lia.topics,
-        ...data.memoria_lia.recent_conversations.flatMap((conversation) => conversation.topics),
+        ...data.memoria_lia.topics.map(normalizeTopicLabel),
+        ...data.memoria_lia.recent_conversations.flatMap((conversation) => conversation.topics.map(normalizeTopicLabel)),
       ]),
     ).slice(0, 8);
   }, [data]);
@@ -111,6 +110,10 @@ export default function Panel() {
 
   const lastMoodDate = data.ultimo_humor ? formatDate(data.ultimo_humor.criado_em) : 'Sem registro ainda';
   const lastConversation = data.memoria_lia.recent_conversations[0] ?? null;
+  const periodSummary =
+    data.memoria_lia.recent_summary ??
+    data.memoria_lia.summary ??
+    'A Lia ainda esta juntando mais contexto para montar um retrato breve daqui.';
 
   return (
     <Layout>
@@ -172,29 +175,38 @@ export default function Panel() {
               </div>
             </div>
 
-            <div className="indicator-grid">
-              <div className="summary-block calm-card">
-                <span className="stat-label">Ultima leitura de humor</span>
-                <strong>{formatQuestionnaireLabel(lastPhq9)}</strong>
-                <p>Uma leitura breve de como o periodo recente vem te afetando.</p>
+            <div className="summary-block calm-card panel-story-block">
+              <span className="stat-label">Leitura breve</span>
+              <p>{periodSummary}</p>
+            </div>
+
+            <div className="divider" />
+
+            <div className="stack-list">
+              <div className="list-row stretch">
+                <div>
+                  <strong>Ultima conversa guardada</strong>
+                  <p>{lastConversation?.summary ?? 'Assim que voce terminar mais conversas com a Lia, esse bloco fica mais rico.'}</p>
+                </div>
               </div>
-              <div className="summary-block calm-card">
-                <span className="stat-label">Ultima leitura de tensao</span>
-                <strong>{formatQuestionnaireLabel(lastGad7)}</strong>
-                <p>Serve mais como acompanhamento do que como definicao sobre voce.</p>
+              <div className="list-row stretch">
+                <div>
+                  <strong>Registros no app</strong>
+                  <p>
+                    Voce ja deixou {data.estatisticas.total_registros_humor} registro{data.estatisticas.total_registros_humor === 1 ? '' : 's'} de humor e{' '}
+                    {data.estatisticas.triagens_realizadas} triagem{data.estatisticas.triagens_realizadas === 1 ? '' : 'ens'} breve{data.estatisticas.triagens_realizadas === 1 ? '' : 's'}.
+                  </p>
+                </div>
               </div>
-              <div className="summary-block calm-card">
-                <span className="stat-label">Registros no app</span>
-                <strong>{data.estatisticas.total_registros_humor}</strong>
-                <p>Quanto mais continuidade voce tiver aqui, mais util esse retrato fica.</p>
-              </div>
-              <div className="summary-block calm-card">
-                <span className="stat-label">O que ficou da ultima conversa</span>
-                <p>
-                  {lastConversation?.summary ??
-                    data.memoria_lia.recent_summary ??
-                    'A Lia ainda esta formando seu primeiro resumo mais completo.'}
-                </p>
+              <div className="list-row stretch">
+                <div>
+                  <strong>Ultimo registro de humor</strong>
+                  <p>
+                    {data.ultimo_humor
+                      ? `Seu ultimo apontamento ficou em ${data.ultimo_humor.valor} de 5, salvo em ${lastMoodDate}.`
+                      : 'Seu ultimo registro de humor vai aparecer aqui quando voce salvar um apontamento.'}
+                  </p>
+                </div>
               </div>
             </div>
           </article>
@@ -223,7 +235,7 @@ export default function Panel() {
 
             <div className="summary-block calm-card">
               <span className="stat-label">Memoria breve da Lia</span>
-              <p>{data.memoria_lia.summary ?? 'Ainda nao existe memoria longa o suficiente para montar esse bloco.'}</p>
+              <p>{periodSummary}</p>
             </div>
           </article>
         </section>
