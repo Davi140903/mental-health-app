@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
-import type { LiaSession } from '../types/app';
+import type { LiaSession, TriageRequest, TriageSlot } from '../types/app';
 
 const LIA_SESSION_STORAGE_PREFIX = 'mental-health-lia-session';
 const LIA_DRAFT_STORAGE_PREFIX = 'mental-health-lia-draft';
@@ -74,6 +74,9 @@ export default function DashboardChat() {
   const [startingLia, setStartingLia] = useState(true);
   const [busy, setBusy] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
+  const [triageRequest, setTriageRequest] = useState<TriageRequest | null>(null);
+  const [triageSlots, setTriageSlots] = useState<TriageSlot[]>([]);
+  const [triageBusy, setTriageBusy] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const sessionStorageKey = user?.id ? getSessionStorageKey(user.id) : null;
@@ -188,8 +191,58 @@ export default function DashboardChat() {
       localStorage.removeItem(sessionStorageKey);
     }
     setDraftMessage('');
+    setTriageRequest(null);
+    setTriageSlots([]);
     await startConversation();
   };
+
+  const loadTriageSlots = useCallback(async () => {
+    const response = await appService.listTriageSlots();
+    setTriageSlots(response);
+  }, []);
+
+  const handleCreateTriageRequest = async () => {
+    if (!liaSession) {
+      return;
+    }
+
+    setTriageBusy(true);
+    setLiaError('');
+    try {
+      const request = await appService.createTriageRequest(liaSession.active_interaction_id ?? undefined);
+      setTriageRequest(request);
+      await loadTriageSlots();
+    } catch (error) {
+      setLiaError(getApiErrorMessage(error, 'Nao foi possivel iniciar o pedido de triagem agora.'));
+    } finally {
+      setTriageBusy(false);
+    }
+  };
+
+  const handleScheduleTriage = async (slotId: number) => {
+    if (!triageRequest) {
+      return;
+    }
+
+    setTriageBusy(true);
+    setLiaError('');
+    try {
+      const scheduled = await appService.scheduleTriage(triageRequest.id, slotId);
+      setTriageRequest(scheduled);
+      await loadTriageSlots();
+    } catch (error) {
+      setLiaError(getApiErrorMessage(error, 'Nao foi possivel agendar a triagem nesse horario.'));
+    } finally {
+      setTriageBusy(false);
+    }
+  };
+
+  function formatDateTime(value: string) {
+    return new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
 
   const transcript = liaSession?.transcript ?? [];
   const memory = liaSession?.memory;
@@ -287,6 +340,40 @@ export default function DashboardChat() {
                     <p>{latestReport}</p>
                   </div>
                 ) : null}
+                <div className="lia-post-chat-actions">
+                  {!triageRequest ? (
+                    <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
+                      {triageBusy ? 'Abrindo triagem...' : 'Encerrar e seguir para triagem'}
+                    </button>
+                  ) : null}
+
+                  {triageRequest ? (
+                    <div className="lia-memory-strip">
+                      <p>
+                        {triageRequest.status === 'scheduled'
+                          ? `Triagem agendada com ${triageRequest.psychologist_name ?? 'psicologo'} em ${formatDateTime(triageRequest.scheduled_for ?? triageRequest.requested_at)}.`
+                          : 'Seu pedido de triagem entrou na fila. Escolha um horario disponivel para concluir o agendamento.'}
+                      </p>
+
+                      {triageRequest.status !== 'scheduled' && triageSlots.length ? (
+                        <div className="option-grid compact">
+                          {triageSlots.slice(0, 6).map((slot) => (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              className="choice"
+                              onClick={() => void handleScheduleTriage(slot.id)}
+                              disabled={triageBusy}
+                            >
+                              <strong>{slot.psychologist_name}</strong>
+                              <span>{formatDateTime(slot.starts_at)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
                 <button type="button" className="chat-submit chat-restart" onClick={() => void handleRestart()}>
                   Novo check-in
                 </button>

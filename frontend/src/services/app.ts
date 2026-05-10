@@ -9,6 +9,8 @@ import type {
   QuestionnaireKind,
   QuestionnaireResult,
   QuestionnaireSubmission,
+  TriageRequest,
+  TriageSlot,
 } from '../types/app';
 
 export const appService = {
@@ -58,6 +60,26 @@ export const appService = {
     const response = await api.post<LiaTurnResponse>('/lia/message', {
       message,
       session,
+    });
+    return response.data;
+  },
+
+  async listTriageSlots(): Promise<TriageSlot[]> {
+    const response = await api.get<TriageSlot[]>('/triage/slots');
+    return response.data;
+  },
+
+  async createTriageRequest(interactionId?: string): Promise<TriageRequest> {
+    const response = await api.post<TriageRequest>('/triage/request', {
+      interaction_id: interactionId,
+    });
+    return response.data;
+  },
+
+  async scheduleTriage(requestId: string, slotId: number): Promise<TriageRequest> {
+    const response = await api.post<TriageRequest>('/triage/schedule', {
+      request_id: requestId,
+      slot_id: slotId,
     });
     return response.data;
   },

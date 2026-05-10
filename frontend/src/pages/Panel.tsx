@@ -114,6 +114,11 @@ export default function Panel() {
     data.memoria_lia.recent_summary ??
     data.memoria_lia.summary ??
     'A Lia ainda esta juntando mais contexto para montar um retrato breve daqui.';
+  const triageSummary = data.triagem_atual
+    ? data.triagem_atual.status === 'scheduled'
+      ? `Triagem marcada com ${data.triagem_atual.psychologist_name ?? 'psicologo'} para ${formatDate(data.triagem_atual.scheduled_for ?? data.triagem_atual.requested_at)}.`
+      : 'Voce ja tem um pedido de triagem em andamento e pode concluir o agendamento com um psicologo.'
+    : null;
 
   return (
     <Layout>
@@ -165,6 +170,20 @@ export default function Panel() {
             </div>
           </article>
         </section>
+
+        {triageSummary ? (
+          <section className="section-card">
+            <div className="section-heading">
+              <div>
+                <h3>Triagem com psicologo</h3>
+                <p className="section-copy">Quando voce encerra com a Lia e pede continuidade, o acompanhamento aparece aqui.</p>
+              </div>
+            </div>
+            <div className="summary-block calm-card">
+              <p>{triageSummary}</p>
+            </div>
+          </section>
+        ) : null}
 
         <section className="panel-content-grid">
           <article className="section-card">

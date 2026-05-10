@@ -137,6 +137,7 @@ class DashboardOut(BaseModel):
     recomendacoes: list[RecommendationOut]
     conteudos_em_destaque: list[EducationalContentOut]
     memoria_lia: LiaMemorySnapshot
+    triagem_atual: TriageRequestOut | None = None
 
 
 class ExportDataOut(BaseModel):
@@ -153,12 +154,15 @@ class LiaTranscriptMessage(BaseModel):
 
 
 class LiaRecentInteraction(BaseModel):
+    id: str | None = None
     created_at: datetime
     opening_label: str | None = None
     opening_value: str | None = None
     summary: str
     report: str | None = None
     topics: list[str] = Field(default_factory=list)
+    status: str = "final"
+    finalized: bool = True
 
 
 class LiaTopicState(BaseModel):
@@ -180,6 +184,8 @@ class LiaMemorySnapshot(BaseModel):
 
 
 class LiaSessionState(BaseModel):
+    session_key: str | None = None
+    active_interaction_id: str | None = None
     stage: Literal["opening", "support", "anxiety", "mood", "closing"] = "opening"
     current_topic: Literal[
         "opening_state",
@@ -229,6 +235,34 @@ class LiaTurnOut(BaseModel):
     session: LiaSessionState
     refresh_dashboard: bool = False
     using_ollama: bool = False
+
+
+class TriageSlotOut(BaseModel):
+    id: int
+    psychologist_name: str
+    starts_at: datetime
+    ends_at: datetime
+    available: bool
+
+
+class TriageRequestCreate(BaseModel):
+    interaction_id: str | None = None
+
+
+class TriageScheduleInput(BaseModel):
+    request_id: str
+    slot_id: int
+
+
+class TriageRequestOut(BaseModel):
+    id: str
+    status: str
+    psychologist_name: str | None = None
+    notes: str | None = None
+    requested_at: datetime
+    scheduled_for: datetime | None = None
+    slot_id: int | None = None
+    lia_interaction_id: str | None = None
 
 
 class LiaAnalysis(BaseModel):

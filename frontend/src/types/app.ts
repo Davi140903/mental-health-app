@@ -79,6 +79,7 @@ export interface DashboardData {
   recomendacoes: Recommendation[];
   conteudos_em_destaque: EducationalContent[];
   memoria_lia: LiaMemorySnapshot;
+  triagem_atual: TriageRequest | null;
 }
 
 export interface ExportData {
@@ -95,12 +96,15 @@ export interface LiaTranscriptMessage {
 }
 
 export interface LiaRecentInteraction {
+  id?: string | null;
   created_at: string;
   opening_label?: string | null;
   opening_value?: string | null;
   summary: string;
   report?: string | null;
   topics: string[];
+  status?: string;
+  finalized?: boolean;
 }
 
 export interface LiaTopicState {
@@ -122,6 +126,8 @@ export interface LiaMemorySnapshot {
 }
 
 export interface LiaSession {
+  session_key?: string | null;
+  active_interaction_id?: string | null;
   stage: LiaStage;
   current_topic: LiaTopicKey;
   turn_count: number;
@@ -145,4 +151,23 @@ export interface LiaTurnResponse {
   session: LiaSession;
   refresh_dashboard: boolean;
   using_ollama: boolean;
+}
+
+export interface TriageSlot {
+  id: number;
+  psychologist_name: string;
+  starts_at: string;
+  ends_at: string;
+  available: boolean;
+}
+
+export interface TriageRequest {
+  id: string;
+  status: string;
+  psychologist_name?: string | null;
+  notes?: string | null;
+  requested_at: string;
+  scheduled_for?: string | null;
+  slot_id?: number | null;
+  lia_interaction_id?: string | null;
 }

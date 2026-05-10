@@ -90,10 +90,38 @@ class LiaInteraction(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    session_key = Column(String, nullable=True, index=True)
     opening_label = Column(String, nullable=True)
     opening_value = Column(String, nullable=True)
     summary = Column(Text, nullable=False)
     report = Column(Text, nullable=True)
     topics = Column(JSON, nullable=False, default=list)
     mood_value = Column(Integer, nullable=True)
+    status = Column(String, nullable=False, default="final", index=True)
+    finalized = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+
+class PsychologistSlot(Base):
+    __tablename__ = "psychologist_slots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    psychologist_name = Column(String, nullable=False)
+    starts_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    ends_at = Column(DateTime(timezone=True), nullable=False)
+    available = Column(Boolean, nullable=False, default=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class TriageRequest(Base):
+    __tablename__ = "triage_requests"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    usuario_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    lia_interaction_id = Column(String, ForeignKey("lia_interactions.id"), nullable=True, index=True)
+    slot_id = Column(Integer, ForeignKey("psychologist_slots.id"), nullable=True, index=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    psychologist_name = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    requested_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    scheduled_for = Column(DateTime(timezone=True), nullable=True, index=True)

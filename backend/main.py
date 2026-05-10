@@ -13,6 +13,7 @@ from hashlib import sha256
 from typing import Any, Generator, Literal
 from urllib import error as urllib_error
 from urllib import request as urllib_request
+from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
@@ -48,7 +49,7 @@ from app.config import (
     env_flag,
 )
 from app.db import SessionLocal, ensure_utc, engine, pwd_context, utcnow
-from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, QuestionnaireResult, User
+from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, PsychologistSlot, QuestionnaireResult, TriageRequest, User
 from app.schemas import (
     CodeRequestOut,
     DashboardOut,
@@ -76,6 +77,10 @@ from app.schemas import (
     QuestionnaireSubmission,
     RecommendationOut,
     TokenOut,
+    TriageRequestCreate,
+    TriageRequestOut,
+    TriageScheduleInput,
+    TriageSlotOut,
     UsuarioCreate,
     UsuarioOut,
 )
@@ -136,12 +141,15 @@ def get_first_name(name: str) -> str:
 
 def build_lia_recent_interaction(interaction: LiaInteraction) -> LiaRecentInteraction:
     return LiaRecentInteraction(
+        id=interaction.id,
         created_at=ensure_utc(interaction.created_at),
         opening_label=normalize_optional_text(interaction.opening_label),
         opening_value=normalize_optional_text(interaction.opening_value),
         summary=normalize_optional_text(interaction.summary) or "Voce deixou um registro breve dessa conversa.",
         report=normalize_optional_text(interaction.report),
         topics=[str(item) for item in (interaction.topics or []) if str(item).strip()],
+        status=(interaction.status or "final").strip() or "final",
+        finalized=bool(interaction.finalized),
     )
 
 
@@ -232,17 +240,20 @@ def build_bootstrap_memory_snapshot(
     )
 
 
-def list_recent_lia_interactions(db: Session, user_id: str, limit: int = 3) -> list[LiaInteraction]:
-    return db.scalars(
-        select(LiaInteraction)
-        .where(LiaInteraction.usuario_id == user_id)
-        .order_by(LiaInteraction.created_at.desc())
-        .limit(limit)
-    ).all()
+def list_recent_lia_interactions(
+    db: Session,
+    user_id: str,
+    limit: int = 3,
+    finalized_only: bool = False,
+) -> list[LiaInteraction]:
+    query = select(LiaInteraction).where(LiaInteraction.usuario_id == user_id)
+    if finalized_only:
+        query = query.where(LiaInteraction.finalized.is_(True))
+    return db.scalars(query.order_by(LiaInteraction.created_at.desc()).limit(limit)).all()
 
 
 def get_lia_memory_snapshot(db: Session, current_user: User) -> LiaMemorySnapshot:
-    recent_interactions = list_recent_lia_interactions(db, current_user.id)
+    recent_interactions = list_recent_lia_interactions(db, current_user.id, finalized_only=True)
     memory = db.get(LiaUserMemory, current_user.id)
     if memory is not None:
         return build_lia_memory_snapshot(memory, recent_interactions)
@@ -266,6 +277,7 @@ def get_lia_memory_snapshot(db: Session, current_user: User) -> LiaMemorySnapsho
 
 def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionState:
     return LiaSessionState(
+        session_key=str(uuid4()),
         stage="opening",
         current_topic="opening_state",
         transcript=[],
@@ -3426,17 +3438,38 @@ def save_lia_interaction(
     session: LiaSessionState,
     topics: list[str],
 ) -> LiaInteraction:
-    interaction = LiaInteraction(
-        usuario_id=current_user.id,
-        opening_label=normalize_optional_text(session.memory.light_prompt_label),
-        opening_value=normalize_optional_text(session.memory.light_prompt_value),
-        summary=build_interaction_summary(session, topics),
-        report=build_psychologist_report(session, topics),
-        topics=topics,
-        mood_value=infer_mood_value(session),
-    )
+    interaction: LiaInteraction | None = None
+    if session.active_interaction_id:
+        interaction = db.get(LiaInteraction, session.active_interaction_id)
+
+    if interaction is None:
+        interaction = LiaInteraction(
+            usuario_id=current_user.id,
+            session_key=session.session_key,
+        )
+
+    interaction.opening_label = normalize_optional_text(session.memory.light_prompt_label)
+    interaction.opening_value = normalize_optional_text(session.memory.light_prompt_value)
+    interaction.summary = build_interaction_summary(session, topics)
+    interaction.report = build_psychologist_report(session, topics)
+    interaction.topics = topics
+    interaction.mood_value = infer_mood_value(session)
+    interaction.status = "final" if session.completed else "draft"
+    interaction.finalized = bool(session.completed)
     db.add(interaction)
+    db.flush()
+    session.active_interaction_id = interaction.id
     return interaction
+
+
+def save_lia_session_draft(db: Session, current_user: User, session: LiaSessionState) -> bool:
+    if session.completed:
+        return False
+
+    topics = derive_memory_topics(session)
+    save_lia_interaction(db, current_user, session, topics)
+    db.commit()
+    return True
 
 
 def merge_memory_topics(existing_topics: list[str], new_topics: list[str]) -> list[str]:
@@ -3467,7 +3500,7 @@ def upsert_lia_memory(db: Session, current_user: User, session: LiaSessionState)
     memory.atualizado_em = utcnow()
 
     db.add(memory)
-    recent_interactions = list_recent_lia_interactions(db, current_user.id)
+    recent_interactions = list_recent_lia_interactions(db, current_user.id, finalized_only=True)
     snapshot = build_lia_memory_snapshot(memory, recent_interactions)
     session.memory = snapshot
     return snapshot
@@ -3590,11 +3623,20 @@ def ensure_database_shape() -> None:
     if "users" not in inspector.get_table_names():
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("users")}
     statements: list[str] = []
 
-    if "consentimento_lgpd" not in existing_columns:
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    if "consentimento_lgpd" not in user_columns:
         statements.append("ALTER TABLE users ADD COLUMN consentimento_lgpd BOOLEAN NOT NULL DEFAULT 1")
+
+    if "lia_interactions" in inspector.get_table_names():
+        lia_columns = {column["name"] for column in inspector.get_columns("lia_interactions")}
+        if "session_key" not in lia_columns:
+            statements.append("ALTER TABLE lia_interactions ADD COLUMN session_key VARCHAR")
+        if "status" not in lia_columns:
+            statements.append("ALTER TABLE lia_interactions ADD COLUMN status VARCHAR NOT NULL DEFAULT 'final'")
+        if "finalized" not in lia_columns:
+            statements.append("ALTER TABLE lia_interactions ADD COLUMN finalized BOOLEAN NOT NULL DEFAULT 1")
 
     if statements:
         with engine.begin() as connection:
@@ -4071,6 +4113,59 @@ def get_featured_contents(
     return ranked[:4]
 
 
+def build_triage_request_out(request: TriageRequest | None) -> TriageRequestOut | None:
+    if request is None:
+        return None
+    return TriageRequestOut(
+        id=request.id,
+        status=request.status,
+        psychologist_name=normalize_optional_text(request.psychologist_name),
+        notes=normalize_optional_text(request.notes),
+        requested_at=ensure_utc(request.requested_at),
+        scheduled_for=ensure_utc(request.scheduled_for) if request.scheduled_for else None,
+        slot_id=request.slot_id,
+        lia_interaction_id=request.lia_interaction_id,
+    )
+
+
+def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | None:
+    return db.scalar(
+        select(TriageRequest)
+        .where(TriageRequest.usuario_id == user_id)
+        .order_by(TriageRequest.requested_at.desc())
+        .limit(1)
+    )
+
+
+def ensure_default_triage_slots(db: Session) -> None:
+    existing_slot = db.scalar(select(PsychologistSlot.id).limit(1))
+    if existing_slot:
+        return
+
+    now = utcnow().replace(minute=0, second=0, microsecond=0)
+    start_base = now + timedelta(days=1)
+    psychologist_names = ["Dra. Helena", "Dr. Caio", "Dra. Marina"]
+    slots: list[PsychologistSlot] = []
+
+    for day_offset in range(0, 6):
+        day = start_base + timedelta(days=day_offset)
+        for hour in (9, 11, 14, 16):
+            slot_start = day.replace(hour=hour)
+            slot_end = slot_start + timedelta(minutes=50)
+            psychologist_name = psychologist_names[(day_offset + hour) % len(psychologist_names)]
+            slots.append(
+                PsychologistSlot(
+                    psychologist_name=psychologist_name,
+                    starts_at=slot_start,
+                    ends_at=slot_end,
+                    available=True,
+                )
+            )
+
+    db.add_all(slots)
+    db.commit()
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {"message": "Mental Health API online"}
@@ -4365,13 +4460,15 @@ def lia_message(
         else:
             assistant_text = build_pause_decline_reply(session)
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
-        return LiaTurnOut(session=session, refresh_dashboard=False, using_ollama=False)
+        refresh_dashboard = save_lia_session_draft(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     if should_offer_pause(session, context):
         session.pause_offer_pending = True
         assistant_text = build_pause_offer_reply(session)
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
-        return LiaTurnOut(session=session, refresh_dashboard=False, using_ollama=False)
+        refresh_dashboard = save_lia_session_draft(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     try:
         analysis, using_ollama = analyze_lia_turn(session, message_text)
@@ -4450,6 +4547,9 @@ def lia_message(
     for item in assistant_messages:
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=item))
 
+    if not should_close:
+        refresh_dashboard = save_lia_session_draft(db, current_user, session)
+
     return LiaTurnOut(
         session=session,
         refresh_dashboard=refresh_dashboard,
@@ -4463,6 +4563,10 @@ def get_dashboard(
     db: Session = Depends(get_db),
 ) -> DashboardOut:
     lia_memory = get_lia_memory_snapshot(db, current_user)
+    dashboard_interactions = list_recent_lia_interactions(db, current_user.id, limit=5, finalized_only=False)
+    lia_memory.recent_conversations = [build_lia_recent_interaction(item) for item in dashboard_interactions]
+    lia_memory.latest_report = normalize_optional_text(dashboard_interactions[0].report) if dashboard_interactions else None
+    triage_request = get_current_triage_request(db, current_user.id)
     moods = db.scalars(
         select(MoodEntry)
         .where(MoodEntry.usuario_id == current_user.id)
@@ -4505,6 +4609,99 @@ def get_dashboard(
         recomendacoes=recommendations,
         conteudos_em_destaque=featured_contents,
         memoria_lia=lia_memory,
+        triagem_atual=build_triage_request_out(triage_request),
     )
+
+
+@app.get("/triage/slots", response_model=list[TriageSlotOut])
+def list_triage_slots(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TriageSlotOut]:
+    ensure_default_triage_slots(db)
+    slots = db.scalars(
+        select(PsychologistSlot)
+        .where(PsychologistSlot.available.is_(True))
+        .order_by(PsychologistSlot.starts_at.asc())
+        .limit(12)
+    ).all()
+    return [
+        TriageSlotOut(
+            id=slot.id,
+            psychologist_name=slot.psychologist_name,
+            starts_at=ensure_utc(slot.starts_at),
+            ends_at=ensure_utc(slot.ends_at),
+            available=bool(slot.available),
+        )
+        for slot in slots
+    ]
+
+
+@app.post("/triage/request", response_model=TriageRequestOut, status_code=status.HTTP_201_CREATED)
+def create_triage_request(
+    data: TriageRequestCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TriageRequestOut:
+    interaction: LiaInteraction | None = None
+    if data.interaction_id:
+        interaction = db.get(LiaInteraction, data.interaction_id)
+        if interaction is None or interaction.usuario_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interacao nao encontrada.")
+
+    if interaction is None:
+        interaction = db.scalar(
+            select(LiaInteraction)
+            .where(LiaInteraction.usuario_id == current_user.id)
+            .order_by(LiaInteraction.created_at.desc())
+            .limit(1)
+        )
+
+    existing_open_request = db.scalar(
+        select(TriageRequest)
+        .where(TriageRequest.usuario_id == current_user.id, TriageRequest.status.in_(["pending", "scheduled"]))
+        .order_by(TriageRequest.requested_at.desc())
+        .limit(1)
+    )
+    if existing_open_request:
+        return build_triage_request_out(existing_open_request)
+
+    request = TriageRequest(
+        usuario_id=current_user.id,
+        lia_interaction_id=interaction.id if interaction else None,
+        status="pending",
+        notes="Pedido criado a partir do encerramento com a Lia.",
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return build_triage_request_out(request)
+
+
+@app.post("/triage/schedule", response_model=TriageRequestOut)
+def schedule_triage_request(
+    data: TriageScheduleInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TriageRequestOut:
+    request = db.get(TriageRequest, data.request_id)
+    if request is None or request.usuario_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido de triagem nao encontrado.")
+
+    slot = db.get(PsychologistSlot, data.slot_id)
+    if slot is None or not slot.available:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Horario indisponivel no momento.")
+
+    slot.available = False
+    request.slot_id = slot.id
+    request.psychologist_name = slot.psychologist_name
+    request.scheduled_for = slot.starts_at
+    request.status = "scheduled"
+    request.notes = "Triagem agendada a partir de um pedido iniciado com a Lia."
+    db.add(slot)
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return build_triage_request_out(request)
 
 

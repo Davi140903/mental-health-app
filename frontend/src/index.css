@@ -563,6 +563,11 @@ a {
   justify-self: start;
 }
 
+.lia-post-chat-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .choice-cluster {
   display: flex;
   flex-wrap: wrap;
