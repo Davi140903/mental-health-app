@@ -1,10 +1,12 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
 import { useAuth } from '../contexts/useAuth';
-
-const LIA_DAILY_CHECKIN_PREFIX = 'mental-health-lia-daily-checkin';
-const LIA_LIGHT_PROMPT_PREFIX = 'mental-health-lia-light-prompt';
+import {
+  getCheckInCooldownExpiresAt,
+  getCheckInCooldownStorageKey,
+  getLightPromptStorageKey,
+  hasActiveCheckInCooldown,
+} from '../utils/checkin';
 
 const lightQuestions = [
   {
@@ -39,24 +41,13 @@ const lightQuestions = [
   },
 ];
 
-function getDailyCheckInStorageKey(userId: string) {
-  return `${LIA_DAILY_CHECKIN_PREFIX}:${userId}`;
-}
-
-function getLightPromptStorageKey(userId: string) {
-  return `${LIA_LIGHT_PROMPT_PREFIX}:${userId}`;
-}
-
-function getTodayKey() {
-  return new Intl.DateTimeFormat('en-CA', {
+function getQuestionIndex() {
+  const todayKey = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
-}
-
-function getQuestionIndex(todayKey: string) {
   const digits = todayKey.replaceAll('-', '');
   const total = digits.split('').reduce((sum, char) => sum + Number(char || 0), 0);
   return total % lightQuestions.length;
@@ -68,15 +59,14 @@ export default function Dashboard() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [otherSelected, setOtherSelected] = useState(false);
   const [otherValue, setOtherValue] = useState('');
-  const todayKey = useMemo(() => getTodayKey(), []);
-  const lightQuestion = useMemo(() => lightQuestions[getQuestionIndex(todayKey)], [todayKey]);
+  const lightQuestion = useMemo(() => lightQuestions[getQuestionIndex()], []);
   const shouldSkipIntro = useMemo(() => {
     if (!user) {
       return false;
     }
 
-    return localStorage.getItem(getDailyCheckInStorageKey(user.id)) === todayKey;
-  }, [todayKey, user]);
+    return hasActiveCheckInCooldown(user.id);
+  }, [user]);
 
   useEffect(() => {
     if (shouldSkipIntro) {
@@ -99,7 +89,7 @@ export default function Dashboard() {
         value,
       })
     );
-    localStorage.setItem(getDailyCheckInStorageKey(user.id), todayKey);
+    localStorage.setItem(getCheckInCooldownStorageKey(user.id), getCheckInCooldownExpiresAt());
 
     startTransition(() => {
       navigate('/lia');
@@ -127,17 +117,17 @@ export default function Dashboard() {
 
   if (shouldSkipIntro) {
     return (
-      <Layout>
-        <section className="section-card">
+      <div className="auth-page">
+        <section className="section-card auth-card auth-card-wide">
           <div className="empty-state">Abrindo sua conversa...</div>
         </section>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <section className="section-card">
+    <div className="auth-page">
+      <section className="section-card auth-card auth-card-wide">
         <div className="companion-header">
           <div className="companion-text">
             <span className="pill">{lightQuestion.label}</span>
@@ -184,6 +174,6 @@ export default function Dashboard() {
 
         <p className="chat-hint">Depois disso, voce vai direto pra conversa e pode falar do jeito que quiser.</p>
       </section>
-    </Layout>
+    </div>
   );
 }

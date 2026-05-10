@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Register from './pages/Register';
 import Contents from './pages/Contents';
 import DashboardChat from './pages/DashboardChat';
+import { hasActiveCheckInCooldown } from './utils/checkin';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
@@ -20,6 +21,24 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   }
 
   return token ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function CheckInRoute({ children }: { children: React.ReactNode }) {
+  const { token, user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="center-screen">Carregando ambiente...</div>;
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user && !hasActiveCheckInCooldown(user.id)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -70,49 +89,49 @@ function AppRoutes() {
       <Route
         path="/lia"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <DashboardChat />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route
         path="/humor"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <Humor />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route
         path="/phq9"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <PHQ9 />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route
         path="/gad7"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <GAD7 />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route
         path="/contents"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <Contents />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route
         path="/profile"
         element={
-          <PrivateRoute>
+          <CheckInRoute>
             <Profile />
-          </PrivateRoute>
+          </CheckInRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
