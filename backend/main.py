@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.config import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
+    ADMIN_EMAILS,
     EMAIL_VERIFICATION_CODE_TTL_MINUTES,
     EMAIL_VERIFICATION_DEBUG,
     FRONTEND_ORIGINS,
@@ -51,6 +52,8 @@ from app.config import (
 from app.db import SessionLocal, ensure_utc, engine, pwd_context, utcnow
 from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, PsychologistSlot, QuestionnaireResult, TriageRequest, User
 from app.schemas import (
+    AdminPsychologistCreate,
+    AdminPsychologistUpdate,
     CodeRequestOut,
     DashboardOut,
     DashboardStatOut,
@@ -3650,6 +3653,8 @@ def ensure_database_shape() -> None:
     user_columns = {column["name"] for column in inspector.get_columns("users")}
     if "consentimento_lgpd" not in user_columns:
         statements.append("ALTER TABLE users ADD COLUMN consentimento_lgpd BOOLEAN NOT NULL DEFAULT 1")
+    if "role" not in user_columns:
+        statements.append("ALTER TABLE users ADD COLUMN role VARCHAR NOT NULL DEFAULT 'user'")
 
     if "lia_interactions" in inspector.get_table_names():
         lia_columns = {column["name"] for column in inspector.get_columns("lia_interactions")}
@@ -3676,10 +3681,32 @@ def seed_contents(db: Session) -> None:
     db.commit()
 
 
+def ensure_initial_admin(db: Session) -> None:
+    configured_admin_emails = set(ADMIN_EMAILS)
+    if configured_admin_emails:
+        users = db.scalars(select(User).where(User.email.in_(configured_admin_emails))).all()
+        for user in users:
+            user.role = "admin"
+            db.add(user)
+        if users:
+            db.commit()
+
+    admin_exists = db.scalar(select(User.id).where(User.role == "admin").limit(1))
+    if admin_exists:
+        return
+
+    first_user = db.scalar(select(User).order_by(User.criado_em.asc()).limit(1))
+    if first_user:
+        first_user.role = "admin"
+        db.add(first_user)
+        db.commit()
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     ensure_database_shape()
     with SessionLocal() as db:
+        ensure_initial_admin(db)
         seed_contents(db)
     yield
 
@@ -3943,6 +3970,13 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(User.email == normalize_email(email)))
 
 
+def has_role(user: User, *roles: str) -> bool:
+    user_role = normalize_optional_text(getattr(user, "role", None)) or "user"
+    if user.email in ADMIN_EMAILS:
+        user_role = "admin"
+    return user_role in roles
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -3964,6 +3998,21 @@ def get_current_user(
     if not user:
         raise credentials_exception
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if not has_role(current_user, "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso permitido apenas para ADM.")
+    return current_user
+
+
+def require_psychologist_or_admin(current_user: User = Depends(get_current_user)) -> User:
+    if not has_role(current_user, "psychologist", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso permitido apenas para psicologo ou ADM.",
+        )
+    return current_user
 
 
 def validate_questionnaire_submission(tipo: str, respostas: list[int]) -> dict[str, Any]:
@@ -4242,9 +4291,11 @@ def register(data: UsuarioCreate, db: Session = Depends(get_db)) -> User:
 
     consume_email_verification_code(db, normalized_email, "register", data.codigo)
 
+    role = "admin" if db.scalar(select(User.id).where(User.role == "admin").limit(1)) is None else "user"
     user = User(
         email=normalized_email,
         nome=data.nome.strip(),
+        role=role,
         consentimento_lgpd=data.consentimento_lgpd,
         hashed_password=hash_password(data.password),
     )
@@ -4319,6 +4370,80 @@ def login(data: LoginData, db: Session = Depends(get_db)) -> TokenOut:
 @app.get("/auth/me", response_model=UsuarioOut)
 def get_me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@app.get("/admin/psychologists", response_model=list[UsuarioOut])
+def list_psychologists(
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[User]:
+    return list(db.scalars(select(User).where(User.role == "psychologist").order_by(User.nome.asc())).all())
+
+
+@app.post("/admin/psychologists", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
+def create_psychologist(
+    data: AdminPsychologistCreate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> User:
+    normalized_email = normalize_email(data.email)
+    existing_user = get_user_by_email(db, normalized_email)
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ja cadastrado.")
+
+    user = User(
+        email=normalized_email,
+        nome=data.nome.strip(),
+        role="psychologist",
+        consentimento_lgpd=data.consentimento_lgpd,
+        hashed_password=hash_password(data.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.patch("/admin/psychologists/{psychologist_id}", response_model=UsuarioOut)
+def update_psychologist(
+    psychologist_id: str,
+    data: AdminPsychologistUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> User:
+    psychologist = db.get(User, psychologist_id)
+    if not psychologist or psychologist.role != "psychologist":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Psicologo nao encontrado.")
+
+    normalized_email = normalize_email(data.email)
+    existing_user = get_user_by_email(db, normalized_email)
+    if existing_user and existing_user.id != psychologist.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ja cadastrado.")
+
+    psychologist.email = normalized_email
+    psychologist.nome = data.nome.strip()
+    psychologist.consentimento_lgpd = data.consentimento_lgpd
+    if data.password:
+        psychologist.hashed_password = hash_password(data.password)
+    db.add(psychologist)
+    db.commit()
+    db.refresh(psychologist)
+    return psychologist
+
+
+@app.delete("/admin/psychologists/{psychologist_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_psychologist(
+    psychologist_id: str,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    psychologist = db.get(User, psychologist_id)
+    if not psychologist or psychologist.role != "psychologist":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Psicologo nao encontrado.")
+
+    db.delete(psychologist)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.patch("/profile", response_model=UsuarioOut)
@@ -4781,7 +4906,7 @@ def schedule_triage_request(
 @app.get("/psychologist/triage-requests", response_model=list[PsychologistTriageRequestOut])
 def list_psychologist_triage_requests(
     status_filter: str | None = Query(default=None, alias="status"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_psychologist_or_admin),
     db: Session = Depends(get_db),
 ) -> list[PsychologistTriageRequestOut]:
     allowed_statuses = {"pending", "scheduled", "completed", "cancelled"}

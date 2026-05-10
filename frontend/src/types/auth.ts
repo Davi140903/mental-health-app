@@ -2,6 +2,7 @@ export interface Usuario {
   id: string;
   email: string;
   nome: string;
+  role: 'user' | 'psychologist' | 'admin';
   consentimento_lgpd: boolean;
   criado_em: string;
 }

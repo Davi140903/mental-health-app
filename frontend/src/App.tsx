@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/useAuth';
+import AdminDashboard from './pages/AdminDashboard';
 import Dashboard from './pages/Dashboard';
 import GAD7 from './pages/GAD7';
 import Humor from './pages/Humor';
@@ -14,15 +15,18 @@ import Register from './pages/Register';
 import Contents from './pages/Contents';
 import DashboardChat from './pages/DashboardChat';
 import { hasActiveCheckInCooldown } from './utils/checkin';
+import type { Usuario } from './types/auth';
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth();
-
-  if (loading) {
-    return <div className="center-screen">Carregando ambiente...</div>;
+function roleHome(user?: Usuario | null) {
+  if (user?.role === 'admin') {
+    return '/admin';
   }
 
-  return token ? <>{children}</> : <Navigate to="/login" replace />;
+  if (user?.role === 'psychologist') {
+    return '/psicologo';
+  }
+
+  return '/dashboard';
 }
 
 function CheckInRoute({ children }: { children: React.ReactNode }) {
@@ -36,6 +40,10 @@ function CheckInRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (user?.role !== 'user') {
+    return <Navigate to={roleHome(user)} replace />;
+  }
+
   if (user && !hasActiveCheckInCooldown(user.id)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -44,13 +52,47 @@ function CheckInRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth();
+  const { token, user, loading } = useAuth();
 
   if (loading) {
     return <div className="center-screen">Carregando ambiente...</div>;
   }
 
-  return token ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  return token ? <Navigate to={roleHome(user)} replace /> : <>{children}</>;
+}
+
+function UserRoute({ children }: { children: React.ReactNode }) {
+  const { token, user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="center-screen">Carregando ambiente...</div>;
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user?.role === 'user' ? <>{children}</> : <Navigate to={roleHome(user)} replace />;
+}
+
+function RoleRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles: Usuario['role'][];
+}) {
+  const { token, user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="center-screen">Carregando ambiente...</div>;
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user && allowedRoles.includes(user.role) ? <>{children}</> : <Navigate to={roleHome(user)} replace />;
 }
 
 function AppRoutes() {
@@ -83,17 +125,25 @@ function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <PrivateRoute>
+          <UserRoute>
             <Dashboard />
-          </PrivateRoute>
+          </UserRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <RoleRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </RoleRoute>
         }
       />
       <Route
         path="/psicologo"
         element={
-          <PrivateRoute>
+          <RoleRoute allowedRoles={['psychologist', 'admin']}>
             <PsychologistDashboard />
-          </PrivateRoute>
+          </RoleRoute>
         }
       />
       <Route

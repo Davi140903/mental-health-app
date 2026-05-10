@@ -19,6 +19,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     nome = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="user", index=True)
     consentimento_lgpd = Column(Boolean, nullable=False, default=True)
     criado_em = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 

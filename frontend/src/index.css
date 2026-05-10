@@ -918,6 +918,184 @@ a {
   padding: 1rem;
 }
 
+.admin-app-shell {
+  min-height: 100vh;
+  color: #3d2926;
+  background:
+    radial-gradient(circle at top, rgba(245, 205, 199, 0.72), transparent 34%),
+    linear-gradient(180deg, #fff8f6 0%, #f8ecea 100%);
+}
+
+.admin-topbar,
+.admin-page {
+  width: min(1080px, calc(100% - 1.5rem));
+  margin: 0 auto;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 0 1rem;
+}
+
+.admin-topbar h1 {
+  margin: 0.3rem 0 0.1rem;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.admin-topbar p,
+.admin-toolbar p,
+.admin-metric p,
+.admin-card p,
+.admin-card span {
+  color: #765d58;
+}
+
+.admin-role-pill {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #f4dbd7;
+  color: #8a493f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-ghost-button {
+  background: rgba(180, 107, 98, 0.11);
+  color: #8a493f;
+  border: 1px solid rgba(180, 107, 98, 0.18);
+}
+
+.admin-ghost-button:hover:enabled {
+  background: rgba(180, 107, 98, 0.18);
+}
+
+.admin-page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 2.75rem;
+}
+
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-metric,
+.admin-panel,
+.admin-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(150, 76, 67, 0.11);
+  box-shadow: 0 18px 45px rgba(119, 64, 58, 0.08);
+}
+
+.admin-metric,
+.admin-panel,
+.admin-card {
+  border-radius: 20px;
+}
+
+.admin-metric,
+.admin-panel {
+  padding: 1.15rem;
+}
+
+.admin-metric span {
+  color: #7a615c;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.admin-metric strong {
+  display: block;
+  margin: 0.2rem 0;
+  color: #3d2926;
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.admin-toolbar {
+  margin-bottom: 1rem;
+}
+
+.admin-toolbar h2 {
+  margin-bottom: 0.2rem;
+}
+
+.admin-form,
+.admin-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.45rem;
+  color: #4f3935;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.admin-form input {
+  width: 100%;
+}
+
+.admin-check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  font-weight: 700;
+}
+
+.admin-check input {
+  width: auto;
+}
+
+.admin-form-actions,
+.admin-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.admin-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.admin-card h3 {
+  margin: 0 0 0.25rem;
+}
+
+.admin-card p,
+.admin-card span {
+  display: block;
+  margin: 0;
+}
+
+.admin-danger-button {
+  background: #f5ddd9;
+  color: #963d33;
+  border: 1px solid rgba(150, 61, 51, 0.18);
+}
+
+.admin-danger-button:hover:enabled {
+  background: #efcbc5;
+}
+
 .triage-request-header,
 .triage-request-grid {
   display: grid;
@@ -1292,6 +1470,8 @@ a {
   .metric-strip,
   .lia-action-row,
   .psychologist-summary-grid,
+  .admin-summary-grid,
+  .admin-workspace,
   .triage-request-header,
   .triage-request-grid {
     grid-template-columns: 1fr;
@@ -1305,7 +1485,9 @@ a {
 @media (max-width: 720px) {
   .topbar,
   .psychologist-topbar,
-  .psychologist-toolbar {
+  .psychologist-toolbar,
+  .admin-topbar,
+  .admin-card {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -1341,7 +1523,9 @@ a {
   .topbar,
   .nav-strip,
   .psychologist-topbar,
-  .psychologist-page {
+  .psychologist-page,
+  .admin-topbar,
+  .admin-page {
     width: min(100%, calc(100% - 1rem));
   }
 }

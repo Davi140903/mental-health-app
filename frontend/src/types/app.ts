@@ -185,3 +185,10 @@ export interface PsychologistTriageRequest {
   user: Usuario;
   interaction?: LiaRecentInteraction | null;
 }
+
+export interface AdminPsychologistInput {
+  email: string;
+  nome: string;
+  password?: string;
+  consentimento_lgpd: boolean;
+}

@@ -51,6 +51,7 @@ class UsuarioOut(BaseModel):
     id: str
     email: EmailStr
     nome: str
+    role: Literal["user", "psychologist", "admin"] = "user"
     consentimento_lgpd: bool
     criado_em: datetime
 
@@ -63,6 +64,20 @@ class TokenOut(BaseModel):
 class ProfileUpdate(BaseModel):
     nome: str = Field(min_length=2, max_length=120)
     consentimento_lgpd: bool
+
+
+class AdminPsychologistCreate(BaseModel):
+    email: EmailStr
+    nome: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=6, max_length=100)
+    consentimento_lgpd: bool = True
+
+
+class AdminPsychologistUpdate(BaseModel):
+    email: EmailStr
+    nome: str = Field(min_length=2, max_length=120)
+    password: str | None = Field(default=None, min_length=6, max_length=100)
+    consentimento_lgpd: bool = True
 
 
 class MoodEntryCreate(BaseModel):

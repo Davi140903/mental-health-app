@@ -7,12 +7,14 @@ import type {
   MoodEntry,
   MoodEntryCreate,
   PsychologistTriageRequest,
+  AdminPsychologistInput,
   QuestionnaireKind,
   QuestionnaireResult,
   QuestionnaireSubmission,
   TriageRequest,
   TriageSlot,
 } from '../types/app';
+import type { Usuario } from '../types/auth';
 
 export const appService = {
   async getDashboard(): Promise<DashboardData> {
@@ -90,5 +92,24 @@ export const appService = {
       params: status ? { status } : undefined,
     });
     return response.data;
+  },
+
+  async listAdminPsychologists(): Promise<Usuario[]> {
+    const response = await api.get<Usuario[]>('/admin/psychologists');
+    return response.data;
+  },
+
+  async createAdminPsychologist(data: AdminPsychologistInput): Promise<Usuario> {
+    const response = await api.post<Usuario>('/admin/psychologists', data);
+    return response.data;
+  },
+
+  async updateAdminPsychologist(id: string, data: AdminPsychologistInput): Promise<Usuario> {
+    const response = await api.patch<Usuario>(`/admin/psychologists/${id}`, data);
+    return response.data;
+  },
+
+  async deleteAdminPsychologist(id: string): Promise<void> {
+    await api.delete(`/admin/psychologists/${id}`);
   },
 };
