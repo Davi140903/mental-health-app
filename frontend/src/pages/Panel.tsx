@@ -32,8 +32,7 @@ function formatQuestionnaireLabel(result: QuestionnaireResult | null | undefined
     return 'Ainda nao realizado';
   }
 
-  const prefix = result.tipo === 'phq9' ? 'PHQ-9' : 'GAD-7';
-  return `${prefix} ${result.pontuacao} · ${result.classificacao}`;
+  return result.classificacao;
 }
 
 export default function Panel() {
@@ -111,6 +110,7 @@ export default function Panel() {
   }
 
   const lastMoodDate = data.ultimo_humor ? formatDate(data.ultimo_humor.criado_em) : 'Sem registro ainda';
+  const lastConversation = data.memoria_lia.recent_conversations[0] ?? null;
 
   return (
     <Layout>
@@ -121,7 +121,7 @@ export default function Panel() {
             <h2>{data.usuario.nome}, aqui esta um retrato breve do que vem aparecendo</h2>
             <p>
               A ideia deste painel e te mostrar o que a Lia vem guardando com cuidado, como seu humor tem aparecido e
-              quais sinais merecem mais atencao agora.
+              o que pode te ajudar a se perceber melhor ao longo do tempo.
             </p>
           </div>
 
@@ -159,7 +159,7 @@ export default function Panel() {
           <article className="section-card panel-stat-card">
             <span className="stat-label">Triagens recentes</span>
             <strong className="stat-value">{data.estatisticas.triagens_realizadas}</strong>
-            <p>PHQ-9 e GAD-7 realizados ate aqui.</p>
+            <p>Registros breves que ajudam a acompanhar como voce vem passando pelos dias.</p>
           </article>
         </section>
 
@@ -168,27 +168,33 @@ export default function Panel() {
             <div className="section-heading">
               <div>
                 <h3>Como esse periodo aparece no seu historico</h3>
-                <p className="section-copy">Um resumo rapido do que a Lia e seus registros mostram agora.</p>
+                <p className="section-copy">Um resumo simples do que mais vem aparecendo no seu acompanhamento.</p>
               </div>
             </div>
 
             <div className="indicator-grid">
               <div className="summary-block calm-card">
-                <span className="stat-label">PHQ-9 mais recente</span>
+                <span className="stat-label">Ultima leitura de humor</span>
                 <strong>{formatQuestionnaireLabel(lastPhq9)}</strong>
+                <p>Uma leitura breve de como o periodo recente vem te afetando.</p>
               </div>
               <div className="summary-block calm-card">
-                <span className="stat-label">GAD-7 mais recente</span>
+                <span className="stat-label">Ultima leitura de tensao</span>
                 <strong>{formatQuestionnaireLabel(lastGad7)}</strong>
+                <p>Serve mais como acompanhamento do que como definicao sobre voce.</p>
               </div>
               <div className="summary-block calm-card">
-                <span className="stat-label">Registros de humor</span>
+                <span className="stat-label">Registros no app</span>
                 <strong>{data.estatisticas.total_registros_humor}</strong>
                 <p>Quanto mais continuidade voce tiver aqui, mais util esse retrato fica.</p>
               </div>
               <div className="summary-block calm-card">
                 <span className="stat-label">O que ficou da ultima conversa</span>
-                <p>{data.memoria_lia.latest_report ?? data.memoria_lia.recent_summary ?? 'A Lia ainda esta formando seu primeiro resumo mais completo.'}</p>
+                <p>
+                  {lastConversation?.summary ??
+                    data.memoria_lia.recent_summary ??
+                    'A Lia ainda esta formando seu primeiro resumo mais completo.'}
+                </p>
               </div>
             </div>
           </article>
@@ -255,8 +261,8 @@ export default function Panel() {
           <article className="section-card">
             <div className="section-heading">
               <div>
-                <h3>Recomendacoes do momento</h3>
-                <p className="section-copy">Sugestoes automaticas com base no que ja apareceu no seu acompanhamento.</p>
+                <h3>Cuidados que podem fazer sentido agora</h3>
+                <p className="section-copy">Sugestoes simples com base no que ja apareceu no seu acompanhamento.</p>
               </div>
             </div>
 
@@ -279,7 +285,7 @@ export default function Panel() {
             <div className="section-heading">
               <div>
                 <h3>Ultimas conversas com a Lia</h3>
-                <p className="section-copy">Trechos resumidos para voce lembrar do que ja foi dito por aqui.</p>
+                <p className="section-copy">Trechos resumidos para voce lembrar do que ja foi dito por aqui, sem pesar demais.</p>
               </div>
             </div>
 
