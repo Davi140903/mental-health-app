@@ -3593,27 +3593,11 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
 def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
     if context["quick_pass"] or context["no_issue"]:
-        return "Tudo certo. Pode deixar isso ser so uma passada rapida por hoje. Quando quiser, voce volta."
+        return "Tudo certo. Se por hoje ja deu, a gente pode parar por aqui. E, se voce sentir vontade, ainda pode continuar conversando comigo um pouco mais."
     if context["wants_to_stop"]:
-        return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo."
+        return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo. Se depois voce quiser retomar, eu continuo daqui com voce."
 
-    summary_parts: list[str] = []
-    main_focus = normalize_optional_text(session.topic_states["main_focus"].value)
-    impact = normalize_optional_text(session.topic_states["functional_impact"].value)
-    frequency = normalize_optional_text(session.topic_states["frequency_duration"].value)
-
-    if main_focus:
-        summary_parts.append(main_focus)
-    if impact:
-        summary_parts.append(f"mexendo em {impact}")
-    if frequency:
-        summary_parts.append(f"aparecendo {frequency}")
-
-    if summary_parts:
-        summary_text = ", ".join(summary_parts[:3])
-        return f"Entendi. Hoje ficou mais claro esse ponto de {summary_text}. Ja consegui organizar bem o que apareceu. Podemos fechar por aqui."
-
-    return "Entendi. Ja consegui organizar bem o que apareceu hoje. Podemos fechar por aqui."
+    return "Obrigada por me contar isso. Ja consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se voce quiser. Se ainda fizer sentido, voce tambem pode continuar conversando comigo."
 
 
 def ensure_database_shape() -> None:

@@ -334,12 +334,15 @@ export default function DashboardChat() {
 
             {!startingLia && liaSession?.completed ? (
               <div className="chat-composer">
-                <p className="chat-hint">Esse check-in foi concluido. Se quiser, a Lia pode recomecar com voce.</p>
-                {latestReport ? (
-                  <div className="lia-memory-strip">
-                    <p>{latestReport}</p>
-                  </div>
-                ) : null}
+                <p className="chat-hint">A Lia ja guardou o essencial desta conversa. Se voce quiser, ainda pode continuar falando por aqui, ou pode parar sem pressa.</p>
+                <div className="lia-memory-strip">
+                  <p>
+                    {triageRequest
+                      ? 'Se voce quiser apoio profissional, pode seguir com a triagem. Se preferir, tambem pode continuar conversando mais um pouco antes disso.'
+                      : 'Se por hoje ja foi o suficiente, tudo bem encerrar. E, se ainda houver algo importante, voce pode continuar o chat normalmente.'}
+                  </p>
+                  {latestReport ? <p className="panel-secondary-copy">{latestReport}</p> : null}
+                </div>
                 <div className="lia-post-chat-actions">
                   {!triageRequest ? (
                     <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
@@ -375,7 +378,7 @@ export default function DashboardChat() {
                   ) : null}
                 </div>
                 <button type="button" className="chat-submit chat-restart" onClick={() => void handleRestart()}>
-                  Novo check-in
+                  Continuar chat
                 </button>
               </div>
             ) : null}
