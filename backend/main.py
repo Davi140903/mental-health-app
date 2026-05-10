@@ -4462,6 +4462,7 @@ def get_dashboard(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DashboardOut:
+    lia_memory = get_lia_memory_snapshot(db, current_user)
     moods = db.scalars(
         select(MoodEntry)
         .where(MoodEntry.usuario_id == current_user.id)
@@ -4496,12 +4497,14 @@ def get_dashboard(
             triagens_realizadas=len(all_results),
             ultima_triagem_phq9=latest_phq9.pontuacao if latest_phq9 else None,
             ultima_triagem_gad7=latest_gad7.pontuacao if latest_gad7 else None,
+            total_conversas_lia=lia_memory.conversation_count,
         ),
         ultimo_humor=latest_mood,
         ultimos_questionarios=all_results[:6],
         historico_humor=mood_history,
         recomendacoes=recommendations,
         conteudos_em_destaque=featured_contents,
+        memoria_lia=lia_memory,
     )
 
 

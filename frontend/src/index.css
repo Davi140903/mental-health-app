@@ -611,7 +611,7 @@ a {
 .lia-action-row {
   display: grid;
   gap: 0.8rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .quick-link-card {
@@ -649,6 +649,40 @@ a {
 
 .dashboard-intro h2 {
   margin-bottom: 0.35rem;
+}
+
+.panel-hero {
+  align-items: flex-end;
+}
+
+.panel-hero p {
+  max-width: 720px;
+}
+
+.dashboard-metrics-grid,
+.indicator-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.indicator-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.panel-stat-card {
+  min-height: 180px;
+  display: grid;
+  align-content: start;
+}
+
+.panel-secondary-copy {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(69, 95, 85, 0.08);
 }
 
 .hero-actions {

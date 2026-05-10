@@ -56,6 +56,7 @@ export interface DashboardStats {
   triagens_realizadas: number;
   ultima_triagem_phq9: number | null;
   ultima_triagem_gad7: number | null;
+  total_conversas_lia: number;
 }
 
 export interface MoodHistoryPoint {
@@ -77,6 +78,7 @@ export interface DashboardData {
   historico_humor: MoodHistoryPoint[];
   recomendacoes: Recommendation[];
   conteudos_em_destaque: EducationalContent[];
+  memoria_lia: LiaMemorySnapshot;
 }
 
 export interface ExportData {

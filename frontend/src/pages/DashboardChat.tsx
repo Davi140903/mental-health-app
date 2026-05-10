@@ -302,6 +302,10 @@ export default function DashboardChat() {
           </div>
 
           <div className="lia-action-row">
+            <Link to="/painel" className="quick-link-card">
+              <strong>Painel</strong>
+              <span>Ver um resumo breve das conversas, registros e sinais recentes.</span>
+            </Link>
             <Link to="/humor" className="quick-link-card">
               <strong>Humor</strong>
               <span>Ver registros e adicionar um apontamento rapido.</span>

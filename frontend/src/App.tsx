@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import GAD7 from './pages/GAD7';
 import Humor from './pages/Humor';
 import Login from './pages/Login';
+import Panel from './pages/Panel';
 import RecoverLogin from './pages/RecoverLogin';
 import PHQ9 from './pages/PHQ9';
 import Profile from './pages/Profile';
@@ -84,6 +85,14 @@ function AppRoutes() {
           <PrivateRoute>
             <Dashboard />
           </PrivateRoute>
+        }
+      />
+      <Route
+        path="/painel"
+        element={
+          <CheckInRoute>
+            <Panel />
+          </CheckInRoute>
         }
       />
       <Route

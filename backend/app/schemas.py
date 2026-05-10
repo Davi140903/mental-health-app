@@ -114,6 +114,7 @@ class DashboardStatOut(BaseModel):
     triagens_realizadas: int
     ultima_triagem_phq9: int | None
     ultima_triagem_gad7: int | None
+    total_conversas_lia: int
 
 
 class MoodHistoryPoint(BaseModel):
@@ -135,6 +136,7 @@ class DashboardOut(BaseModel):
     historico_humor: list[MoodHistoryPoint]
     recomendacoes: list[RecommendationOut]
     conteudos_em_destaque: list[EducationalContentOut]
+    memoria_lia: LiaMemorySnapshot
 
 
 class ExportDataOut(BaseModel):
