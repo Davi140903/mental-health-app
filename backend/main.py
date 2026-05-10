@@ -1079,7 +1079,11 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "mixed_feeling": contains_any(latest_text, ["mais ou menos", "meio assim", "nem bem nem mal", "entre bem e mal"]),
         "creative": contains_any(
             latest_text,
-            ["flores", "flor", "ceu", "mar", "musica", "chuva", "vento", "sol", "silencio", "recolher", "quietude"],
+            ["flores", "flor", "ceu", "mar", "chuva", "vento", "sol", "silencio", "recolher", "quietude"],
+        ),
+        "light_topic": contains_any(
+            latest_text,
+            ["musica", "filme", "filmes", "serie", "series", "esporte", "comida", "livro", "livros"],
         ),
         "quick_pass": contains_any(latest_text, ["rapidinho", "so quis passar", "so passei", "so passar por aqui", "so vim passar", "so vim aqui"]),
         "wants_to_stop": contains_any(
@@ -1127,6 +1131,8 @@ def build_opening_topic(context: dict[str, Any]) -> str:
         return "esse momento mais leve"
     if context["mixed_feeling"]:
         return "esse meio termo que apareceu agora"
+    if context["light_topic"]:
+        return "esse assunto leve que voce trouxe"
     if context["creative"]:
         return "essa imagem que veio a voce"
     if context["ending"] and context["pressure"]:
@@ -1227,6 +1233,7 @@ PASSIVE_LIA_REPLY_FRAGMENTS = [
     "queremos estar aqui para te ouvir",
     "qual e o melhor jeito para eu te ajudar",
     "como posso te ajudar",
+    "nao posso ajudar",
 ]
 
 SUPPORTIVE_VALIDATION_FRAGMENTS = [
@@ -1319,10 +1326,60 @@ THERAPEUTIC_STYLE_FRAGMENTS = [
     "eu fico com voce nessa parte",
 ]
 
+MISREAD_CLEAR_MESSAGE_FRAGMENTS = [
+    "nao sei bem o que isso significa para voce",
+    "nao sei bem o que isso quer dizer para voce",
+    "nao entendi bem o que isso significa para voce",
+    "nao sei ao certo o que isso significa para voce",
+]
+
+MODEL_LEAK_FRAGMENTS = [
+    "ultima mensagem do usuario",
+    "resposta anterior da lia",
+    "reescreva agora",
+    "aqui vai uma resposta final",
+    "aqui vai lia",
+    "resposta final que",
+]
+
 
 def reply_has_therapeutic_style(text_value: str) -> bool:
     normalized = normalize_for_match(text_value)
     return any(fragment in normalized for fragment in THERAPEUTIC_STYLE_FRAGMENTS)
+
+
+def reply_looks_like_model_leak(text_value: str) -> bool:
+    normalized = normalize_for_match(text_value)
+    return any(fragment in normalized for fragment in MODEL_LEAK_FRAGMENTS)
+
+
+def reply_misreads_clear_message(session: LiaSessionState, user_message: str, text_value: str) -> bool:
+    context = build_lia_context(session, user_message)
+    normalized_reply = normalize_for_match(text_value)
+    normalized_user = normalize_for_match(user_message)
+
+    clear_message = is_probably_meaningful_message(user_message) and not context["unsure"]
+    if clear_message and contains_any(normalized_reply, MISREAD_CLEAR_MESSAGE_FRAGMENTS):
+        return True
+
+    if "cansad" in normalized_user and "voce se sente cansado" in normalized_reply:
+        return True
+    if "ansios" in normalized_user and "voce se sente ansioso" in normalized_reply:
+        return True
+    if "triste" in normalized_user and "voce se sente triste" in normalized_reply:
+        return True
+    if "voce tem uma pergunta para mim" in normalized_reply:
+        return True
+    if "tem uma pergunta para mim" in normalized_reply:
+        return True
+    if "mais doente" in normalized_reply:
+        return True
+    if re.search(r"\beu tambem\b", normalized_reply):
+        return True
+    if reply_looks_like_model_leak(text_value):
+        return True
+
+    return False
 
 DISTRESS_ASSUMPTION_FRAGMENTS = [
     "sinto muito",
@@ -1339,6 +1396,8 @@ GENERIC_MINIMIZING_FRAGMENTS = [
     "e natural sentir-se",
     "isso e natural",
     "isso e normal",
+    "normal ter dias assim",
+    "normal ter dias desse jeito",
     "de vez em quando",
     "isso acontece",
     "todo mundo passa",
@@ -1371,6 +1430,13 @@ WEAK_COACHING_REPLY_FRAGMENTS = [
     "recarregar as baterias",
     "o que me faz pensar",
     "pode ser uma semana dificil",
+    "voce tem uma pergunta para mim",
+    "tem uma pergunta para mim",
+    "alguma pergunta para mim",
+    "mais doente",
+    "um pouco mais doente",
+    "eu tambem",
+    "ultimamente eu",
 ]
 
 UNSUPPORTIVE_SOCIAL_PROOF_FRAGMENTS = [
@@ -1495,6 +1561,9 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     normalized = normalize_for_match(text_value)
     question_count = text_value.count("?")
 
+    if reply_looks_like_model_leak(text_value):
+        return False
+
     if context["quick_pass"]:
         if contains_any(normalized, DISTRESS_ASSUMPTION_FRAGMENTS) or contains_any(
             normalized, GENERIC_MINIMIZING_FRAGMENTS
@@ -1510,6 +1579,16 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
         return contains_any(
             normalized,
             POSITIVE_QUICK_PASS_FRAGMENTS + ["que bom", "bom ler", "leve", "quando quiser", "volta quando quiser"],
+        )
+
+    if context["light_topic"]:
+        if contains_any(normalized, DISTRESS_ASSUMPTION_FRAGMENTS + GUIDED_QUESTION_FRAGMENTS):
+            return False
+        if question_count > 1:
+            return False
+        return contains_any(
+            normalized,
+            ["musica", "filme", "serie", "esporte", "comida", "livro", "curte", "gosta de ouvir"],
         )
 
     if context["no_issue"]:
@@ -1609,6 +1688,9 @@ def build_contextual_reflection(
 
     if context["unsure"]:
         return "Tudo bem. Nem sempre isso vem claro na hora."
+
+    if session.turn_count == 1 and context["light_topic"]:
+        return "Claro. A gente pode falar disso sim."
 
     if session.turn_count == 1 and context["creative"]:
         return "Isso soa delicado."
@@ -1712,6 +1794,9 @@ def build_contextual_reflection(
 
     if session.stage == "support" and context["mixed_feeling"]:
         return "Entendi. Parece que o dia ficou num meio termo cansativo."
+
+    if session.stage == "support" and context["light_topic"]:
+        return "Pode me contar por onde voce quer comecar nesse assunto."
 
     if session.stage == "support" and context["creative"]:
         return "Gostei dessa imagem que veio agora."
@@ -1846,6 +1931,8 @@ def build_contextual_question(
             return "O que mais te pegou hoje?"
         if context["unwell"]:
             return "Se quiser, me conta o que mais te pegou hoje."
+        if context["light_topic"]:
+            return "O que voce mais curte nisso?"
         if context["creative"]:
             return "Flores te passam calma ou essa imagem apareceu por algum motivo especial?"
         if context["mentions_help"] or context["asks_to_talk"]:
@@ -1960,6 +2047,8 @@ def build_contextual_support(
             return "Tudo bem passar por aqui so pra dar um respiro."
         if context["mixed_feeling"]:
             return "Nao precisa definir o dia inteiro agora. A gente pode olhar so a parte que mais ficou com voce."
+        if context["light_topic"]:
+            return "Pode ir por onde ficar mais natural."
         if context["creative"]:
             return "Nao precisa transformar isso em problema. A gente pode partir dessa imagem mesmo."
         if session.turn_count == 1:
@@ -2626,6 +2715,9 @@ def generate_lia_plain_reply(
         "Use portugues do Brasil simples, tom humano e acolhedor, em ate 80 palavras. "
         "Acolha primeiro; depois, se fizer sentido, traga uma orientacao minima. "
         "Nao mencione diagnostico, questionario, pontuacao ou avaliacao. "
+        "Nao use a palavra 'doente' para reformular cansaco, tristeza, ansiedade ou inseguranca. "
+        "Nao pergunte se o usuario tem uma pergunta para voce. "
+        "Nao fale de experiencias, cansaco, memoria ou sentimentos proprios como 'eu tambem' ou 'ultimamente eu'. "
         f"Etapa: {stage}. {question_rule} {extra_style_hint} "
     )
     if repair_reason:
@@ -2654,7 +2746,102 @@ def generate_lia_plain_reply(
     with urllib_request.urlopen(request, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
         raw_payload = json.loads(response.read().decode("utf-8"))
 
-    return normalize_optional_text(raw_payload.get("message", {}).get("content"))
+    return clean_lia_model_text(raw_payload.get("message", {}).get("content"))
+
+
+def build_lia_rewrite_seed(
+    session: LiaSessionState,
+    user_message: str,
+    analysis: LiaAnalysis,
+) -> str:
+    context = build_lia_context(session, user_message)
+    allowed_question = normalize_optional_text(analysis.next_question)
+    support = build_contextual_support(session, user_message, analysis.recommended_stage)
+    reflection = normalize_optional_text(analysis.reflection) or ""
+
+    intent_parts = [
+        f"etapa: {analysis.recommended_stage}",
+        f"abertura base: {reflection}" if reflection else None,
+        f"apoio base: {support}" if support else None,
+        f"pergunta permitida: {allowed_question}" if allowed_question else "sem pergunta obrigatoria",
+    ]
+
+    if context["light_topic"]:
+        intent_parts.append("tema leve: manter a conversa leve e direta, sem dramatizar")
+    if context["quick_pass"] or context["no_issue"]:
+        intent_parts.append("check-in breve: nao investigar sintomas")
+    if user_needs_active_guidance(session, user_message):
+        intent_parts.append("o usuario precisa de acolhimento concreto e continuidade")
+
+    return " | ".join(part for part in intent_parts if part)
+
+
+def rewrite_lia_from_analysis(
+    session: LiaSessionState,
+    user_message: str,
+    analysis: LiaAnalysis,
+    retry_hint: str | None = None,
+) -> str | None:
+    if not OLLAMA_ENABLED:
+        return None
+
+    context = build_lia_context(session, user_message)
+    base_reply = normalize_optional_text(analysis.assistant_reply) or normalize_optional_text(analysis.reflection)
+    if not base_reply:
+        return None
+
+    question_rule = (
+        "Sem pergunta investigativa. Se fizer sentido, deixe uma porta aberta leve."
+        if context["quick_pass"] or context["no_issue"]
+        else "Use no maximo uma pergunta curta, e somente se ela ja estiver permitida no roteiro."
+    )
+
+    system_prompt = (
+        "Voce vai apenas redigir melhor a resposta da Lia. "
+        "Nao mude o sentido, nao mude o foco e nao invente um novo rumo para a conversa. "
+        "Use portugues do Brasil simples, humano, natural e acolhedor. "
+        "Nao use acentos. Nao use JSON. Nao use cabecalhos. "
+        "Nao fale de si mesma. Nao use 'eu tambem'. "
+        "Nao use a palavra 'doente'. "
+        "Nao pergunte se o usuario tem uma pergunta para voce. "
+        "Nao recuse conversa neutra ou leve. "
+        "Nao cite emergencia, crise, suicidio ou ajuda profissional se o roteiro nao trouxer isso. "
+        "Nao use texto meta como 'ultima mensagem do usuario', 'resposta anterior da Lia' ou 'reescreva agora'. "
+        "Seu trabalho e apenas pegar a intencao ja definida e dizer isso de um jeito mais vivo. "
+        f"{question_rule} "
+        f"Roteiro obrigatorio deste turno: {build_lia_rewrite_seed(session, user_message, analysis)}."
+    )
+    if retry_hint:
+        system_prompt += f" Ajuste extra: {retry_hint}"
+
+    payload = {
+        "model": resolve_ollama_model(),
+        "stream": False,
+        "options": {"temperature": 0.55, "num_predict": 120, "num_ctx": 2048},
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": (
+                    f"Mensagem do usuario: {user_message}\n"
+                    f"Resposta base da Lia: {base_reply}\n"
+                    "Escreva apenas a resposta final da Lia."
+                ),
+            },
+        ],
+    }
+
+    request = urllib_request.Request(
+        f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urllib_request.urlopen(request, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
+        raw_payload = json.loads(response.read().decode("utf-8"))
+
+    return clean_lia_model_text(raw_payload.get("message", {}).get("content"))
 
 
 def build_ai_rescue_analysis(
@@ -2733,6 +2920,9 @@ def rewrite_lia_reply(
         "Nao use frases passivas como 'estou aqui para ouvir'. "
         "Nao use frases minimizantes como 'e natural sentir-se assim de vez em quando'. "
         "Nao use tom de coach, autoajuda ou produtividade. "
+        "Nao use a palavra 'doente' para descrever o estado do usuario. "
+        "Nao pergunte se o usuario tem uma pergunta para voce. "
+        "Nao fale de experiencias, cansaco, memoria ou sentimentos proprios como 'eu tambem' ou 'ultimamente eu'. "
         "Nao pule direto para dica ou solucao antes de acolher. "
         "Nao faca perguntas de coaching futuro como 'o que voce pode fazer amanha'. "
         f"{question_limit}"
@@ -2770,7 +2960,23 @@ def rewrite_lia_reply(
     with urllib_request.urlopen(request, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
         raw_payload = json.loads(response.read().decode("utf-8"))
 
-    return normalize_optional_text(raw_payload.get("message", {}).get("content"))
+    return clean_lia_model_text(raw_payload.get("message", {}).get("content"))
+
+
+def clean_lia_model_text(raw_text: str | None) -> str | None:
+    cleaned = normalize_optional_text(raw_text)
+    if not cleaned:
+        return None
+
+    cleaned = re.sub(r"<\|[^|]+?\|>", " ", cleaned)
+    cleaned = re.sub(r"^aqui vai lia:\s*", "", cleaned.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"^ola lia!?\s*", "", cleaned.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \"'")
+
+    if cleaned.startswith("- "):
+        cleaned = cleaned.replace("- ", "", 1).strip()
+
+    return normalize_optional_text(cleaned)
 
 
 def repair_lia_reply(
@@ -2905,6 +3111,8 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
     analysis.assistant_reply = normalize_optional_text(analysis.assistant_reply) or analysis.assistant_reply
     if reply_has_therapeutic_style(analysis.assistant_reply):
         raise ValueError("Ollama returned an overly therapeutic assistant reply")
+    if reply_misreads_clear_message(session, user_message, analysis.assistant_reply):
+        raise ValueError("Ollama misread a clear user message")
     analysis.reflection = normalize_optional_text(analysis.reflection) or analysis.assistant_reply
     analysis.next_question = normalize_optional_text(analysis.next_question)
     normalized_user_message = normalize_optional_text(user_message) or ""
@@ -2950,8 +3158,11 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
         else:
             raise ValueError("Ollama returned a reply that does not fit support context")
 
+    needs_active_guidance = user_needs_active_guidance(session, user_message)
+    strict_active_guidance = context_requires_strict_active_guidance(session, user_message)
+
     if (
-        user_needs_active_guidance(session, user_message)
+        needs_active_guidance
         and not analysis.ready_to_close
         and analysis.recommended_stage != "closing"
         and not reply_shows_active_guidance(analysis.assistant_reply)
@@ -2969,7 +3180,7 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
         if rewritten_reply and reply_shows_active_guidance(rewritten_reply):
             analysis.assistant_reply = rewritten_reply
             analysis.reflection = rewritten_reply
-        elif rewritten_reply and reply_shows_supportive_progress(rewritten_reply):
+        elif rewritten_reply and reply_shows_supportive_progress(rewritten_reply) and not strict_active_guidance:
             analysis.assistant_reply = rewritten_reply
             analysis.reflection = rewritten_reply
         else:
@@ -2978,97 +3189,48 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
     return analysis
 
 
+def context_requires_strict_active_guidance(session: LiaSessionState, user_message: str) -> bool:
+    context = build_lia_context(session, user_message)
+    return bool(
+        context["unwell"]
+        or context["energia"]
+        or context["sono"]
+        or context["tristeza"]
+        or context["interesse"]
+        or context["worn_out"]
+        or context["stuck_without_improvement"]
+    )
+
+
 def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
+    if OLLAMA_ENABLED:
+        return analyze_lia_turn_with_llm(session, user_message)
     return fallback_lia_analysis(session, user_message), False
 
 
 def analyze_lia_turn_with_llm(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
-    last_error: Exception | None = None
-    recent_assistant_messages = [normalize_for_match(item) for item in get_recent_transcript_by_role(session, "assistant", 2)]
-
-    if resolve_ollama_model() == "llama3.2:1b":
-        try:
-            quick_analysis = build_ai_rescue_analysis(
-                session,
-                user_message,
-                retry_hint="Responda de forma curta, humana e especifica, com no maximo uma pergunta.",
-            )
-            if has_usable_assistant_reply(quick_analysis.assistant_reply or "", recent_assistant_messages):
-                return quick_analysis, True
-        except Exception as exc:
-            last_error = exc
-            if is_ollama_transport_error(exc):
-                return fallback_lia_analysis(session, user_message), False
-
-    retry_hints = [
-        None,
-        (
-            "Sua resposta anterior ficou passiva ou pouco acolhedora. Reescreva assistant_reply com reconhecimento concreto, "
-            "uma frase curta de apoio ou presenca e uma pergunta curta, observacional e clinica "
-            "disfarcada de conversa. Evite coaching generico, autoajuda e conselhos prontos. Avance primeiro por ansiedade/corpo/mente, "
-            "depois por sono, energia, interesse e humor."
-        ),
-        (
-            "Sua resposta anterior ficou generica ou preencheu scores cedo demais. Reescreva com mais precisao: "
-            "cite um detalhe da fala recente, acolha primeiro, faca uma pergunta que investigue sintomas de forma natural e use null "
-            "nos itens sem base direta."
-        ),
-    ]
-
-    for retry_hint in retry_hints:
-        try:
-            analysis = call_ollama_for_lia(session, retry_hint=retry_hint)
-            return refine_lia_analysis(session, analysis, user_message), True
-        except Exception as exc:
-            last_error = exc
-            if is_ollama_transport_error(exc):
-                return fallback_lia_analysis(session, user_message), False
-
-    rescue_hints = [
-        "A resposta precisa soar como conversa real, com apoio emocional de verdade, sem formulario nem conselhos vagos.",
-        (
-            "Se o usuario estiver bem, neutro ou simbolico, respeite isso com leveza. "
-            "Se estiver mal, conduza com reconhecimento concreto, presenca curta e uma pergunta observacional."
-        ),
-        (
-            "Nao use social proof, celebracao, analogias prontas, elogio exagerado, produtividade nem autoajuda. "
-            "Nao diga 'muita gente passa por isso', 'isso ja e uma vitoria', 'vou sugerir' ou perguntas abertas demais."
-        ),
-    ]
-    repair_reason = str(last_error) if last_error else None
-
-    for rescue_hint in rescue_hints:
-        try:
-            rescue_analysis = build_ai_rescue_analysis(
-                session,
-                user_message,
-                retry_hint=rescue_hint,
-                repair_reason=repair_reason,
-            )
-            return refine_lia_analysis(session, rescue_analysis, user_message), True
-        except Exception as exc:
-            last_error = exc
-            if is_ollama_transport_error(exc):
-                return fallback_lia_analysis(session, user_message), False
-
+    base_analysis = fallback_lia_analysis(session, user_message)
     try:
-        final_rescue = build_ai_rescue_analysis(
+        rewritten_reply = rewrite_lia_from_analysis(
             session,
             user_message,
+            base_analysis,
             retry_hint=(
-                "Mesmo se a resposta nao estiver perfeita, entregue uma mensagem calorosa, especifica e humana. "
-                "Retome o que a pessoa acabou de dizer, acolha primeiro e faca no maximo uma pergunta curta e util."
+                "Mantenha a mesma conducao do roteiro. "
+                "So deixe a fala menos quadrada, mais espontanea e mais conversada."
             ),
-            repair_reason=str(last_error) if last_error else "resgate final",
         )
-        if has_usable_assistant_reply(final_rescue.assistant_reply or "", recent_assistant_messages):
-            return final_rescue, True
-    except Exception as exc:
-        last_error = exc
-        if is_ollama_transport_error(exc):
-            return fallback_lia_analysis(session, user_message), False
+        if not rewritten_reply:
+            return base_analysis, False
 
-    return fallback_lia_analysis(session, user_message), False
+        candidate = base_analysis.model_copy(deep=True)
+        candidate.assistant_reply = rewritten_reply
+        candidate.reflection = rewritten_reply
+        candidate.next_question = base_analysis.next_question
+        refined = refine_lia_analysis(session, candidate, user_message)
+        return refined, True
+    except Exception:
+        return base_analysis, False
 
 
 def count_answered_scores(scores: list[int | None]) -> int:

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timezone
 
 import main
@@ -313,6 +314,160 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertIsNotNone(support)
         self.assertNotEqual(support, "Quando o cansaco acumula, ate falar disso ja pode parecer muito.")
+
+    def test_music_topic_does_not_sound_delicate_on_first_turn(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        analysis = main.fallback_lia_analysis(session, "podemos falar de musica?")
+
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertNotIn("isso soa delicado", lowered)
+        self.assertIn("claro", lowered)
+        self.assertIn("o que voce mais curte nisso", lowered)
+
+    def test_analyze_lia_turn_prefers_llm_when_enabled(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        expected = main.LiaAnalysis(
+            assistant_reply="Claro. Qual tipo de musica te pega mais facil?",
+            reflection="Claro.",
+            next_question="Qual tipo de musica te pega mais facil?",
+            risk_level="none",
+            mood_value=4,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
+        with patch.object(main, "OLLAMA_ENABLED", True), patch.object(
+            main,
+            "analyze_lia_turn_with_llm",
+            return_value=(expected, True),
+        ) as llm_mock:
+            analysis, using_ollama = main.analyze_lia_turn(session, "podemos falar de musica?")
+
+        llm_mock.assert_called_once_with(session, "podemos falar de musica?")
+        self.assertTrue(using_ollama)
+        self.assertEqual(analysis.assistant_reply, expected.assistant_reply)
+
+    def test_rejects_reply_that_misreads_clear_cansado_message(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]
+        analysis = main.LiaAnalysis(
+            assistant_reply=(
+                "Nao sei bem o que isso significa para voce. "
+                "Voce se sente cansado? E agora, uma pergunta: o que mais te preocupa hoje?"
+            ),
+            reflection="teste",
+            next_question="O que mais te preocupa hoje?",
+            risk_level="none",
+            mood_value=3,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
+        with self.assertRaisesRegex(ValueError, "misread a clear user message"):
+            main.refine_lia_analysis(session, analysis, "estou me sentindo cansado")
+
+    def test_rejects_reply_with_doente_or_question_for_lia(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]
+        analysis = main.LiaAnalysis(
+            assistant_reply=(
+                "Entendo que seja normal ter dias assim. "
+                "Voce se sente cansado de alguma coisa em particular ou esta apenas sendo um pouco mais doente? "
+                "E voce tem uma pergunta para mim sobre isso?"
+            ),
+            reflection="teste",
+            next_question="E voce tem uma pergunta para mim sobre isso?",
+            risk_level="none",
+            mood_value=3,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
+        with self.assertRaisesRegex(ValueError, "misread a clear user message"):
+            main.refine_lia_analysis(session, analysis, "estou um pouco cansado")
+
+    def test_rejects_reply_with_self_reference_from_lia(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]
+        analysis = main.LiaAnalysis(
+            assistant_reply=(
+                "Sabe, eu tambem fui muito cansada ultimamente. "
+                "Mas e bom saber que voce esta aqui."
+            ),
+            reflection="teste",
+            next_question=None,
+            risk_level="none",
+            mood_value=3,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
+        with self.assertRaisesRegex(ValueError, "misread a clear user message"):
+            main.refine_lia_analysis(session, analysis, "as vezes, estou ficando bastante tempo na cama")
+
+    def test_analyze_lia_turn_with_llm_falls_back_when_rewrite_is_bad(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        with patch.object(
+            main,
+            "rewrite_lia_from_analysis",
+            return_value="Eu tambem ando cansada ultimamente. Voce tem uma pergunta para mim?",
+        ):
+            analysis, using_ollama = main.analyze_lia_turn_with_llm(session, "estou um pouco cansado")
+
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+        self.assertFalse(using_ollama)
+        self.assertIn("cansaco", lowered)
+        self.assertNotIn("eu tambem", lowered)
+
+    def test_build_lia_rewrite_seed_keeps_question_from_script(self) -> None:
+        session = self.build_session(stage="mood", turn_count=1)
+        analysis = main.LiaAnalysis(
+            assistant_reply="Entendi. O cansaco parece estar pesando em voce. Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+            reflection="Entendi. O cansaco parece estar pesando em voce.",
+            next_question="Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+            risk_level="none",
+            mood_value=3,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="mood",
+        )
+
+        seed = main.build_lia_rewrite_seed(session, "estou cansado", analysis)
+        lowered = main.normalize_for_match(seed)
+        self.assertIn("pergunta permitida", lowered)
+        self.assertIn("menos vontade de fazer as coisas", lowered)
+
+    def test_rejects_model_leak_reply(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]
+        analysis = main.LiaAnalysis(
+            assistant_reply=(
+                "Ultima mensagem do usuario: estou cansado. "
+                "Resposta anterior da Lia: Entendi. "
+                "Reescreva agora a melhor resposta final."
+            ),
+            reflection="teste",
+            next_question=None,
+            risk_level="none",
+            mood_value=3,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=False,
+            recommended_stage="support",
+        )
+
+        with self.assertRaisesRegex(ValueError, "misread a clear user message"):
+            main.refine_lia_analysis(session, analysis, "estou cansado")
 
 
 if __name__ == "__main__":
