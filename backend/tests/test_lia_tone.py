@@ -310,7 +310,7 @@ class LiaToneTests(unittest.TestCase):
         lowered = main.normalize_for_match(reply)
 
         self.assertIn("triagem", lowered)
-        self.assertIn("distrair a mente", lowered)
+        self.assertIn("baixar um pouco o ritmo", lowered)
         self.assertIn("para por aqui", lowered)
 
     def test_followup_mode_keeps_conversation_open_for_extra_turn(self) -> None:

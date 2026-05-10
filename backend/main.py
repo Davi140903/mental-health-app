@@ -3602,8 +3602,9 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
     if session.followup_mode and (session.followup_turns_left or 0) <= 0:
         return (
-            "Obrigada por continuar comigo mais um pouco. Pelo que apareceu hoje, pode ser uma boa transformar isso em um proximo passo e seguir para a triagem com um dos nossos profissionais. "
-            "Por agora, tenta escolher algo simples para distrair a mente, como ouvir uma musica, tomar um banho, descansar um pouco ou ficar longe de coisas que te deixem ainda mais acelerado. "
+            "Obrigada por continuar comigo mais um pouco. Acho que por hoje a gente ja conseguiu organizar uma parte importante do que voce trouxe. "
+            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais, para voce nao precisar carregar isso sozinho. "
+            "Agora, tenta fazer algo simples que te ajude a baixar um pouco o ritmo, como ouvir uma musica calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
             "A gente para por aqui hoje. Cuida de voce, e quando voltar eu continuo de onde isso ficou."
         )
 
