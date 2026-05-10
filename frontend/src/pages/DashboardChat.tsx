@@ -183,17 +183,24 @@ export default function DashboardChat() {
     }
   };
 
-  const handleRestart = async () => {
-    if (draftStorageKey) {
-      localStorage.removeItem(draftStorageKey);
+  const handleContinueConversation = () => {
+    if (!liaSession) {
+      return;
     }
-    if (sessionStorageKey) {
-      localStorage.removeItem(sessionStorageKey);
-    }
-    setDraftMessage('');
+
+    const lastAssistantMessage = liaSession.transcript[liaSession.transcript.length - 1];
+    const nextTranscript =
+      lastAssistantMessage?.role === 'assistant' && lastAssistantMessage.content.includes('continuar conversando')
+        ? [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voce daqui.' }]
+        : [...liaSession.transcript];
+
     setTriageRequest(null);
     setTriageSlots([]);
-    await startConversation();
+    setLiaSession({
+      ...liaSession,
+      completed: false,
+      transcript: nextTranscript,
+    });
   };
 
   const loadTriageSlots = useCallback(async () => {
@@ -249,7 +256,6 @@ export default function DashboardChat() {
   const isReturning = Boolean(memory && !memory.is_first_contact);
   const memorySummary = memory?.recent_summary ?? memory?.summary ?? null;
   const recentConversations = memory?.recent_conversations ?? [];
-  const latestReport = memory?.latest_report ?? null;
 
   return (
     <Layout immersive>
@@ -334,15 +340,11 @@ export default function DashboardChat() {
 
             {!startingLia && liaSession?.completed ? (
               <div className="chat-composer">
-                <p className="chat-hint">A Lia ja guardou o essencial desta conversa. Se voce quiser, ainda pode continuar falando por aqui, ou pode parar sem pressa.</p>
-                <div className="lia-memory-strip">
-                  <p>
-                    {triageRequest
-                      ? 'Se voce quiser apoio profissional, pode seguir com a triagem. Se preferir, tambem pode continuar conversando mais um pouco antes disso.'
-                      : 'Se por hoje ja foi o suficiente, tudo bem encerrar. E, se ainda houver algo importante, voce pode continuar o chat normalmente.'}
-                  </p>
-                  {latestReport ? <p className="panel-secondary-copy">{latestReport}</p> : null}
-                </div>
+                <p className="chat-hint">
+                  {triageRequest
+                    ? 'Se quiser, voce pode seguir com a triagem agora. E, se ainda nao for a hora, tambem pode continuar conversando por aqui.'
+                    : 'Se por hoje ja foi o suficiente, tudo bem parar por aqui. Mas, se ainda houver algo importante, voce pode continuar conversando.'}
+                </p>
                 <div className="lia-post-chat-actions">
                   {!triageRequest ? (
                     <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
@@ -377,7 +379,7 @@ export default function DashboardChat() {
                     </div>
                   ) : null}
                 </div>
-                <button type="button" className="chat-submit chat-restart" onClick={() => void handleRestart()}>
+                <button type="button" className="chat-submit chat-restart" onClick={handleContinueConversation}>
                   Continuar chat
                 </button>
               </div>
