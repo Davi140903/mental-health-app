@@ -1,7 +1,7 @@
 const LIA_CHECKIN_COOLDOWN_PREFIX = 'mental-health-lia-checkin-cooldown';
 const LIA_LIGHT_PROMPT_PREFIX = 'mental-health-lia-light-prompt';
 
-const CHECKIN_COOLDOWN_MINUTES = 5;
+const CHECKIN_COOLDOWN_HOURS = 12;
 
 export function getCheckInCooldownStorageKey(userId: string) {
   return `${LIA_CHECKIN_COOLDOWN_PREFIX}:${userId}`;
@@ -13,7 +13,7 @@ export function getLightPromptStorageKey(userId: string) {
 
 export function getCheckInCooldownExpiresAt() {
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + CHECKIN_COOLDOWN_MINUTES);
+  expiresAt.setHours(expiresAt.getHours() + CHECKIN_COOLDOWN_HOURS);
   return expiresAt.toISOString();
 }
 
