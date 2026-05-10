@@ -197,6 +197,7 @@ export default function DashboardChat() {
       completed: false,
       followup_mode: true,
       followup_turns_left: 2,
+      followup_finished: false,
       transcript: nextTranscript,
     });
   };
@@ -339,7 +340,9 @@ export default function DashboardChat() {
             {!startingLia && liaSession?.completed ? (
               <div className="chat-composer">
                 <p className="chat-hint">
-                  {triageRequest
+                  {liaSession.followup_finished
+                    ? 'Se por hoje ja foi suficiente, tudo bem parar por aqui. A triagem fica disponivel como proximo passo.'
+                    : triageRequest
                     ? 'Se quiser, voce pode seguir com a triagem agora. E, se ainda nao for a hora, tambem pode continuar conversando por aqui.'
                     : 'Se por hoje ja foi o suficiente, tudo bem parar por aqui. Mas, se ainda houver algo importante, voce pode continuar conversando.'}
                 </p>
@@ -377,9 +380,11 @@ export default function DashboardChat() {
                     </div>
                   ) : null}
                 </div>
-                <button type="button" className="chat-submit chat-restart" onClick={handleContinueConversation}>
-                  Continuar chat
-                </button>
+                {!liaSession.followup_finished ? (
+                  <button type="button" className="chat-submit chat-restart" onClick={handleContinueConversation}>
+                    Continuar chat
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>

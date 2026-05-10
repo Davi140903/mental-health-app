@@ -289,6 +289,7 @@ def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionStat
         saved_mood=False,
         followup_mode=False,
         followup_turns_left=0,
+        followup_finished=False,
         memory=memory or LiaMemorySnapshot(),
     )
 
@@ -3600,9 +3601,39 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
         return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo. Se depois voce quiser retomar, eu continuo daqui com voce."
 
     if session.followup_mode and (session.followup_turns_left or 0) <= 0:
-        return "Obrigada por continuar comigo mais um pouco. Agora sim, acho melhor a gente parar por aqui por hoje. Se depois voce quiser retomar, eu sigo com voce de onde isso ficou."
+        return (
+            "Obrigada por continuar comigo mais um pouco. Pelo que apareceu hoje, pode ser uma boa transformar isso em um proximo passo e seguir para a triagem com um dos nossos profissionais. "
+            "Por agora, tenta escolher algo simples para distrair a mente, como ouvir uma musica, tomar um banho, descansar um pouco ou ficar longe de coisas que te deixem ainda mais acelerado. "
+            "A gente para por aqui hoje. Cuida de voce, e quando voltar eu continuo de onde isso ficou."
+        )
 
     return "Obrigada por me contar isso. Ja consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se voce quiser. Se ainda fizer sentido, voce tambem pode continuar conversando comigo."
+
+
+def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
+    context = build_lia_context(session, user_message)
+    if context["sleep"] or context["energy"]:
+        return "Entendi. Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
+    if context["irritability"]:
+        return "Entendi. Essa irritacao junto com o afastamento parece ser uma parte importante do que ficou. Quando voce percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciencia com as pessoas?"
+    if context["worry"] or context["anxiety"]:
+        return "Entendi. Essa cabeca que nao desliga parece estar acompanhando voce depois do trabalho tambem. O que costuma ficar repetindo mais quando voce chega em casa?"
+    return "Entendi. Pode me contar so mais esse pedaco. O que voce acha importante a Lia guardar sobre isso?"
+
+
+def reply_sounds_like_closing(reply: str | None) -> bool:
+    lowered = normalize_for_match(reply)
+    return contains_any(
+        lowered,
+        [
+            "quer encerrar",
+            "fechar por aqui",
+            "parar por aqui",
+            "podemos fechar",
+            "ja consegui montar um retrato",
+            "ja consegui guardar o essencial",
+        ],
+    )
 
 
 def ensure_database_shape() -> None:
@@ -4514,9 +4545,12 @@ def lia_message(
         session.current_topic = "closing"
         session.focus_kind = "phq9"
         session.completed = True
+        session.followup_finished = bool(session.followup_mode)
         session.followup_mode = False
         session.followup_turns_left = 0
     else:
+        if session.followup_mode and reply_sounds_like_closing(analysis.assistant_reply):
+            analysis.assistant_reply = build_followup_continuation_reply(session, message_text)
         recommended_stage = analysis.recommended_stage
         session.stage = recommended_stage
         if session.stage == "anxiety":

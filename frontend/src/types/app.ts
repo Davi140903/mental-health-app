@@ -142,6 +142,7 @@ export interface LiaSession {
   saved_mood: boolean;
   followup_mode?: boolean;
   followup_turns_left?: number;
+  followup_finished?: boolean;
   pause_offer_pending?: boolean;
   pause_used?: boolean;
   recent_question_intents?: string[];
