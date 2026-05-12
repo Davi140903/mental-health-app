@@ -32,6 +32,31 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("Me conta, como voce ta hoje?", contents)
         self.assertNotIn("Esse pode ser nosso primeiro cuidado por aqui. Nao precisa acertar as palavras.", contents)
 
+    def test_returning_contact_does_not_dump_previous_summary(self) -> None:
+        user = main.User(nome="Davi", email="davi@example.com", hashed_password="x")
+        memory = LiaMemorySnapshot(
+            is_first_contact=False,
+            summary="Temas que ja apareceram no seu cuidado: ansiedade, sono e trabalho.",
+            recent_summary="a pressao do trabalho voltou a pesar bastante",
+            recent_conversations=[
+                main.LiaRecentInteraction(
+                    created_at=datetime.now(timezone.utc),
+                    summary="partimos de musica e falamos bastante sobre trabalho, sono e ansiedade",
+                    topics=["trabalho", "sono", "ansiedade"],
+                )
+            ],
+        )
+
+        messages = main.build_lia_welcome_messages(user, memory)
+        joined = main.normalize_for_match(" ".join(item.content for item in messages))
+
+        self.assertEqual(len(messages), 3)
+        self.assertIn("bom te ver por aqui", joined)
+        self.assertIn("retomar algo", joined)
+        self.assertNotIn("da ultima vez ficou comigo", joined)
+        self.assertNotIn("ansiedade sono e trabalho", joined)
+        self.assertNotIn("partimos de musica", joined)
+
     def test_fallback_reply_avoids_therapeutic_old_style(self) -> None:
         session = self.build_session()
         analysis = main.fallback_lia_analysis(session, "nao estou me sentindo muito bem")

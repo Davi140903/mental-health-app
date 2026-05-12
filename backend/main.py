@@ -315,39 +315,17 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
             ),
         ]
 
-    messages = [LiaTranscriptMessage(role="assistant", content=f"Oi de novo, {first_name}.")]
-
-    latest_interaction = memory.recent_conversations[0] if memory.recent_conversations else None
-
-    if latest_interaction and latest_interaction.summary:
-        messages.append(
-            LiaTranscriptMessage(
-                role="assistant",
-                content=f"Da ultima vez, ficou comigo que {latest_interaction.summary[0:180].rstrip('.')}.",
-            )
-        )
-    elif memory.recent_summary:
-        messages.append(
-            LiaTranscriptMessage(
-                role="assistant",
-                content=f"Eu guardei com cuidado da ultima vez que {memory.recent_summary[0:180].rstrip('.')}.",
-            )
-        )
-    elif memory.summary:
-        messages.append(
-            LiaTranscriptMessage(
-                role="assistant",
-                content=f"Eu tenho em mente que {memory.summary[0:180].rstrip('.')}.",
-            )
-        )
-
-    messages.append(
+    return [
+        LiaTranscriptMessage(role="assistant", content=f"Oi de novo, {first_name}."),
         LiaTranscriptMessage(
             role="assistant",
-            content="Podemos retomar de onde voce parou ou comecar de outro ponto. O que faz mais sentido hoje?",
-        )
-    )
-    return messages
+            content="Bom te ver por aqui. A gente pode continuar com calma, sem precisar puxar tudo de uma vez.",
+        ),
+        LiaTranscriptMessage(
+            role="assistant",
+            content="Hoje voce quer retomar algo que ficou da ultima conversa ou prefere comecar de outro ponto?",
+        ),
+    ]
 
 
 COMMON_PORTUGUESE_TOKENS = {
@@ -1989,7 +1967,7 @@ def build_contextual_question(
         if session.turn_count == 1 and context["tristeza"]:
             return "O que mais tem vindo junto com isso?"
         if session.turn_count == 1 and not session.memory.is_first_contact:
-            return "Desde a ultima vez, o que parece mais forte agora: ansiedade, cansaco ou pressao do dia a dia?"
+            return "O que voce quer colocar primeiro hoje?"
         if context["short_both"] and session.turn_count <= 3:
             return "Quando os dois pesam juntos, o que costuma derrubar mais depois: o cansaco, o sono ruim ou a mente que nao desacelera?"
         if context["short_body"]:
