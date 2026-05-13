@@ -179,7 +179,8 @@ class LiaToneTests(unittest.TestCase):
         summary = main.build_interaction_summary(session, topics)
         report = main.build_psychologist_report(session, topics)
 
-        self.assertIn("musica", summary)
+        self.assertIn("trabalho", summary)
+        self.assertNotIn("partimos de", main.normalize_for_match(summary))
         self.assertIn("trabalho", report)
         self.assertIn("pausa leve", report)
 

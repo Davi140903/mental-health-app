@@ -3479,6 +3479,43 @@ def build_lia_note(transcript: list[LiaTranscriptMessage]) -> str | None:
     return normalize_optional_text(" | ".join(user_messages)[0:500])
 
 
+def get_meaningful_user_messages(transcript: list[LiaTranscriptMessage]) -> list[str]:
+    return [
+        item.content
+        for item in transcript
+        if item.role == "user" and is_probably_meaningful_message(item.content, allow_short_contextual=False)
+    ]
+
+
+def build_user_facing_topic_summary(session: LiaSessionState, topics: list[str]) -> str:
+    text_value = build_memory_source_text(session)
+    bullets: list[str] = []
+
+    if contains_any(text_value, ["mud", "novo trabalho", "emprego", "empresa"]):
+        bullets.append("mudanca ou pressao no trabalho")
+    elif "trabalho ou estudos" in topics:
+        bullets.append("trabalho ou estudos apareceram como parte do contexto")
+
+    if "pressao do dia a dia" in topics:
+        bullets.append("sensacao de muitas demandas ao mesmo tempo")
+    if "sono" in topics:
+        bullets.append("sono prejudicado ou descanso insuficiente")
+    if "energia" in topics or "humor" in topics:
+        bullets.append("queda de energia, animo ou disposicao")
+    if "ansiedade" in topics or "corpo em alerta" in topics:
+        bullets.append("nervosismo, preocupacao ou corpo em alerta")
+    if contains_any(text_value, ["amigos", "sair", "isol", "afastad"]):
+        bullets.append("menos vontade de sair ou se aproximar de pessoas")
+
+    if not bullets:
+        note = build_lia_note(session.transcript)
+        if note:
+            return "Ponto trazido no check-in inicial."
+        return "Check-in breve registrado pela Lia."
+
+    return "; ".join(list(dict.fromkeys(bullets))[:4]) + "."
+
+
 def build_memory_source_text(session: LiaSessionState) -> str:
     user_messages = [
         item.content
@@ -3577,29 +3614,13 @@ def build_memory_summary(topics: list[str]) -> str | None:
 
 
 def build_interaction_summary(session: LiaSessionState, topics: list[str]) -> str:
-    opening_context = build_opening_context(session)
-    note = build_lia_note(session.transcript)
-
-    if topics:
-        if len(topics) == 1:
-            base = f"o tema mais forte da conversa foi {topics[0]}"
-        elif len(topics) == 2:
-            base = f"os temas que mais apareceram foram {topics[0]} e {topics[1]}"
-        else:
-            base = f"os temas que mais apareceram foram {', '.join(topics[:3])}"
-    else:
-        base = "voce deixou um retrato curto, mas importante, de como vinha se sentindo"
-
-    if opening_context:
-        return f"partimos de {opening_context} e {base}"
-    if note:
-        return base
-    return "voce fez um check-in breve e deixou pontos importantes registrados"
+    return build_user_facing_topic_summary(session, topics)
 
 
 def build_psychologist_report(session: LiaSessionState, topics: list[str]) -> str:
-    opening_context = build_opening_context(session)
-    note = build_lia_note(session.transcript)
+    user_messages = get_meaningful_user_messages(session.transcript)
+    first_message = normalize_optional_text(user_messages[0]) if user_messages else None
+    later_messages = [message for message in user_messages[1:] if normalize_optional_text(message)]
     mood_value = infer_mood_value(session)
     mood_label = {
         1: "muito baixo",
@@ -3610,10 +3631,14 @@ def build_psychologist_report(session: LiaSessionState, topics: list[str]) -> st
     }.get(mood_value, "intermediario")
 
     parts: list[str] = []
-    if opening_context:
-        parts.append(f"Abertura do dia: {opening_context}.")
-    if note:
-        parts.append(f"Fala principal do usuario: {note}.")
+    summary = build_user_facing_topic_summary(session, topics)
+    parts.append(f"Sintese inicial: {summary}")
+    if first_message and len(first_message) <= 180:
+        parts.append(f"Frase inicial registrada: {first_message}.")
+    elif first_message:
+        parts.append("A primeira fala trouxe um relato amplo de desconforto e necessidade de orientacao.")
+    if later_messages:
+        parts.append(f"Pontos nomeados depois: {'; '.join(later_messages[:3])}.")
     if topics:
         parts.append(f"Temas que apareceram: {', '.join(topics[:4])}.")
     parts.append(f"Humor inferido ao fim da conversa: {mood_label}.")

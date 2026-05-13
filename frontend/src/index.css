@@ -1262,6 +1262,32 @@ a {
   margin-top: 0.25rem;
 }
 
+.triage-summary-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.triage-summary-list li {
+  position: relative;
+  padding-left: 0.9rem;
+  color: #46606d;
+  line-height: 1.45;
+}
+
+.triage-summary-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: #6f9ab0;
+}
+
 .triage-topic-row {
   display: flex;
   flex-wrap: wrap;
@@ -1363,6 +1389,20 @@ a {
 .patient-mini-list span,
 .patient-conversation-list strong {
   display: block;
+}
+
+.mood-card-list {
+  gap: 0.55rem;
+}
+
+.mood-mini-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mood-mini-card p {
+  margin: 0;
+  color: #5f7480;
 }
 
 .patient-conversation-list p {

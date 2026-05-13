@@ -43,6 +43,24 @@ function extractMainText(request: PsychologistTriageRequest) {
   return source.length > 220 ? `${source.slice(0, 220).trim()}...` : source;
 }
 
+function splitSummaryTopics(value?: string | null) {
+  const cleaned = (value ?? '').trim().replace(/\.$/, '');
+  if (!cleaned) {
+    return [];
+  }
+
+  return cleaned
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function isRawConversationText(value?: string | null) {
+  const normalized = normalizeMessageForCompare(value ?? '');
+  return normalized.includes('|') || normalized.length > 160 || normalized.includes('oi lia');
+}
+
 function patientFirstName(name: string) {
   return name.trim().split(' ')[0] || 'Usuario';
 }
@@ -96,6 +114,18 @@ function moodLabel(value: number) {
   };
 
   return labels[value] ?? `${value}/5`;
+}
+
+function moodDescription(value: number) {
+  const labels: Record<number, string> = {
+    1: 'Registro indica um momento mais dificil.',
+    2: 'Registro indica um periodo pesado.',
+    3: 'Registro indica oscilacao ou instabilidade.',
+    4: 'Registro indica um momento um pouco mais favoravel.',
+    5: 'Registro indica um momento positivo.',
+  };
+
+  return labels[value] ?? 'Registro de humor salvo no app.';
 }
 
 export default function PsychologistDashboard() {
@@ -269,7 +299,7 @@ export default function PsychologistDashboard() {
     const moods = detail.moods.length
       ? detail.moods
           .slice(0, 8)
-          .map((mood) => `<li>${moodLabel(mood.valor)} - ${escapeHtml(mood.nota || formatDateTime(mood.criado_em))}</li>`)
+          .map((mood) => `<li>${moodLabel(mood.valor)} - ${escapeHtml(formatDateTime(mood.criado_em))}</li>`)
           .join('')
       : '<li>Nenhum registro de humor salvo.</li>';
     const conversations = detail.lia_memory.recent_conversations.length
@@ -474,7 +504,15 @@ export default function PsychologistDashboard() {
 
                   <div className="triage-report">
                     <span className="field-label">Ponto inicial</span>
-                    <p>{extractMainText(request)}</p>
+                    {splitSummaryTopics(request.interaction?.summary).length ? (
+                      <ul className="triage-summary-list">
+                        {splitSummaryTopics(request.interaction?.summary).map((topic) => (
+                          <li key={topic}>{topic}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{extractMainText(request)}</p>
+                    )}
                   </div>
 
                   {request.interaction?.topics?.length ? (
@@ -556,11 +594,14 @@ export default function PsychologistDashboard() {
                           <section className="patient-detail-card">
                             <span className="field-label">Humor recente</span>
                             {patientDetail.moods.length ? (
-                              <div className="patient-mini-list">
+                              <div className="patient-mini-list mood-card-list">
                                 {patientDetail.moods.slice(0, 5).map((mood) => (
-                                  <div key={mood.id}>
-                                    <strong>{moodLabel(mood.valor)}</strong>
-                                    <span>{mood.nota || formatDateTime(mood.criado_em)}</span>
+                                  <div key={mood.id} className="mood-mini-card">
+                                    <div>
+                                      <strong>{moodLabel(mood.valor)}</strong>
+                                      <span>{formatDateTime(mood.criado_em)}</span>
+                                    </div>
+                                    <p>{isRawConversationText(mood.nota) ? 'Inferido a partir da conversa com a Lia.' : mood.nota || moodDescription(mood.valor)}</p>
                                   </div>
                                 ))}
                               </div>
