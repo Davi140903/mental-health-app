@@ -1290,7 +1290,7 @@ a {
 
 .patient-detail-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.32fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: start;
   margin-bottom: 1rem;
@@ -1304,6 +1304,14 @@ a {
 .patient-detail-header p {
   margin: 0;
   color: #5f7480;
+}
+
+.patient-detail-actions,
+.professional-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
 }
 
 .patient-detail-grid {
@@ -1356,6 +1364,60 @@ a {
 
 .patient-conversation-list p {
   margin: 0.25rem 0 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(23, 39, 49, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.professional-modal {
+  width: min(860px, 100%);
+  max-height: min(760px, calc(100vh - 2rem));
+  overflow: auto;
+  padding: 1.2rem;
+  border-radius: 14px;
+  background: #f8fbfc;
+  border: 1px solid rgba(56, 104, 130, 0.18);
+  box-shadow: 0 24px 70px rgba(23, 39, 49, 0.25);
+}
+
+.professional-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(56, 104, 130, 0.12);
+}
+
+.professional-modal-header h2 {
+  margin: 0.25rem 0 0.1rem;
+}
+
+.professional-modal-header p {
+  margin: 0;
+  color: #5f7480;
+}
+
+.professional-note-area {
+  width: 100%;
+  min-height: 310px;
+  resize: vertical;
+  margin-bottom: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 104, 130, 0.18);
+  background: #ffffff;
+  color: #243b49;
+  font: inherit;
+  line-height: 1.55;
 }
 
 .focus-card,
@@ -1655,9 +1717,15 @@ a {
   .psychologist-topbar,
   .psychologist-toolbar,
   .admin-topbar,
-  .admin-card {
+  .admin-card,
+  .professional-modal-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .patient-detail-actions,
+  .professional-modal-actions {
+    justify-content: flex-start;
   }
 
   .segmented-control {

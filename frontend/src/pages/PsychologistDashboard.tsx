@@ -71,6 +71,10 @@ export default function PsychologistDashboard() {
   const [patientDetail, setPatientDetail] = useState<PsychologistPatientDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteFeedback, setNoteFeedback] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -125,12 +129,171 @@ export default function PsychologistDashboard() {
     try {
       const detail = await appService.getPsychologistPatientDetail(request.id);
       setPatientDetail(detail);
+      setNoteDraft(detail.psychologist_note?.content ?? '');
     } catch {
       setPatientDetail(null);
       setDetailError('Nao foi possivel abrir os detalhes deste paciente agora.');
     } finally {
       setDetailLoading(false);
     }
+  };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+  const openPrintDocument = (title: string, html: string) => {
+    const printWindow = window.open('', '_blank', 'width=900,height=720');
+    if (!printWindow) {
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            body { font-family: Georgia, 'Times New Roman', serif; color: #1f2933; margin: 32px; line-height: 1.5; }
+            header { border-bottom: 2px solid #315d74; margin-bottom: 20px; padding-bottom: 12px; }
+            h1 { margin: 0 0 4px; font-size: 24px; }
+            h2 { margin-top: 24px; font-size: 17px; color: #315d74; border-bottom: 1px solid #d8e3e8; padding-bottom: 4px; }
+            p { margin: 6px 0; }
+            .meta { color: #5f7480; font-size: 13px; }
+            .box { border: 1px solid #d8e3e8; padding: 12px; margin: 10px 0; border-radius: 6px; }
+            ul { padding-left: 18px; }
+            @media print { body { margin: 20mm; } button { display: none; } }
+          </style>
+        </head>
+        <body>${html}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const buildPatientReportHtml = (detail: PsychologistPatientDetail) => {
+    const note = noteDraft.trim() || detail.psychologist_note?.content || 'Sem anotacoes registradas.';
+    const questionnaires = detail.questionnaires.length
+      ? detail.questionnaires
+          .map((item) => `<li>${questionnaireLabel(item)}: ${item.pontuacao} pontos, ${escapeHtml(item.classificacao)}</li>`)
+          .join('')
+      : '<li>Nenhuma triagem PHQ/GAD registrada.</li>';
+    const moods = detail.moods.length
+      ? detail.moods
+          .slice(0, 8)
+          .map((mood) => `<li>${moodLabel(mood.valor)} - ${escapeHtml(mood.nota || formatDateTime(mood.criado_em))}</li>`)
+          .join('')
+      : '<li>Nenhum registro de humor salvo.</li>';
+    const conversations = detail.lia_memory.recent_conversations.length
+      ? detail.lia_memory.recent_conversations
+          .slice(0, 5)
+          .map(
+            (interaction) =>
+              `<div class="box"><p class="meta">${formatDateTime(interaction.created_at)}</p><p>${escapeHtml(
+                interaction.report ?? interaction.summary,
+              )}</p></div>`,
+          )
+          .join('')
+      : '<p>Nenhuma conversa recente registrada.</p>';
+
+    return `
+      <header>
+        <h1>Relatorio de triagem e preparacao</h1>
+        <p class="meta">Paciente: ${escapeHtml(detail.user.nome)} | ${escapeHtml(detail.user.email)}</p>
+        <p class="meta">Gerado em ${formatDateTime(new Date().toISOString())}</p>
+      </header>
+      <h2>Resumo da Lia</h2>
+      <div class="box"><p>${escapeHtml(
+        detail.current_request.interaction?.report ??
+          detail.current_request.interaction?.summary ??
+          'Ainda nao ha relatorio detalhado da Lia.',
+      )}</p></div>
+      <h2>Memoria breve</h2>
+      <p>${escapeHtml(
+        detail.lia_memory.recent_summary ?? detail.lia_memory.summary ?? 'Ainda ha pouco historico acumulado.',
+      )}</p>
+      <h2>Triagens recentes</h2>
+      <ul>${questionnaires}</ul>
+      <h2>Humor recente</h2>
+      <ul>${moods}</ul>
+      <h2>Conversas recentes com a Lia</h2>
+      ${conversations}
+      <h2>Anotacoes do profissional</h2>
+      <div class="box"><p>${escapeHtml(note).replaceAll('\\n', '<br />')}</p></div>
+    `;
+  };
+
+  const handleSaveNote = async () => {
+    if (!selectedRequestId) {
+      return;
+    }
+
+    setNoteSaving(true);
+    setNoteFeedback('');
+    try {
+      const saved = await appService.updatePsychologistPatientNote(selectedRequestId, noteDraft);
+      setPatientDetail((current) => (current ? { ...current, psychologist_note: saved } : current));
+      setNoteFeedback('Anotacao salva.');
+    } catch {
+      setNoteFeedback('Nao foi possivel salvar agora.');
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const handleDownloadNote = () => {
+    if (!patientDetail) {
+      return;
+    }
+
+    const content = [
+      `Paciente: ${patientDetail.user.nome}`,
+      `Email: ${patientDetail.user.email}`,
+      `Gerado em: ${formatDateTime(new Date().toISOString())}`,
+      '',
+      'Anotacoes do profissional:',
+      noteDraft.trim() || 'Sem anotacoes registradas.',
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `anotacoes-${patientDetail.user.nome.toLowerCase().replaceAll(' ', '-')}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintNote = () => {
+    if (!patientDetail) {
+      return;
+    }
+
+    openPrintDocument(
+      `Anotacoes - ${patientDetail.user.nome}`,
+      `
+        <header>
+          <h1>Anotacoes do profissional</h1>
+          <p class="meta">Paciente: ${escapeHtml(patientDetail.user.nome)} | ${escapeHtml(patientDetail.user.email)}</p>
+          <p class="meta">Gerado em ${formatDateTime(new Date().toISOString())}</p>
+        </header>
+        <div class="box"><p>${escapeHtml(noteDraft.trim() || 'Sem anotacoes registradas.').replaceAll('\\n', '<br />')}</p></div>
+      `,
+    );
+  };
+
+  const handlePrintPatientReport = () => {
+    if (!patientDetail) {
+      return;
+    }
+
+    openPrintDocument(`Relatorio - ${patientDetail.user.nome}`, buildPatientReportHtml(patientDetail));
   };
 
   return (
@@ -258,9 +421,13 @@ export default function PsychologistDashboard() {
                             <h4>{patientDetail.user.nome}</h4>
                             <p>{patientDetail.user.email}</p>
                           </div>
-                          <div className="triage-time">
-                            <span>Gerado em</span>
-                            <strong>{formatDateTime(patientDetail.generated_at)}</strong>
+                          <div className="patient-detail-actions">
+                            <button type="button" className="psychologist-ghost-button" onClick={() => setNoteModalOpen(true)}>
+                              Bloco de notas
+                            </button>
+                            <button type="button" className="psychologist-ghost-button" onClick={handlePrintPatientReport}>
+                              Imprimir relatorio
+                            </button>
                           </div>
                         </div>
 
@@ -349,6 +516,47 @@ export default function PsychologistDashboard() {
           </div>
         </section>
       </main>
+
+      {noteModalOpen && patientDetail ? (
+        <div className="modal-backdrop" role="presentation">
+          <section className="professional-modal" role="dialog" aria-modal="true" aria-label="Bloco de notas do paciente">
+            <div className="professional-modal-header">
+              <div>
+                <span className="field-label">Bloco de notas</span>
+                <h2>{patientDetail.user.nome}</h2>
+                <p>Anotacoes privadas do profissional para esta solicitacao de triagem.</p>
+              </div>
+              <button type="button" className="psychologist-ghost-button" onClick={() => setNoteModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+
+            <textarea
+              className="professional-note-area"
+              value={noteDraft}
+              onChange={(event) => setNoteDraft(event.target.value)}
+              placeholder="Registre hipoteses de acolhimento, pontos para investigar na primeira consulta, observacoes e encaminhamentos combinados."
+            />
+
+            {noteFeedback ? <div className="alert success">{noteFeedback}</div> : null}
+
+            <div className="professional-modal-actions">
+              <button type="button" onClick={() => void handleSaveNote()} disabled={noteSaving}>
+                {noteSaving ? 'Salvando...' : 'Salvar anotacao'}
+              </button>
+              <button type="button" className="psychologist-ghost-button" onClick={handleDownloadNote}>
+                Baixar .txt
+              </button>
+              <button type="button" className="psychologist-ghost-button" onClick={handlePrintNote}>
+                Imprimir notas
+              </button>
+              <button type="button" className="psychologist-ghost-button" onClick={handlePrintPatientReport}>
+                Imprimir relatorio completo
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

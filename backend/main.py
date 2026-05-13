@@ -50,7 +50,7 @@ from app.config import (
     env_flag,
 )
 from app.db import SessionLocal, ensure_utc, engine, pwd_context, utcnow
-from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, PsychologistSlot, QuestionnaireResult, TriageRequest, User
+from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, PsychologistPatientNote, PsychologistSlot, QuestionnaireResult, TriageRequest, User
 from app.schemas import (
     AdminPsychologistCreate,
     AdminPsychologistUpdate,
@@ -86,6 +86,8 @@ from app.schemas import (
     TriageSlotOut,
     PsychologistTriageRequestOut,
     PsychologistPatientDetailOut,
+    PsychologistPatientNoteIn,
+    PsychologistPatientNoteOut,
     UsuarioCreate,
     UsuarioOut,
 )
@@ -4206,6 +4208,51 @@ def psychologist_can_access_request(current_user: User, request: TriageRequest) 
     return normalize_optional_text(request.psychologist_name) == normalize_optional_text(current_user.nome)
 
 
+def build_psychologist_note_out(
+    note: PsychologistPatientNote | None,
+    request_id: str,
+    patient_id: str,
+    psychologist_id: str | None = None,
+) -> PsychologistPatientNoteOut:
+    if note is None:
+        return PsychologistPatientNoteOut(
+            request_id=request_id,
+            patient_id=patient_id,
+            psychologist_id=psychologist_id,
+            content="",
+        )
+
+    return PsychologistPatientNoteOut(
+        id=note.id,
+        request_id=note.request_id,
+        patient_id=note.patient_id,
+        psychologist_id=note.psychologist_id,
+        content=note.content or "",
+        created_at=ensure_utc(note.created_at),
+        updated_at=ensure_utc(note.updated_at),
+    )
+
+
+def get_accessible_triage_row(
+    db: Session,
+    request_id: str,
+    current_user: User,
+) -> tuple[TriageRequest, User, LiaInteraction | None]:
+    row = db.execute(
+        select(TriageRequest, User, LiaInteraction)
+        .join(User, TriageRequest.usuario_id == User.id)
+        .outerjoin(LiaInteraction, TriageRequest.lia_interaction_id == LiaInteraction.id)
+        .where(TriageRequest.id == request_id)
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido de triagem nao encontrado.")
+
+    request, patient, interaction = row
+    if not psychologist_can_access_request(current_user, request):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voce nao tem acesso a este paciente.")
+    return request, patient, interaction
+
+
 def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | None:
     return db.scalar(
         select(TriageRequest)
@@ -4963,18 +5010,7 @@ def get_psychologist_patient_detail(
     current_user: User = Depends(require_psychologist_or_admin),
     db: Session = Depends(get_db),
 ) -> PsychologistPatientDetailOut:
-    row = db.execute(
-        select(TriageRequest, User, LiaInteraction)
-        .join(User, TriageRequest.usuario_id == User.id)
-        .outerjoin(LiaInteraction, TriageRequest.lia_interaction_id == LiaInteraction.id)
-        .where(TriageRequest.id == request_id)
-    ).first()
-    if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido de triagem nao encontrado.")
-
-    request, patient, interaction = row
-    if not psychologist_can_access_request(current_user, request):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voce nao tem acesso a este paciente.")
+    request, patient, interaction = get_accessible_triage_row(db, request_id, current_user)
 
     moods = db.scalars(
         select(MoodEntry)
@@ -4997,6 +5033,12 @@ def get_psychologist_patient_detail(
         .order_by(TriageRequest.requested_at.desc())
         .limit(6)
     ).all()
+    note = db.scalar(
+        select(PsychologistPatientNote)
+        .where(PsychologistPatientNote.request_id == request.id)
+        .where(PsychologistPatientNote.psychologist_id == current_user.id)
+        .limit(1)
+    )
 
     return PsychologistPatientDetailOut(
         user=patient,
@@ -5005,7 +5047,62 @@ def get_psychologist_patient_detail(
         questionnaires=questionnaires,
         lia_memory=lia_memory,
         triage_history=[build_triage_request_out(item) for item in triage_history],
+        psychologist_note=build_psychologist_note_out(note, request.id, patient.id, current_user.id),
         generated_at=utcnow(),
     )
+
+
+@app.get(
+    "/psychologist/triage-requests/{request_id}/note",
+    response_model=PsychologistPatientNoteOut,
+)
+def get_psychologist_patient_note(
+    request_id: str,
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> PsychologistPatientNoteOut:
+    request, patient, _ = get_accessible_triage_row(db, request_id, current_user)
+    note = db.scalar(
+        select(PsychologistPatientNote)
+        .where(PsychologistPatientNote.request_id == request.id)
+        .where(PsychologistPatientNote.psychologist_id == current_user.id)
+        .limit(1)
+    )
+    return build_psychologist_note_out(note, request.id, patient.id, current_user.id)
+
+
+@app.patch(
+    "/psychologist/triage-requests/{request_id}/note",
+    response_model=PsychologistPatientNoteOut,
+)
+def update_psychologist_patient_note(
+    request_id: str,
+    data: PsychologistPatientNoteIn,
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> PsychologistPatientNoteOut:
+    request, patient, _ = get_accessible_triage_row(db, request_id, current_user)
+    note = db.scalar(
+        select(PsychologistPatientNote)
+        .where(PsychologistPatientNote.request_id == request.id)
+        .where(PsychologistPatientNote.psychologist_id == current_user.id)
+        .limit(1)
+    )
+
+    if note is None:
+        note = PsychologistPatientNote(
+            request_id=request.id,
+            patient_id=patient.id,
+            psychologist_id=current_user.id,
+            content=data.content.strip(),
+        )
+    else:
+        note.content = data.content.strip()
+        note.updated_at = utcnow()
+
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return build_psychologist_note_out(note, request.id, patient.id, current_user.id)
 
 

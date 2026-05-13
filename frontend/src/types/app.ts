@@ -193,7 +193,18 @@ export interface PsychologistPatientDetail {
   questionnaires: QuestionnaireResult[];
   lia_memory: LiaMemorySnapshot;
   triage_history: TriageRequest[];
+  psychologist_note?: PsychologistPatientNote | null;
   generated_at: string;
+}
+
+export interface PsychologistPatientNote {
+  id?: string | null;
+  request_id: string;
+  patient_id: string;
+  psychologist_id?: string | null;
+  content: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface AdminPsychologistInput {

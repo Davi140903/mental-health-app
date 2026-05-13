@@ -126,3 +126,15 @@ class TriageRequest(Base):
     notes = Column(Text, nullable=True)
     requested_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
     scheduled_for = Column(DateTime(timezone=True), nullable=True, index=True)
+
+
+class PsychologistPatientNote(Base):
+    __tablename__ = "psychologist_patient_notes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    request_id = Column(String, ForeignKey("triage_requests.id"), nullable=False, index=True)
+    patient_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    psychologist_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    content = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
