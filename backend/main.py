@@ -160,6 +160,7 @@ def parse_lia_transcript(value: Any) -> list[LiaTranscriptMessage]:
         return []
 
     transcript: list[LiaTranscriptMessage] = []
+    previous_key: tuple[str, str] | None = None
     for item in value:
         if not isinstance(item, dict):
             continue
@@ -167,7 +168,11 @@ def parse_lia_transcript(value: Any) -> list[LiaTranscriptMessage]:
         role = item.get("role")
         content = normalize_optional_text(str(item.get("content") or ""))
         if role in {"assistant", "user"} and content:
+            key = (role, normalize_for_match(content))
+            if key == previous_key:
+                continue
             transcript.append(LiaTranscriptMessage(role=role, content=content[:2000]))
+            previous_key = key
 
     return transcript
 

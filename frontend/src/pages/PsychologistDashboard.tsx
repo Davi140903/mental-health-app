@@ -51,6 +51,37 @@ function hasTranscript(interaction: LiaRecentInteraction) {
   return Boolean(interaction.transcript?.length);
 }
 
+function normalizeMessageForCompare(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getCleanTranscript(interaction: LiaRecentInteraction) {
+  const cleaned: NonNullable<LiaRecentInteraction['transcript']> = [];
+  let previousKey = '';
+
+  for (const message of interaction.transcript ?? []) {
+    const content = message.content.trim();
+    if (!content) {
+      continue;
+    }
+
+    const key = `${message.role}:${normalizeMessageForCompare(content)}`;
+    if (key === previousKey) {
+      continue;
+    }
+
+    cleaned.push({ ...message, content });
+    previousKey = key;
+  }
+
+  return cleaned;
+}
+
 function questionnaireLabel(result: QuestionnaireResult) {
   return result.tipo === 'phq9' ? 'PHQ-9' : 'GAD-7';
 }
@@ -173,6 +204,12 @@ export default function PsychologistDashboard() {
             p { margin: 6px 0; }
             .meta { color: #5f7480; font-size: 13px; }
             .box { border: 1px solid #d8e3e8; padding: 12px; margin: 10px 0; border-radius: 6px; }
+            .chat-session { border: 1px solid #d8e3e8; padding: 14px; margin: 12px 0; border-radius: 12px; background: #f8fbfc; }
+            .chat-message { max-width: 78%; padding: 9px 11px; margin: 8px 0; border-radius: 12px; border: 1px solid #d8e3e8; }
+            .chat-message.lia { background: #ffffff; border-bottom-left-radius: 4px; }
+            .chat-message.user { margin-left: auto; background: #e7f1f6; border-bottom-right-radius: 4px; }
+            .chat-author { display: block; font: 700 11px Arial, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #315d74; margin-bottom: 3px; }
+            .chat-message p { margin: 0; }
             ul { padding-left: 18px; }
             @media print { body { margin: 20mm; } button { display: none; } }
           </style>
@@ -197,15 +234,20 @@ export default function PsychologistDashboard() {
     }
 
     const firstName = patientFirstName(patientName);
-    const messages = (interaction.transcript ?? [])
+    const messages = getCleanTranscript(interaction)
       .map((message) => {
         const author = message.role === 'assistant' ? 'Lia' : firstName;
-        return `<p><strong>${escapeHtml(author)}:</strong> ${escapeHtml(message.content)}</p>`;
+        return `
+          <div class="chat-message ${message.role === 'assistant' ? 'lia' : 'user'}">
+            <span class="chat-author">${escapeHtml(author)}</span>
+            <p>${escapeHtml(message.content)}</p>
+          </div>
+        `;
       })
       .join('');
 
     return `
-      <div class="box">
+      <div class="chat-session">
         <p class="meta">${formatDateTime(interaction.created_at)}</p>
         ${messages}
       </div>
@@ -528,18 +570,33 @@ export default function PsychologistDashboard() {
                               <div className="patient-conversation-list">
                                 {patientDetail.lia_memory.recent_conversations.slice(0, 4).map((interaction) => (
                                   <article key={interaction.id ?? interaction.created_at}>
-                                    <strong>{formatDateTime(interaction.created_at)}</strong>
+                                    <div className="patient-chat-session-header">
+                                      <div>
+                                        <strong>Conversa com a Lia</strong>
+                                        <span>{formatDateTime(interaction.created_at)}</span>
+                                      </div>
+                                      {interaction.topics.length ? (
+                                        <span className="patient-chat-topic">{interaction.topics[0]}</span>
+                                      ) : null}
+                                    </div>
                                     {hasTranscript(interaction) ? (
                                       <div className="patient-chat-transcript">
-                                        {(interaction.transcript ?? []).map((message, index) => (
+                                        {getCleanTranscript(interaction).map((message, index) => (
                                           <div
                                             key={`${interaction.id ?? interaction.created_at}-${index}`}
                                             className={`patient-chat-message ${message.role}`}
                                           >
-                                            <span>
-                                              {message.role === 'assistant' ? 'Lia' : patientFirstName(patientDetail.user.nome)}
-                                            </span>
-                                            <p>{message.content}</p>
+                                            <div className="patient-chat-avatar" aria-hidden="true">
+                                              {message.role === 'assistant'
+                                                ? 'L'
+                                                : patientFirstName(patientDetail.user.nome).slice(0, 1).toUpperCase()}
+                                            </div>
+                                            <div className="patient-chat-bubble">
+                                              <span>
+                                                {message.role === 'assistant' ? 'Lia' : patientFirstName(patientDetail.user.nome)}
+                                              </span>
+                                              <p>{message.content}</p>
+                                            </div>
                                           </div>
                                         ))}
                                       </div>
