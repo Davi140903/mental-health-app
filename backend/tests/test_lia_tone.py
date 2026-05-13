@@ -425,6 +425,19 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("nao precisa chegar la com tudo pronto", lowered)
         self.assertNotIn("quando isso aparece em casa", lowered)
 
+    def test_followup_does_not_treat_noise_as_meaningful_context(self) -> None:
+        session = self.build_session(stage="closing", turn_count=6)
+        session.followup_mode = True
+        session.followup_turns_left = 2
+        session.transcript = [
+            main.LiaTranscriptMessage(role="assistant", content="Pode continuar. Eu sigo com voce daqui."),
+        ]
+
+        reply = main.normalize_for_match(main.build_followup_continuation_reply(session, "ain"))
+
+        self.assertIn("nao consegui pegar bem", reply)
+        self.assertNotIn("quando isso aparece em casa", reply)
+
     def test_returning_contact_answers_professional_help_question(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         session.memory.is_first_contact = False

@@ -83,6 +83,11 @@ export default function DashboardChat() {
   const draftStorageKey = user?.id ? getDraftStorageKey(user.id) : null;
   const lightPromptStorageKey = user?.id ? getLightPromptStorageKey(user.id) : null;
 
+  const loadTriageSlots = useCallback(async () => {
+    const response = await appService.listTriageSlots();
+    setTriageSlots(response);
+  }, []);
+
   const startConversation = useCallback(async () => {
     setStartingLia(true);
     setLiaError('');
@@ -90,6 +95,7 @@ export default function DashboardChat() {
     try {
       const response = await appService.startLiaConversation();
       const nextSession = response.session;
+      const currentTriage = await appService.getDashboard().then((dashboard) => dashboard.triagem_atual).catch(() => null);
       if (lightPromptStorageKey) {
         const rawLightPrompt = sessionStorage.getItem(lightPromptStorageKey);
         if (rawLightPrompt) {
@@ -103,12 +109,16 @@ export default function DashboardChat() {
         }
       }
       setLiaSession(nextSession);
+      setTriageRequest(currentTriage);
+      if (currentTriage && currentTriage.status !== 'scheduled') {
+        void loadTriageSlots();
+      }
     } catch (error) {
       setLiaError(getApiErrorMessage(error, 'Nao foi possivel iniciar a conversa agora.'));
     } finally {
       setStartingLia(false);
     }
-  }, [lightPromptStorageKey]);
+  }, [lightPromptStorageKey, loadTriageSlots]);
 
   useEffect(() => {
     if (!sessionStorageKey || !draftStorageKey) {
@@ -190,8 +200,6 @@ export default function DashboardChat() {
 
     const nextTranscript = [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voce daqui.' }];
 
-    setTriageRequest(null);
-    setTriageSlots([]);
     setLiaSession({
       ...liaSession,
       completed: false,
@@ -201,11 +209,6 @@ export default function DashboardChat() {
       transcript: nextTranscript,
     });
   };
-
-  const loadTriageSlots = useCallback(async () => {
-    const response = await appService.listTriageSlots();
-    setTriageSlots(response);
-  }, []);
 
   const handleCreateTriageRequest = async () => {
     if (!liaSession) {

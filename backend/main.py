@@ -3838,6 +3838,11 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
 def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
+    if not is_probably_meaningful_message(user_message, allow_short_contextual=False):
+        return (
+            "Nao consegui pegar bem essa ultima parte. Se ainda tiver algo importante, me conta com um pouco mais de contexto. "
+            "Se foi so uma resposta solta, tudo bem tambem; a gente pode parar por aqui por hoje."
+        )
     if context["asks_about_professional"]:
         return (
             "Pode ajudar, sim. Conversar com um profissional pode ser um jeito de olhar para isso com mais calma, "
