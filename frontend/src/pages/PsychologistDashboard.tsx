@@ -321,12 +321,6 @@ export default function PsychologistDashboard() {
           detail.current_request.interaction?.summary ??
           'Ainda nao ha relatorio detalhado da Lia.',
       )}</p></div>
-      <h2>Memoria breve</h2>
-      <p>${escapeHtml(
-        detail.lia_memory.topics.length
-          ? `Temas recorrentes no historico: ${detail.lia_memory.topics.slice(0, 8).join(', ')}.`
-          : 'Ainda ha pouco historico acumulado.',
-      )}</p>
       <h2>Triagens recentes</h2>
       <ul>${questionnaires}</ul>
       <h2>Humor recente</h2>
@@ -555,22 +549,6 @@ export default function PsychologistDashboard() {
                                 patientDetail.current_request.interaction?.summary ??
                                 'Ainda nao ha um relatorio detalhado da Lia para este pedido.'}
                             </p>
-                          </section>
-
-                          <section className="patient-detail-card">
-                            <span className="field-label">Memoria breve</span>
-                            <p>
-                              {patientDetail.lia_memory.topics.length
-                                ? 'Temas que ajudam a Lia e o profissional a entenderem continuidade, sem transformar isso em rotulo para o paciente.'
-                                : 'Ainda ha pouco historico acumulado deste paciente.'}
-                            </p>
-                            {patientDetail.lia_memory.topics.length ? (
-                              <div className="triage-topic-row compact-tags">
-                                {patientDetail.lia_memory.topics.slice(0, 8).map((topic) => (
-                                  <span key={topic}>{topic}</span>
-                                ))}
-                              </div>
-                            ) : null}
                           </section>
 
                           <section className="patient-detail-card">
