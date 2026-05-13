@@ -821,8 +821,8 @@ a {
 }
 
 .psychologist-nav-button:not(.primary):hover {
-  background: #eaf3f7;
-  color: #315d74;
+  background: #d6eaf3;
+  color: #244e64;
 }
 
 .psychologist-nav-button.primary {
@@ -858,7 +858,9 @@ a {
 }
 
 .psychologist-ghost-button:hover:enabled {
-  background: #eaf3f7;
+  background: #d6eaf3;
+  border-color: rgba(49, 93, 116, 0.32);
+  color: #244e64;
 }
 
 .psychologist-page {
