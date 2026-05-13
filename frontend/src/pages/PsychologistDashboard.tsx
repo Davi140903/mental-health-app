@@ -407,11 +407,11 @@ export default function PsychologistDashboard() {
           <p>{user?.nome ? `Profissional: ${user.nome}` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
         </div>
 
-        <div className="patient-detail-actions">
-          <Link to="/psicologo/agenda" className="psychologist-ghost-button">
+        <div className="psychologist-top-actions">
+          <Link to="/psicologo/agenda" className="psychologist-nav-button primary">
             Minha agenda
           </Link>
-          <button type="button" className="psychologist-ghost-button" onClick={handleLogout}>
+          <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
             Sair
           </button>
         </div>

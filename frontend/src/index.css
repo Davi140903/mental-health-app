@@ -794,6 +794,38 @@ a {
   color: #5f7480;
 }
 
+.psychologist-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(56, 104, 130, 0.12);
+  box-shadow: 0 16px 36px rgba(38, 74, 94, 0.08);
+}
+
+.psychologist-nav-button {
+  min-height: 2.45rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: #315d74;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.psychologist-nav-button:hover {
+  transform: translateY(-1px);
+}
+
+.psychologist-nav-button.primary {
+  background: #315d74;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(49, 93, 116, 0.22);
+}
+
 .role-pill,
 .status-badge,
 .field-label {
