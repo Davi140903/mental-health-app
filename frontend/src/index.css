@@ -820,6 +820,11 @@ a {
   transform: translateY(-1px);
 }
 
+.psychologist-nav-button:not(.primary):hover {
+  background: #eaf3f7;
+  color: #315d74;
+}
+
 .psychologist-nav-button.primary {
   background: #315d74;
   color: #ffffff;
