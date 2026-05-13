@@ -307,11 +307,14 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
             LiaTranscriptMessage(role="assistant", content=f"Oi, {first_name}. Eu sou a Lia."),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Pode falar do seu jeito. Nao precisa pensar muito pra comecar.",
+                content=(
+                    "Eu estou aqui para te ouvir com calma, ajudar a organizar o que voce esta sentindo "
+                    "e, se fizer sentido, te orientar daqui para a frente."
+                ),
             ),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Me conta, como voce ta hoje?",
+                content="Nao precisa ter as palavras certas agora. Pode comecar do seu jeito.",
             ),
         ]
 

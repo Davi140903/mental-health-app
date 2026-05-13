@@ -29,7 +29,13 @@ class LiaToneTests(unittest.TestCase):
         messages = main.build_lia_welcome_messages(user, LiaMemorySnapshot())
         contents = [item.content for item in messages]
 
-        self.assertIn("Me conta, como voce ta hoje?", contents)
+        self.assertIn("Oi, Davi. Eu sou a Lia.", contents)
+        self.assertIn(
+            "Eu estou aqui para te ouvir com calma, ajudar a organizar o que voce esta sentindo e, se fizer sentido, te orientar daqui para a frente.",
+            contents,
+        )
+        self.assertIn("Nao precisa ter as palavras certas agora. Pode comecar do seu jeito.", contents)
+        self.assertNotIn("Me conta, como voce ta hoje?", contents)
         self.assertNotIn("Esse pode ser nosso primeiro cuidado por aqui. Nao precisa acertar as palavras.", contents)
 
     def test_returning_contact_does_not_dump_previous_summary(self) -> None:
