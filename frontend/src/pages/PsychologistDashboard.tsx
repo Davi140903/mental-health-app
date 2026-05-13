@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
 import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
@@ -407,9 +407,14 @@ export default function PsychologistDashboard() {
           <p>{user?.nome ? `Profissional: ${user.nome}` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
         </div>
 
-        <button type="button" className="psychologist-ghost-button" onClick={handleLogout}>
-          Sair
-        </button>
+        <div className="patient-detail-actions">
+          <Link to="/psicologo/agenda" className="psychologist-ghost-button">
+            Minha agenda
+          </Link>
+          <button type="button" className="psychologist-ghost-button" onClick={handleLogout}>
+            Sair
+          </button>
+        </div>
       </header>
 
       <main className="psychologist-page">
