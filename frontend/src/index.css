@@ -1413,6 +1413,12 @@ a {
   border: 1px solid rgba(56, 104, 130, 0.08);
 }
 
+.patient-chat-transcript.legacy {
+  background:
+    linear-gradient(135deg, rgba(231, 241, 246, 0.9), rgba(255, 255, 255, 0.92)),
+    #f8fbfc;
+}
+
 .patient-chat-message {
   display: flex;
   gap: 0.55rem;
@@ -1481,12 +1487,34 @@ a {
   color: #344a54;
 }
 
-.patient-chat-empty {
-  margin-top: 0.65rem;
-  padding: 0.65rem;
-  border-radius: 8px;
-  background: #f8fbfc;
-  border: 1px dashed rgba(56, 104, 130, 0.18);
+.patient-chat-legacy-card {
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px dashed rgba(56, 104, 130, 0.22);
+}
+
+.patient-chat-legacy-card span,
+.patient-chat-legacy-card strong {
+  display: block;
+}
+
+.patient-chat-legacy-card span {
+  color: #6b7f8a;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.patient-chat-legacy-card strong {
+  margin-top: 0.2rem;
+  color: #243b49;
+}
+
+.patient-chat-legacy-card p {
+  margin: 0.35rem 0 0;
+  color: #5f7480;
 }
 
 .modal-backdrop {

@@ -210,6 +210,9 @@ export default function PsychologistDashboard() {
             .chat-message.user { margin-left: auto; background: #e7f1f6; border-bottom-right-radius: 4px; }
             .chat-author { display: block; font: 700 11px Arial, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #315d74; margin-bottom: 3px; }
             .chat-message p { margin: 0; }
+            .chat-legacy-note { border: 1px dashed #b8ccd6; background: #ffffff; border-radius: 10px; padding: 12px; }
+            .chat-legacy-note strong { display: block; color: #315d74; margin-bottom: 4px; }
+            .chat-legacy-note p { margin: 0; color: #5f7480; }
             ul { padding-left: 18px; }
             @media print { body { margin: 20mm; } button { display: none; } }
           </style>
@@ -225,10 +228,12 @@ export default function PsychologistDashboard() {
   const buildConversationPrintHtml = (interaction: LiaRecentInteraction, patientName: string) => {
     if (!hasTranscript(interaction)) {
       return `
-        <div class="box">
+        <div class="chat-session legacy">
           <p class="meta">${formatDateTime(interaction.created_at)}</p>
-          <p>Transcricao completa indisponivel para este registro antigo.</p>
-          <p>${escapeHtml(interaction.summary)}</p>
+          <div class="chat-legacy-note">
+            <strong>Registro antigo</strong>
+            <p>Esta conversa foi salva antes do app guardar a transcricao completa. O resumo clinico ja aparece acima; as proximas conversas serao exibidas aqui como chat, com falas da Lia e do paciente.</p>
+          </div>
         </div>
       `;
     }
@@ -601,9 +606,16 @@ export default function PsychologistDashboard() {
                                         ))}
                                       </div>
                                     ) : (
-                                      <div className="patient-chat-empty">
-                                        <p>Transcricao completa indisponivel para este registro antigo.</p>
-                                        <p>{interaction.summary}</p>
+                                      <div className="patient-chat-transcript legacy">
+                                        <div className="patient-chat-legacy-card">
+                                          <span>Registro antigo</span>
+                                          <strong>Transcricao completa indisponivel</strong>
+                                          <p>
+                                            Esta conversa foi salva antes do app guardar as falas completas. O resumo
+                                            profissional ja aparece em “Relatorio da Lia”; novas conversas aparecerao aqui
+                                            em formato de chat, com mensagens da Lia e do paciente.
+                                          </p>
+                                        </div>
                                       </div>
                                     )}
                                   </article>
