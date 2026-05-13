@@ -147,6 +147,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/psicologo/agenda"
+        element={
+          <RoleRoute allowedRoles={['psychologist', 'admin']}>
+            <PsychologistDashboard />
+          </RoleRoute>
+        }
+      />
+      <Route
         path="/painel"
         element={
           <CheckInRoute>

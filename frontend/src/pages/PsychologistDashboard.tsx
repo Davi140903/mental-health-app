@@ -10,6 +10,8 @@ const statusOptions = [
   { value: 'scheduled', label: 'Agendados' },
 ];
 
+const agendaHours = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+
 function formatDateTime(value?: string | null) {
   if (!value) {
     return 'Sem horario definido';
@@ -24,6 +26,14 @@ function formatDateTime(value?: string | null) {
 function toDatetimeLocalValue(date = new Date(Date.now() + 24 * 60 * 60 * 1000)) {
   const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return shifted.toISOString().slice(0, 16);
+}
+
+function toDateInputValue(date = new Date(Date.now() + 24 * 60 * 60 * 1000)) {
+  return toDatetimeLocalValue(date).slice(0, 10);
+}
+
+function combineDateAndHour(dateValue: string, hourValue: string) {
+  return new Date(`${dateValue}T${hourValue}:00`);
 }
 
 function statusLabel(status: string) {
@@ -149,8 +159,7 @@ export default function PsychologistDashboard() {
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteFeedback, setNoteFeedback] = useState('');
   const [slots, setSlots] = useState<TriageSlot[]>([]);
-  const [slotStart, setSlotStart] = useState(toDatetimeLocalValue());
-  const [slotEnd, setSlotEnd] = useState(toDatetimeLocalValue(new Date(Date.now() + 24 * 60 * 60 * 1000 + 50 * 60000)));
+  const [agendaDate, setAgendaDate] = useState(toDateInputValue());
   const [slotFeedback, setSlotFeedback] = useState('');
   const [slotBusy, setSlotBusy] = useState(false);
 
@@ -215,13 +224,13 @@ export default function PsychologistDashboard() {
     navigate('/login');
   };
 
-  const handleCreateSlot = async () => {
+  const handleCreateSlotAt = async (hour: string) => {
     setSlotBusy(true);
     setSlotFeedback('');
     try {
-      const created = await appService.createPsychologistSlot(new Date(slotStart).toISOString(), slotEnd ? new Date(slotEnd).toISOString() : undefined);
+      const created = await appService.createPsychologistSlot(combineDateAndHour(agendaDate, hour).toISOString());
       setSlots((current) => [...current.filter((slot) => slot.id !== created.id), created].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()));
-      setSlotFeedback('Horario publicado para os pacientes.');
+      setSlotFeedback(`Horario de ${hour} publicado para os pacientes.`);
     } catch {
       setSlotFeedback('Nao foi possivel criar esse horario.');
     } finally {
@@ -459,6 +468,10 @@ export default function PsychologistDashboard() {
     openPrintDocument(`Relatorio - ${patientDetail.user.nome}`, buildPatientReportHtml(patientDetail));
   };
 
+  const selectedDateSlots = slots.filter((slot) => toDateInputValue(new Date(slot.starts_at)) === agendaDate);
+  const findSlotAtHour = (hour: string) =>
+    selectedDateSlots.find((slot) => toDatetimeLocalValue(new Date(slot.starts_at)).slice(11, 16) === hour);
+
   return (
     <div className="psychologist-app-shell">
       <header className="psychologist-topbar">
@@ -504,38 +517,30 @@ export default function PsychologistDashboard() {
 
           <div className="agenda-create-row">
             <label>
-              Inicio
-              <input type="datetime-local" value={slotStart} onChange={(event) => setSlotStart(event.target.value)} />
+              Data da agenda
+              <input type="date" value={agendaDate} onChange={(event) => setAgendaDate(event.target.value)} />
             </label>
-            <label>
-              Fim
-              <input type="datetime-local" value={slotEnd} onChange={(event) => setSlotEnd(event.target.value)} />
-            </label>
-            <button type="button" onClick={() => void handleCreateSlot()} disabled={slotBusy || !slotStart}>
-              {slotBusy ? 'Salvando...' : 'Adicionar horario'}
-            </button>
+            <p>Escolha uma data e clique nos horarios que deseja liberar. Cada horario usa a duracao padrao da triagem.</p>
           </div>
 
           {slotFeedback ? <div className="alert success">{slotFeedback}</div> : null}
 
-          <div className="agenda-slot-list">
-            {slots.length ? (
-              slots.slice(0, 12).map((slot) => (
-                <article key={slot.id} className={`agenda-slot-card ${slot.available ? '' : 'busy'}`}>
-                  <div>
-                    <strong>{formatDateTime(slot.starts_at)}</strong>
-                    <span>{slot.available ? 'Disponivel para pacientes' : 'Horario ja agendado'}</span>
-                  </div>
-                  {slot.available ? (
-                    <button type="button" className="psychologist-ghost-button" onClick={() => void handleDeleteSlot(slot.id)} disabled={slotBusy}>
-                      Remover
-                    </button>
-                  ) : null}
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">Nenhum horario futuro cadastrado ainda.</div>
-            )}
+          <div className="agenda-calendar-grid">
+            {agendaHours.map((hour) => {
+              const slot = findSlotAtHour(hour);
+              return (
+                <button
+                  key={hour}
+                  type="button"
+                  className={`agenda-hour-card ${slot ? (slot.available ? 'available' : 'busy') : ''}`}
+                  onClick={() => (slot?.available ? void handleDeleteSlot(slot.id) : !slot ? void handleCreateSlotAt(hour) : undefined)}
+                  disabled={slotBusy || Boolean(slot && !slot.available)}
+                >
+                  <strong>{hour}</strong>
+                  <span>{slot ? (slot.available ? 'Disponivel, clique para remover' : 'Agendado') : 'Livre para publicar'}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 

@@ -882,7 +882,7 @@ a {
 
 .agenda-create-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
   gap: 0.75rem;
   align-items: end;
 }
@@ -907,33 +907,50 @@ a {
   min-height: 2.7rem;
 }
 
-.agenda-slot-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+.agenda-create-row p {
+  margin: 0;
+  color: #617783;
 }
 
-.agenda-slot-card {
-  display: flex;
-  justify-content: space-between;
+.agenda-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
-  align-items: center;
+  margin-top: 0.95rem;
+}
+
+.agenda-hour-card {
+  min-height: 5.4rem;
   padding: 0.85rem;
   border-radius: 12px;
-  background: #f5fafc;
+  background: #ffffff;
   border: 1px solid rgba(56, 104, 130, 0.12);
+  color: #243b49;
+  text-align: left;
+  box-shadow: 0 10px 26px rgba(38, 74, 94, 0.06);
 }
 
-.agenda-slot-card.busy {
+.agenda-hour-card.available {
+  background: #e9f5ef;
+  border-color: rgba(75, 126, 94, 0.22);
+}
+
+.agenda-hour-card.busy {
+  cursor: not-allowed;
   background: #eef4f7;
+  opacity: 0.82;
 }
 
-.agenda-slot-card strong,
-.agenda-slot-card span {
+.agenda-hour-card strong,
+.agenda-hour-card span {
   display: block;
 }
 
-.agenda-slot-card span {
+.agenda-hour-card strong {
+  font-size: 1.1rem;
+}
+
+.agenda-hour-card span {
   margin-top: 0.2rem;
   color: #5f7480;
   font-size: 0.86rem;
