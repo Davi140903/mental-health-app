@@ -111,11 +111,11 @@ export default function PsychologistAgenda() {
           <p>{user?.nome ? `Profissional: ${user.nome}` : 'Defina os horarios disponiveis para triagem.'}</p>
         </div>
 
-        <div className="patient-detail-actions">
-          <Link to="/psicologo" className="psychologist-ghost-button">
+        <div className="psychologist-top-actions">
+          <Link to="/psicologo" className="psychologist-nav-button primary">
             Ver relatorios
           </Link>
-          <button type="button" className="psychologist-ghost-button" onClick={handleLogout}>
+          <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
             Sair
           </button>
         </div>
