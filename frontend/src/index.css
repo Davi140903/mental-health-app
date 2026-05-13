@@ -821,7 +821,7 @@ a {
 }
 
 .psychologist-nav-button:not(.primary):hover {
-  background: #d6eaf3;
+  background: #cfe4ef;
   color: #244e64;
 }
 
@@ -858,9 +858,21 @@ a {
 }
 
 .psychologist-ghost-button:hover:enabled {
-  background: #d6eaf3;
+  background: #cfe4ef;
   border-color: rgba(49, 93, 116, 0.32);
   color: #244e64;
+}
+
+.psychologist-primary-button {
+  background: #315d74;
+  color: #ffffff;
+  border: 1px solid rgba(49, 93, 116, 0.12);
+  box-shadow: 0 10px 24px rgba(49, 93, 116, 0.18);
+}
+
+.psychologist-primary-button:hover:enabled {
+  background: #244e64;
+  color: #ffffff;
 }
 
 .psychologist-page {
@@ -969,9 +981,20 @@ a {
   box-shadow: 0 10px 26px rgba(38, 74, 94, 0.06);
 }
 
+.agenda-hour-card:hover:enabled {
+  background: #cfe4ef;
+  border-color: rgba(49, 93, 116, 0.28);
+  color: #244e64;
+}
+
 .agenda-hour-card.available {
-  background: #e9f5ef;
-  border-color: rgba(75, 126, 94, 0.22);
+  background: #e6f2f7;
+  border-color: rgba(70, 127, 157, 0.24);
+}
+
+.agenda-hour-card.available:hover:enabled {
+  background: #cfe4ef;
+  border-color: rgba(49, 93, 116, 0.34);
 }
 
 .agenda-hour-card.busy {
@@ -1056,10 +1079,20 @@ a {
   color: #527083;
 }
 
+.segmented-control button:hover:enabled {
+  background: #cfe4ef;
+  color: #244e64;
+}
+
 .segmented-control button.active {
   background: #ffffff;
   color: #285872;
   box-shadow: 0 8px 20px rgba(53, 91, 111, 0.08);
+}
+
+.segmented-control button.active:hover:enabled {
+  background: #ffffff;
+  color: #285872;
 }
 
 .triage-request-list {

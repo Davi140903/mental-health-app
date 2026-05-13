@@ -684,7 +684,7 @@ export default function PsychologistDashboard() {
             {noteFeedback ? <div className="alert success">{noteFeedback}</div> : null}
 
             <div className="professional-modal-actions">
-              <button type="button" onClick={() => void handleSaveNote()} disabled={noteSaving}>
+              <button type="button" className="psychologist-primary-button" onClick={() => void handleSaveNote()} disabled={noteSaving}>
                 {noteSaving ? 'Salvando...' : 'Salvar anotacao'}
               </button>
               <button type="button" className="psychologist-ghost-button" onClick={handleDownloadNote}>
