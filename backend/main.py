@@ -326,6 +326,7 @@ def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionStat
         completed=False,
         saved_questionnaires=[],
         saved_mood=False,
+        off_scope_count=0,
         followup_mode=False,
         followup_turns_left=0,
         followup_finished=False,
@@ -1205,6 +1206,170 @@ def build_opening_topic(context: dict[str, Any]) -> str:
     if context["sono"] or context["energia"]:
         return "o impacto disso no seu corpo"
     return "isso tudo"
+
+
+def is_support_related_message(context: dict[str, Any]) -> bool:
+    support_keys = [
+        "asks_about_professional",
+        "mentions_help",
+        "palpitacao",
+        "ansiedade",
+        "pressure",
+        "worn_out",
+        "ending",
+        "relationship",
+        "work_study",
+        "controlar",
+        "relaxar",
+        "medo",
+        "sono",
+        "energia",
+        "tristeza",
+        "interesse",
+        "concentracao",
+        "irritabilidade",
+        "unwell",
+        "mixed_feeling",
+        "no_issue",
+        "wants_to_stop",
+        "asks_to_talk",
+        "unsure",
+        "stuck_without_improvement",
+    ]
+    return any(bool(context.get(key)) for key in support_keys)
+
+
+def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
+    latest_text = context["latest_text"]
+    return contains_any(
+        latest_text,
+        [
+            "o que voce faz",
+            "como voce funciona",
+            "como funciona a lia",
+            "para que voce serve",
+            "o que e a lia",
+            "como funciona a triagem",
+            "o que e triagem",
+            "quem vai ver",
+            "quem ve isso",
+            "meus dados",
+            "relatorio",
+            "consulta",
+            "psicologo",
+            "psicologa",
+            "profissional",
+        ],
+    )
+
+
+def is_probably_question_or_request(text_value: str) -> bool:
+    normalized = normalize_for_match(text_value)
+    if "?" in text_value:
+        return True
+    return normalized.startswith(
+        (
+            "qual ",
+            "quais ",
+            "como ",
+            "quando ",
+            "onde ",
+            "quem ",
+            "por que ",
+            "porque ",
+            "me fala ",
+            "me explica ",
+            "me ensina ",
+            "faz ",
+            "crie ",
+            "cria ",
+            "resolva ",
+            "calcule ",
+        )
+    )
+
+
+def is_off_scope_message(context: dict[str, Any], user_message: str) -> bool:
+    if is_support_related_message(context) or context["light_topic"] or context["creative"]:
+        return False
+
+    latest_text = context["latest_text"]
+    explicit_off_scope = contains_any(
+        latest_text,
+        [
+            "codigo",
+            "programacao",
+            "python",
+            "javascript",
+            "html",
+            "css",
+            "matematica",
+            "calcule",
+            "quanto e",
+            "capital da",
+            "receita de",
+            "previsao do tempo",
+            "clima hoje",
+            "noticia",
+            "futebol",
+            "jogo de hoje",
+            "trabalho da faculdade",
+            "tcc pra mim",
+            "redacao",
+        ],
+    )
+    return explicit_off_scope or (is_probably_question_or_request(user_message) and not asks_about_lia_or_triage(context))
+
+
+def build_related_question_reply(session: LiaSessionState, context: dict[str, Any]) -> str | None:
+    if context["asks_about_professional"]:
+        return (
+            "Pode ajudar, sim. Conversar com um profissional pode te ajudar a olhar para isso com mais calma, "
+            "organizar o que esta acontecendo e pensar em proximos passos. "
+            "Voce nao precisa chegar com tudo pronto; levar essa duvida para a consulta ja e um bom comeco."
+        )
+
+    if asks_about_lia_or_triage(context):
+        return (
+            "Eu posso te ajudar a organizar o que voce esta sentindo e, quando fizer sentido, encaminhar isso para a triagem. "
+            "Nao substituo um profissional, mas posso deixar a conversa mais clara para voce chegar com menos peso."
+        )
+
+    return None
+
+
+def build_off_scope_reply(session: LiaSessionState) -> str:
+    if session.off_scope_count <= 1:
+        return (
+            "Isso foge um pouco do meu papel por aqui. Eu consigo te ajudar melhor com o que voce esta sentindo "
+            "ou com algo que esteja pesando hoje."
+        )
+    if session.off_scope_count == 2:
+        return (
+            "Eu entendo a pergunta, mas preciso manter nossa conversa dentro do meu objetivo: apoio, bem-estar e triagem. "
+            "Se quiser, a gente pode voltar para o que te trouxe aqui hoje."
+        )
+    return (
+        "Parece que talvez esse nao seja o melhor momento para essa conversa. Vou manter esse limite por cuidado. "
+        "Quando voce quiser falar sobre como esta se sentindo ou sobre a triagem, eu continuo com voce."
+    )
+
+
+def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str | None:
+    context = build_lia_context(session, user_message)
+    related_reply = build_related_question_reply(session, context)
+    if related_reply:
+        session.off_scope_count = 0
+        if session.current_topic == "main_focus":
+            return related_reply + " Para eu te acompanhar agora, o que voce mais espera conseguir entender ou aliviar primeiro?"
+        return related_reply
+
+    if is_off_scope_message(context, user_message):
+        session.off_scope_count = min(int(session.off_scope_count or 0) + 1, 5)
+        return build_off_scope_reply(session)
+
+    session.off_scope_count = 0
+    return None
 
 
 def infer_recommended_stage(
@@ -4733,6 +4898,13 @@ def lia_message(
     session.clarification_streak = 0
     session.turn_count += 1
     using_ollama = False
+
+    scope_guard_reply = build_scope_guard_reply(session, message_text)
+    if scope_guard_reply:
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=scope_guard_reply))
+        refresh_dashboard = save_lia_session_draft(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
+
     infer_topic_states(session, message_text)
     session.current_topic = next_lia_topic(session)
 

@@ -216,6 +216,7 @@ class LiaSessionState(BaseModel):
     ] = "opening_state"
     turn_count: int = Field(default=0, ge=0, le=12)
     clarification_streak: int = Field(default=0, ge=0, le=6)
+    off_scope_count: int = Field(default=0, ge=0, le=5)
     transcript: list[LiaTranscriptMessage] = Field(default_factory=list)
     gad7_scores: list[int | None] = Field(default_factory=lambda: [None] * 7)
     phq9_scores: list[int | None] = Field(default_factory=lambda: [None] * 9)

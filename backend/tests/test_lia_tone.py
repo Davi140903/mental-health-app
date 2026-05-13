@@ -424,6 +424,39 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("nao precisa chegar la com tudo pronto", lowered)
         self.assertNotIn("quando isso aparece em casa", lowered)
 
+    def test_returning_contact_answers_professional_help_question(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        session.memory.is_first_contact = False
+        session.current_topic = "main_focus"
+        user_message = "quero saber antes da minha consulta se o doutor Davi pode me ajudar?"
+
+        reply = main.normalize_for_match(main.build_scope_guard_reply(session, user_message) or "")
+
+        self.assertIn("pode ajudar", reply)
+        self.assertIn("profissional", reply)
+        self.assertIn("consulta", reply)
+        self.assertNotIn("o que mais ficou na sua cabeca hoje", reply)
+
+    def test_scope_guard_redirects_unrelated_question_progressively(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        first = main.normalize_for_match(main.build_scope_guard_reply(session, "qual e a capital da Franca?") or "")
+        second = main.normalize_for_match(main.build_scope_guard_reply(session, "faz um codigo em python pra mim") or "")
+        third = main.normalize_for_match(main.build_scope_guard_reply(session, "calcule uma conta de matematica") or "")
+
+        self.assertIn("foge um pouco do meu papel", first)
+        self.assertIn("apoio, bem-estar e triagem", second)
+        self.assertIn("vou manter esse limite", third)
+        self.assertEqual(session.off_scope_count, 3)
+
+    def test_scope_guard_allows_user_distress_to_follow_script(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.build_scope_guard_reply(session, "nao tenho dormido bem e estou sobrecarregado")
+
+        self.assertIsNone(reply)
+        self.assertEqual(session.off_scope_count, 0)
+
     def test_followup_final_close_marks_finished(self) -> None:
         session = self.build_session(stage="closing", turn_count=7)
         session.current_topic = "closing"
