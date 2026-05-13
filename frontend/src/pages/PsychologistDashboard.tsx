@@ -2,15 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
-import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult, TriageSlot } from '../types/app';
+import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
 
 const statusOptions = [
   { value: '', label: 'Todos' },
   { value: 'pending', label: 'Aguardando' },
   { value: 'scheduled', label: 'Agendados' },
 ];
-
-const agendaHours = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
 
 function formatDateTime(value?: string | null) {
   if (!value) {
@@ -21,19 +19,6 @@ function formatDateTime(value?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
-}
-
-function toDatetimeLocalValue(date = new Date(Date.now() + 24 * 60 * 60 * 1000)) {
-  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return shifted.toISOString().slice(0, 16);
-}
-
-function toDateInputValue(date = new Date(Date.now() + 24 * 60 * 60 * 1000)) {
-  return toDatetimeLocalValue(date).slice(0, 10);
-}
-
-function combineDateAndHour(dateValue: string, hourValue: string) {
-  return new Date(`${dateValue}T${hourValue}:00`);
 }
 
 function statusLabel(status: string) {
@@ -158,10 +143,6 @@ export default function PsychologistDashboard() {
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteFeedback, setNoteFeedback] = useState('');
-  const [slots, setSlots] = useState<TriageSlot[]>([]);
-  const [agendaDate, setAgendaDate] = useState(toDateInputValue());
-  const [slotFeedback, setSlotFeedback] = useState('');
-  const [slotBusy, setSlotBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -193,63 +174,12 @@ export default function PsychologistDashboard() {
     };
   }, [statusFilter]);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadSlots = async () => {
-      try {
-        const response = await appService.listPsychologistSlots();
-        if (active) {
-          setSlots(response);
-        }
-      } catch {
-        if (active) {
-          setSlotFeedback('Nao foi possivel carregar sua agenda agora.');
-        }
-      }
-    };
-
-    void loadSlots();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const pendingCount = requests.filter((item) => item.status === 'pending').length;
   const scheduledCount = requests.filter((item) => item.status === 'scheduled').length;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleCreateSlotAt = async (hour: string) => {
-    setSlotBusy(true);
-    setSlotFeedback('');
-    try {
-      const created = await appService.createPsychologistSlot(combineDateAndHour(agendaDate, hour).toISOString());
-      setSlots((current) => [...current.filter((slot) => slot.id !== created.id), created].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()));
-      setSlotFeedback(`Horario de ${hour} publicado para os pacientes.`);
-    } catch {
-      setSlotFeedback('Nao foi possivel criar esse horario.');
-    } finally {
-      setSlotBusy(false);
-    }
-  };
-
-  const handleDeleteSlot = async (slotId: number) => {
-    setSlotBusy(true);
-    setSlotFeedback('');
-    try {
-      await appService.deletePsychologistSlot(slotId);
-      setSlots((current) => current.filter((slot) => slot.id !== slotId));
-      setSlotFeedback('Horario removido da agenda.');
-    } catch {
-      setSlotFeedback('Nao foi possivel remover esse horario.');
-    } finally {
-      setSlotBusy(false);
-    }
   };
 
   const handleSelectRequest = async (request: PsychologistTriageRequest) => {
@@ -468,10 +398,6 @@ export default function PsychologistDashboard() {
     openPrintDocument(`Relatorio - ${patientDetail.user.nome}`, buildPatientReportHtml(patientDetail));
   };
 
-  const selectedDateSlots = slots.filter((slot) => toDateInputValue(new Date(slot.starts_at)) === agendaDate);
-  const findSlotAtHour = (hour: string) =>
-    selectedDateSlots.find((slot) => toDatetimeLocalValue(new Date(slot.starts_at)).slice(11, 16) === hour);
-
   return (
     <div className="psychologist-app-shell">
       <header className="psychologist-topbar">
@@ -505,43 +431,6 @@ export default function PsychologistDashboard() {
             <strong>{scheduledCount}</strong>
             <p>Atendimentos vinculados a horario e profissional.</p>
           </article>
-        </section>
-
-        <section className="psychologist-workspace agenda-panel">
-          <div className="psychologist-toolbar">
-            <div>
-              <h2>Minha agenda</h2>
-              <p>Publique os horarios que os pacientes podem escolher ao finalizar a triagem com a Lia.</p>
-            </div>
-          </div>
-
-          <div className="agenda-create-row">
-            <label>
-              Data da agenda
-              <input type="date" value={agendaDate} onChange={(event) => setAgendaDate(event.target.value)} />
-            </label>
-            <p>Escolha uma data e clique nos horarios que deseja liberar. Cada horario usa a duracao padrao da triagem.</p>
-          </div>
-
-          {slotFeedback ? <div className="alert success">{slotFeedback}</div> : null}
-
-          <div className="agenda-calendar-grid">
-            {agendaHours.map((hour) => {
-              const slot = findSlotAtHour(hour);
-              return (
-                <button
-                  key={hour}
-                  type="button"
-                  className={`agenda-hour-card ${slot ? (slot.available ? 'available' : 'busy') : ''}`}
-                  onClick={() => (slot?.available ? void handleDeleteSlot(slot.id) : !slot ? void handleCreateSlotAt(hour) : undefined)}
-                  disabled={slotBusy || Boolean(slot && !slot.available)}
-                >
-                  <strong>{hour}</strong>
-                  <span>{slot ? (slot.available ? 'Disponivel, clique para remover' : 'Agendado') : 'Livre para publicar'}</span>
-                </button>
-              );
-            })}
-          </div>
         </section>
 
         <section className="psychologist-workspace">

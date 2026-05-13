@@ -10,6 +10,7 @@ import Panel from './pages/Panel';
 import RecoverLogin from './pages/RecoverLogin';
 import PHQ9 from './pages/PHQ9';
 import Profile from './pages/Profile';
+import PsychologistAgenda from './pages/PsychologistAgenda';
 import PsychologistDashboard from './pages/PsychologistDashboard';
 import Register from './pages/Register';
 import Contents from './pages/Contents';
@@ -150,7 +151,7 @@ function AppRoutes() {
         path="/psicologo/agenda"
         element={
           <RoleRoute allowedRoles={['psychologist', 'admin']}>
-            <PsychologistDashboard />
+            <PsychologistAgenda />
           </RoleRoute>
         }
       />

@@ -956,6 +956,34 @@ a {
   font-size: 0.86rem;
 }
 
+.agenda-slot-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.agenda-slot-card {
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: #f5fafc;
+  border: 1px solid rgba(56, 104, 130, 0.12);
+}
+
+.agenda-slot-card.busy {
+  background: #eef4f7;
+}
+
+.agenda-slot-card strong,
+.agenda-slot-card span {
+  display: block;
+}
+
+.agenda-slot-card span {
+  margin-top: 0.2rem;
+  color: #5f7480;
+  font-size: 0.86rem;
+}
+
 .psychologist-toolbar {
   display: flex;
   align-items: flex-start;
