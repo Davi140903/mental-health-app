@@ -146,6 +146,32 @@ def get_first_name(name: str) -> str:
     return name.strip().split(" ")[0] if name.strip() else "voce"
 
 
+def serialize_lia_transcript(transcript: list[LiaTranscriptMessage]) -> list[dict[str, str]]:
+    serialized: list[dict[str, str]] = []
+    for item in transcript:
+        content = normalize_optional_text(item.content)
+        if item.role in {"assistant", "user"} and content:
+            serialized.append({"role": item.role, "content": content})
+    return serialized
+
+
+def parse_lia_transcript(value: Any) -> list[LiaTranscriptMessage]:
+    if not isinstance(value, list):
+        return []
+
+    transcript: list[LiaTranscriptMessage] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+
+        role = item.get("role")
+        content = normalize_optional_text(str(item.get("content") or ""))
+        if role in {"assistant", "user"} and content:
+            transcript.append(LiaTranscriptMessage(role=role, content=content[:2000]))
+
+    return transcript
+
+
 def build_lia_recent_interaction(interaction: LiaInteraction) -> LiaRecentInteraction:
     return LiaRecentInteraction(
         id=interaction.id,
@@ -154,6 +180,7 @@ def build_lia_recent_interaction(interaction: LiaInteraction) -> LiaRecentIntera
         opening_value=normalize_optional_text(interaction.opening_value),
         summary=normalize_optional_text(interaction.summary) or "Voce deixou um registro breve dessa conversa.",
         report=normalize_optional_text(interaction.report),
+        transcript=parse_lia_transcript(getattr(interaction, "transcript", None)),
         topics=[str(item) for item in (interaction.topics or []) if str(item).strip()],
         status=(interaction.status or "final").strip() or "final",
         finalized=bool(interaction.finalized),
@@ -3457,6 +3484,7 @@ def save_lia_interaction(
     interaction.opening_value = normalize_optional_text(session.memory.light_prompt_value)
     interaction.summary = build_interaction_summary(session, topics)
     interaction.report = build_psychologist_report(session, topics)
+    interaction.transcript = serialize_lia_transcript(session.transcript)
     interaction.topics = topics
     interaction.mood_value = infer_mood_value(session)
     interaction.status = "final" if session.completed else "draft"
@@ -3668,6 +3696,8 @@ def ensure_database_shape() -> None:
             statements.append("ALTER TABLE lia_interactions ADD COLUMN status VARCHAR NOT NULL DEFAULT 'final'")
         if "finalized" not in lia_columns:
             statements.append("ALTER TABLE lia_interactions ADD COLUMN finalized BOOLEAN NOT NULL DEFAULT 1")
+        if "transcript" not in lia_columns:
+            statements.append("ALTER TABLE lia_interactions ADD COLUMN transcript JSON NOT NULL DEFAULT '[]'")
 
     if statements:
         with engine.begin() as connection:

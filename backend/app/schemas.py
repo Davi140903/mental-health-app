@@ -175,6 +175,7 @@ class LiaRecentInteraction(BaseModel):
     opening_value: str | None = None
     summary: str
     report: str | None = None
+    transcript: list[LiaTranscriptMessage] = Field(default_factory=list)
     topics: list[str] = Field(default_factory=list)
     status: str = "final"
     finalized: bool = True

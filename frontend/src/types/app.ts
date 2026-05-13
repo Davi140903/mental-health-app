@@ -102,6 +102,7 @@ export interface LiaRecentInteraction {
   opening_value?: string | null;
   summary: string;
   report?: string | null;
+  transcript?: LiaTranscriptMessage[];
   topics: string[];
   status?: string;
   finalized?: boolean;

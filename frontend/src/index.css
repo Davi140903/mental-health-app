@@ -1366,6 +1366,50 @@ a {
   margin: 0.25rem 0 0;
 }
 
+.patient-chat-transcript {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.patient-chat-message {
+  max-width: 82%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 104, 130, 0.08);
+}
+
+.patient-chat-message span {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #315d74;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.patient-chat-message p {
+  margin: 0;
+  color: #344a54;
+}
+
+.patient-chat-message.assistant {
+  justify-self: start;
+  background: #f2f8fb;
+}
+
+.patient-chat-message.user {
+  justify-self: end;
+  background: #e7f1f6;
+}
+
+.patient-chat-empty {
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border-radius: 8px;
+  background: #f8fbfc;
+  border: 1px dashed rgba(56, 104, 130, 0.18);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

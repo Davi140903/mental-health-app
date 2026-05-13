@@ -63,6 +63,25 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("ansiedade sono e trabalho", joined)
         self.assertNotIn("partimos de musica", joined)
 
+    def test_recent_interaction_includes_transcript_for_psychologist_view(self) -> None:
+        interaction = LiaInteraction(
+            id="lia-1",
+            usuario_id="user-1",
+            summary="Conversa registrada.",
+            report="Relatorio breve.",
+            transcript=[
+                {"role": "assistant", "content": "Oi, eu sou a Lia."},
+                {"role": "user", "content": "Estou sobrecarregado."},
+            ],
+            topics=["trabalho"],
+            created_at=datetime.now(timezone.utc),
+        )
+
+        recent = main.build_lia_recent_interaction(interaction)
+
+        self.assertEqual([item.role for item in recent.transcript], ["assistant", "user"])
+        self.assertEqual(recent.transcript[1].content, "Estou sobrecarregado.")
+
     def test_fallback_reply_avoids_therapeutic_old_style(self) -> None:
         session = self.build_session()
         analysis = main.fallback_lia_analysis(session, "nao estou me sentindo muito bem")

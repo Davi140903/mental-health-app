@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
-import type { PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
+import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
 
 const statusOptions = [
   { value: '', label: 'Todos' },
@@ -33,15 +33,22 @@ function statusLabel(status: string) {
 }
 
 function extractMainText(request: PsychologistTriageRequest) {
-  const report = request.interaction?.report ?? '';
   const summary = request.interaction?.summary ?? '';
-  const source = report || summary;
+  const source = summary;
 
   if (!source) {
-    return 'Ainda nao ha resumo da Lia ligado a este pedido.';
+    return 'Pedido recebido pela Lia, ainda sem sintese breve vinculada.';
   }
 
-  return source.length > 520 ? `${source.slice(0, 520).trim()}...` : source;
+  return source.length > 220 ? `${source.slice(0, 220).trim()}...` : source;
+}
+
+function patientFirstName(name: string) {
+  return name.trim().split(' ')[0] || 'Usuario';
+}
+
+function hasTranscript(interaction: LiaRecentInteraction) {
+  return Boolean(interaction.transcript?.length);
 }
 
 function questionnaireLabel(result: QuestionnaireResult) {
@@ -178,6 +185,33 @@ export default function PsychologistDashboard() {
     printWindow.print();
   };
 
+  const buildConversationPrintHtml = (interaction: LiaRecentInteraction, patientName: string) => {
+    if (!hasTranscript(interaction)) {
+      return `
+        <div class="box">
+          <p class="meta">${formatDateTime(interaction.created_at)}</p>
+          <p>Transcricao completa indisponivel para este registro antigo.</p>
+          <p>${escapeHtml(interaction.summary)}</p>
+        </div>
+      `;
+    }
+
+    const firstName = patientFirstName(patientName);
+    const messages = (interaction.transcript ?? [])
+      .map((message) => {
+        const author = message.role === 'assistant' ? 'Lia' : firstName;
+        return `<p><strong>${escapeHtml(author)}:</strong> ${escapeHtml(message.content)}</p>`;
+      })
+      .join('');
+
+    return `
+      <div class="box">
+        <p class="meta">${formatDateTime(interaction.created_at)}</p>
+        ${messages}
+      </div>
+    `;
+  };
+
   const buildPatientReportHtml = (detail: PsychologistPatientDetail) => {
     const note = noteDraft.trim() || detail.psychologist_note?.content || 'Sem anotacoes registradas.';
     const questionnaires = detail.questionnaires.length
@@ -194,12 +228,7 @@ export default function PsychologistDashboard() {
     const conversations = detail.lia_memory.recent_conversations.length
       ? detail.lia_memory.recent_conversations
           .slice(0, 5)
-          .map(
-            (interaction) =>
-              `<div class="box"><p class="meta">${formatDateTime(interaction.created_at)}</p><p>${escapeHtml(
-                interaction.report ?? interaction.summary,
-              )}</p></div>`,
-          )
+          .map((interaction) => buildConversationPrintHtml(interaction, detail.user.nome))
           .join('')
       : '<p>Nenhuma conversa recente registrada.</p>';
 
@@ -217,7 +246,9 @@ export default function PsychologistDashboard() {
       )}</p></div>
       <h2>Memoria breve</h2>
       <p>${escapeHtml(
-        detail.lia_memory.recent_summary ?? detail.lia_memory.summary ?? 'Ainda ha pouco historico acumulado.',
+        detail.lia_memory.topics.length
+          ? `Temas recorrentes no historico: ${detail.lia_memory.topics.slice(0, 8).join(', ')}.`
+          : 'Ainda ha pouco historico acumulado.',
       )}</p>
       <h2>Triagens recentes</h2>
       <ul>${questionnaires}</ul>
@@ -395,7 +426,7 @@ export default function PsychologistDashboard() {
                   </div>
 
                   <div className="triage-report">
-                    <span className="field-label">Resumo para triagem</span>
+                    <span className="field-label">Ponto inicial</span>
                     <p>{extractMainText(request)}</p>
                   </div>
 
@@ -444,9 +475,9 @@ export default function PsychologistDashboard() {
                           <section className="patient-detail-card">
                             <span className="field-label">Memoria breve</span>
                             <p>
-                              {patientDetail.lia_memory.recent_summary ??
-                                patientDetail.lia_memory.summary ??
-                                'Ainda ha pouco historico acumulado deste paciente.'}
+                              {patientDetail.lia_memory.topics.length
+                                ? 'Temas que ajudam a Lia e o profissional a entenderem continuidade, sem transformar isso em rotulo para o paciente.'
+                                : 'Ainda ha pouco historico acumulado deste paciente.'}
                             </p>
                             {patientDetail.lia_memory.topics.length ? (
                               <div className="triage-topic-row compact-tags">
@@ -498,7 +529,26 @@ export default function PsychologistDashboard() {
                                 {patientDetail.lia_memory.recent_conversations.slice(0, 4).map((interaction) => (
                                   <article key={interaction.id ?? interaction.created_at}>
                                     <strong>{formatDateTime(interaction.created_at)}</strong>
-                                    <p>{interaction.report ?? interaction.summary}</p>
+                                    {hasTranscript(interaction) ? (
+                                      <div className="patient-chat-transcript">
+                                        {(interaction.transcript ?? []).map((message, index) => (
+                                          <div
+                                            key={`${interaction.id ?? interaction.created_at}-${index}`}
+                                            className={`patient-chat-message ${message.role}`}
+                                          >
+                                            <span>
+                                              {message.role === 'assistant' ? 'Lia' : patientFirstName(patientDetail.user.nome)}
+                                            </span>
+                                            <p>{message.content}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="patient-chat-empty">
+                                        <p>Transcricao completa indisponivel para este registro antigo.</p>
+                                        <p>{interaction.summary}</p>
+                                      </div>
+                                    )}
                                   </article>
                                 ))}
                               </div>

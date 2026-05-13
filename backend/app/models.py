@@ -96,6 +96,7 @@ class LiaInteraction(Base):
     opening_value = Column(String, nullable=True)
     summary = Column(Text, nullable=False)
     report = Column(Text, nullable=True)
+    transcript = Column(JSON, nullable=False, default=list)
     topics = Column(JSON, nullable=False, default=list)
     mood_value = Column(Integer, nullable=True)
     status = Column(String, nullable=False, default="final", index=True)
