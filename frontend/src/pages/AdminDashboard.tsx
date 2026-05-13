@@ -128,9 +128,13 @@ export default function AdminDashboard() {
     <div className="admin-app-shell">
       <header className="admin-topbar">
         <div>
-          <span className="admin-role-pill">Area ADM</span>
-          <h1>Controle de psicologos</h1>
-          <p>{user?.nome ? `Ola, ${user.nome}.` : 'Gerencie os acessos profissionais da plataforma.'}</p>
+          <span className="admin-role-pill">Painel administrativo</span>
+          <h1>Gestao de acessos profissionais</h1>
+          <p>
+            {user?.nome
+              ? `Operador: ${user.nome}`
+              : 'Controle os perfis profissionais autorizados na plataforma.'}
+          </p>
         </div>
 
         <button type="button" className="admin-ghost-button" onClick={handleLogout}>
@@ -141,15 +145,15 @@ export default function AdminDashboard() {
       <main className="admin-page">
         <section className="admin-summary-grid">
           <article className="admin-metric">
-            <span>Psicologos cadastrados</span>
+            <span>Profissionais ativos</span>
             <strong>{psychologists.length}</strong>
-            <p>Contas profissionais criadas pelo ADM.</p>
+            <p>Contas com permissao de acesso ao painel de triagem.</p>
           </article>
 
           <article className="admin-metric">
-            <span>Permissao</span>
-            <strong>ADM</strong>
-            <p>Somente esta area cria ou remove logins de psicologos.</p>
+            <span>Escopo do modulo</span>
+            <strong>CRUD</strong>
+            <p>Criar, revisar, atualizar e remover acessos profissionais.</p>
           </article>
         </section>
 
@@ -158,7 +162,7 @@ export default function AdminDashboard() {
             <div className="admin-toolbar">
               <div>
                 <h2>{editingId ? 'Editar psicologo' : 'Novo psicologo'}</h2>
-                <p>Crie o login que sera usado na fila de triagem.</p>
+                <p>Cadastre o profissional que podera acessar solicitacoes de triagem.</p>
               </div>
             </div>
 
@@ -228,8 +232,8 @@ export default function AdminDashboard() {
           <div className="admin-panel">
             <div className="admin-toolbar">
               <div>
-                <h2>Logins ativos</h2>
-                <p>Use esta lista para revisar, editar ou remover acessos.</p>
+                <h2>Registro de profissionais</h2>
+                <p>Lista administrativa dos logins autorizados para atendimento.</p>
               </div>
             </div>
 
@@ -238,26 +242,46 @@ export default function AdminDashboard() {
               <div className="empty-state">Nenhum psicologo cadastrado ainda.</div>
             ) : null}
 
-            <div className="admin-list">
-              {psychologists.map((psychologist) => (
-                <article key={psychologist.id} className="admin-card">
-                  <div>
-                    <h3>{psychologist.nome}</h3>
-                    <p>{psychologist.email}</p>
-                    <span>Criado em {formatDate(psychologist.criado_em)}</span>
-                  </div>
-
-                  <div className="admin-card-actions">
-                    <button type="button" className="admin-ghost-button" onClick={() => handleEdit(psychologist)}>
-                      Editar
-                    </button>
-                    <button type="button" className="admin-danger-button" onClick={() => void handleDelete(psychologist)}>
-                      Remover
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+            {psychologists.length ? (
+              <div className="admin-table-shell">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Profissional</th>
+                      <th>Email</th>
+                      <th>Criado em</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {psychologists.map((psychologist) => (
+                      <tr key={psychologist.id}>
+                        <td>
+                          <strong>{psychologist.nome}</strong>
+                          <span>Psicologo</span>
+                        </td>
+                        <td>{psychologist.email}</td>
+                        <td>{formatDate(psychologist.criado_em)}</td>
+                        <td>
+                          <div className="admin-card-actions">
+                            <button type="button" className="admin-ghost-button" onClick={() => handleEdit(psychologist)}>
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-danger-button"
+                              onClick={() => void handleDelete(psychologist)}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </div>
         </section>
       </main>

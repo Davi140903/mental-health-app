@@ -137,9 +137,9 @@ export default function PsychologistDashboard() {
     <div className="psychologist-app-shell">
       <header className="psychologist-topbar">
         <div>
-          <span className="role-pill">Area do psicologo</span>
-          <h1>Fila de triagem</h1>
-          <p>{user?.nome ? `Ola, ${user.nome}.` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
+          <span className="role-pill">Painel profissional</span>
+          <h1>Solicitacoes de triagem</h1>
+          <p>{user?.nome ? `Profissional: ${user.nome}` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
         </div>
 
         <button type="button" className="psychologist-ghost-button" onClick={handleLogout}>
@@ -152,27 +152,27 @@ export default function PsychologistDashboard() {
           <article className="psychologist-metric">
             <span>Pedidos visiveis</span>
             <strong>{requests.length}</strong>
-            <p>Solicitacoes encontradas para o filtro atual.</p>
+            <p>Registros encontrados para o filtro atual.</p>
           </article>
 
           <article className="psychologist-metric">
             <span>Aguardando</span>
             <strong>{pendingCount}</strong>
-            <p>Usuarios que ainda precisam concluir o agendamento.</p>
+            <p>Pedidos ainda sem horario confirmado.</p>
           </article>
 
           <article className="psychologist-metric">
             <span>Agendados</span>
             <strong>{scheduledCount}</strong>
-            <p>Triagens ja vinculadas a horario e profissional.</p>
+            <p>Atendimentos vinculados a horario e profissional.</p>
           </article>
         </section>
 
         <section className="psychologist-workspace">
           <div className="psychologist-toolbar">
             <div>
-              <h2>Solicitacoes de atendimento</h2>
-              <p>Veja o contexto inicial organizado pela Lia antes da triagem.</p>
+              <h2>Registros recebidos</h2>
+              <p>Selecione um paciente para abrir o contexto de preparacao da primeira consulta.</p>
             </div>
 
             <div className="segmented-control" aria-label="Filtrar pedidos">
@@ -204,45 +204,45 @@ export default function PsychologistDashboard() {
               >
                 <button type="button" className="triage-request-main" onClick={() => void handleSelectRequest(request)}>
                   <div className="triage-request-header">
-                  <div>
-                    <span className={`status-badge status-${request.status}`}>{statusLabel(request.status)}</span>
-                    <h3>{request.user.nome}</h3>
-                    <p>{request.user.email}</p>
+                    <div>
+                      <span className={`status-badge status-${request.status}`}>{statusLabel(request.status)}</span>
+                      <h3>{request.user.nome}</h3>
+                      <p>{request.user.email}</p>
+                    </div>
+
+                    <div className="triage-time">
+                      <span>Solicitado em</span>
+                      <strong>{formatDateTime(request.requested_at)}</strong>
+                    </div>
                   </div>
 
-                  <div className="triage-time">
-                    <span>Pedido</span>
-                    <strong>{formatDateTime(request.requested_at)}</strong>
+                  <div className="triage-request-grid">
+                    <div>
+                      <span className="field-label">Horario</span>
+                      <p>{formatDateTime(request.scheduled_for)}</p>
+                    </div>
+                    <div>
+                      <span className="field-label">Profissional</span>
+                      <p>{request.psychologist_name ?? 'Ainda nao definido'}</p>
+                    </div>
+                    <div>
+                      <span className="field-label">Origem</span>
+                      <p>{request.interaction ? 'Conversa com a Lia' : 'Pedido sem conversa vinculada'}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="triage-request-grid">
-                  <div>
-                    <span className="field-label">Horario</span>
-                    <p>{formatDateTime(request.scheduled_for)}</p>
+                  <div className="triage-report">
+                    <span className="field-label">Resumo para triagem</span>
+                    <p>{extractMainText(request)}</p>
                   </div>
-                  <div>
-                    <span className="field-label">Profissional</span>
-                    <p>{request.psychologist_name ?? 'Ainda nao definido'}</p>
-                  </div>
-                  <div>
-                    <span className="field-label">Origem</span>
-                    <p>{request.interaction ? 'Conversa com a Lia' : 'Pedido sem conversa vinculada'}</p>
-                  </div>
-                </div>
 
-                <div className="triage-report">
-                  <span className="field-label">Resumo para triagem</span>
-                  <p>{extractMainText(request)}</p>
-                </div>
-
-                {request.interaction?.topics?.length ? (
-                  <div className="triage-topic-row">
-                    {request.interaction.topics.slice(0, 6).map((topic) => (
-                      <span key={topic}>{topic}</span>
-                    ))}
-                  </div>
-                ) : null}
+                  {request.interaction?.topics?.length ? (
+                    <div className="triage-topic-row">
+                      {request.interaction.topics.slice(0, 6).map((topic) => (
+                        <span key={topic}>{topic}</span>
+                      ))}
+                    </div>
+                  ) : null}
                 </button>
 
                 {selectedRequestId === request.id ? (
