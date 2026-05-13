@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
-import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
+import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult, TriageSlot } from '../types/app';
 
 const statusOptions = [
   { value: '', label: 'Todos' },
@@ -19,6 +19,11 @@ function formatDateTime(value?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function toDatetimeLocalValue(date = new Date(Date.now() + 24 * 60 * 60 * 1000)) {
+  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
 }
 
 function statusLabel(status: string) {
@@ -143,6 +148,11 @@ export default function PsychologistDashboard() {
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteFeedback, setNoteFeedback] = useState('');
+  const [slots, setSlots] = useState<TriageSlot[]>([]);
+  const [slotStart, setSlotStart] = useState(toDatetimeLocalValue());
+  const [slotEnd, setSlotEnd] = useState(toDatetimeLocalValue(new Date(Date.now() + 24 * 60 * 60 * 1000 + 50 * 60000)));
+  const [slotFeedback, setSlotFeedback] = useState('');
+  const [slotBusy, setSlotBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -174,12 +184,63 @@ export default function PsychologistDashboard() {
     };
   }, [statusFilter]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadSlots = async () => {
+      try {
+        const response = await appService.listPsychologistSlots();
+        if (active) {
+          setSlots(response);
+        }
+      } catch {
+        if (active) {
+          setSlotFeedback('Nao foi possivel carregar sua agenda agora.');
+        }
+      }
+    };
+
+    void loadSlots();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const pendingCount = requests.filter((item) => item.status === 'pending').length;
   const scheduledCount = requests.filter((item) => item.status === 'scheduled').length;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleCreateSlot = async () => {
+    setSlotBusy(true);
+    setSlotFeedback('');
+    try {
+      const created = await appService.createPsychologistSlot(new Date(slotStart).toISOString(), slotEnd ? new Date(slotEnd).toISOString() : undefined);
+      setSlots((current) => [...current.filter((slot) => slot.id !== created.id), created].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()));
+      setSlotFeedback('Horario publicado para os pacientes.');
+    } catch {
+      setSlotFeedback('Nao foi possivel criar esse horario.');
+    } finally {
+      setSlotBusy(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId: number) => {
+    setSlotBusy(true);
+    setSlotFeedback('');
+    try {
+      await appService.deletePsychologistSlot(slotId);
+      setSlots((current) => current.filter((slot) => slot.id !== slotId));
+      setSlotFeedback('Horario removido da agenda.');
+    } catch {
+      setSlotFeedback('Nao foi possivel remover esse horario.');
+    } finally {
+      setSlotBusy(false);
+    }
   };
 
   const handleSelectRequest = async (request: PsychologistTriageRequest) => {
@@ -431,6 +492,51 @@ export default function PsychologistDashboard() {
             <strong>{scheduledCount}</strong>
             <p>Atendimentos vinculados a horario e profissional.</p>
           </article>
+        </section>
+
+        <section className="psychologist-workspace agenda-panel">
+          <div className="psychologist-toolbar">
+            <div>
+              <h2>Minha agenda</h2>
+              <p>Publique os horarios que os pacientes podem escolher ao finalizar a triagem com a Lia.</p>
+            </div>
+          </div>
+
+          <div className="agenda-create-row">
+            <label>
+              Inicio
+              <input type="datetime-local" value={slotStart} onChange={(event) => setSlotStart(event.target.value)} />
+            </label>
+            <label>
+              Fim
+              <input type="datetime-local" value={slotEnd} onChange={(event) => setSlotEnd(event.target.value)} />
+            </label>
+            <button type="button" onClick={() => void handleCreateSlot()} disabled={slotBusy || !slotStart}>
+              {slotBusy ? 'Salvando...' : 'Adicionar horario'}
+            </button>
+          </div>
+
+          {slotFeedback ? <div className="alert success">{slotFeedback}</div> : null}
+
+          <div className="agenda-slot-list">
+            {slots.length ? (
+              slots.slice(0, 12).map((slot) => (
+                <article key={slot.id} className={`agenda-slot-card ${slot.available ? '' : 'busy'}`}>
+                  <div>
+                    <strong>{formatDateTime(slot.starts_at)}</strong>
+                    <span>{slot.available ? 'Disponivel para pacientes' : 'Horario ja agendado'}</span>
+                  </div>
+                  {slot.available ? (
+                    <button type="button" className="psychologist-ghost-button" onClick={() => void handleDeleteSlot(slot.id)} disabled={slotBusy}>
+                      Remover
+                    </button>
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <div className="empty-state">Nenhum horario futuro cadastrado ainda.</div>
+            )}
+          </div>
         </section>
 
         <section className="psychologist-workspace">

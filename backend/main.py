@@ -88,6 +88,7 @@ from app.schemas import (
     PsychologistPatientDetailOut,
     PsychologistPatientNoteIn,
     PsychologistPatientNoteOut,
+    PsychologistSlotCreate,
     UsuarioCreate,
     UsuarioOut,
 )
@@ -4513,6 +4514,17 @@ def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | Non
 
 
 def ensure_triage_slots(db: Session) -> None:
+    # Legacy fallback: only seed automatic slots when no psychologist has configured
+    # future availability yet. Once professionals customize their agenda, patient
+    # choices come directly from those slots.
+    configured_future_slot = db.scalar(
+        select(PsychologistSlot.id)
+        .where(PsychologistSlot.starts_at >= utcnow())
+        .limit(1)
+    )
+    if configured_future_slot is not None:
+        return
+
     psychologists = db.scalars(select(User).where(User.role == "psychologist").order_by(User.nome.asc())).all()
     psychologist_names = [user.nome.strip() for user in psychologists if normalize_optional_text(user.nome)]
     if not psychologist_names:
@@ -5160,6 +5172,105 @@ def list_triage_slots(
     ]
 
 
+@app.get("/psychologist/slots", response_model=list[TriageSlotOut])
+def list_my_psychologist_slots(
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> list[TriageSlotOut]:
+    if has_role(current_user, "admin"):
+        slots = db.scalars(
+            select(PsychologistSlot)
+            .where(PsychologistSlot.starts_at >= utcnow())
+            .order_by(PsychologistSlot.starts_at.asc(), PsychologistSlot.psychologist_name.asc())
+            .limit(120)
+        ).all()
+    else:
+        slots = db.scalars(
+            select(PsychologistSlot)
+            .where(PsychologistSlot.psychologist_name == current_user.nome)
+            .where(PsychologistSlot.starts_at >= utcnow())
+            .order_by(PsychologistSlot.starts_at.asc())
+            .limit(80)
+        ).all()
+
+    return [
+        TriageSlotOut(
+            id=slot.id,
+            psychologist_name=slot.psychologist_name,
+            starts_at=ensure_utc(slot.starts_at),
+            ends_at=ensure_utc(slot.ends_at),
+            available=bool(slot.available),
+        )
+        for slot in slots
+    ]
+
+
+@app.post("/psychologist/slots", response_model=TriageSlotOut, status_code=status.HTTP_201_CREATED)
+def create_my_psychologist_slot(
+    data: PsychologistSlotCreate,
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> TriageSlotOut:
+    if has_role(current_user, "admin") and not has_role(current_user, "psychologist"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas psicologos podem criar horarios.")
+
+    starts_at = ensure_utc(data.starts_at).replace(second=0, microsecond=0)
+    ends_at = ensure_utc(data.ends_at).replace(second=0, microsecond=0) if data.ends_at else starts_at + timedelta(minutes=50)
+    if starts_at <= utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Crie horarios futuros.")
+    if ends_at <= starts_at:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Horario final deve ser depois do inicial.")
+
+    existing = db.scalar(
+        select(PsychologistSlot).where(
+            PsychologistSlot.psychologist_name == current_user.nome,
+            PsychologistSlot.starts_at == starts_at,
+        )
+    )
+    if existing:
+        if not existing.available:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este horario ja esta ocupado.")
+        existing.ends_at = ends_at
+        slot = existing
+    else:
+        slot = PsychologistSlot(
+            psychologist_name=current_user.nome,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            available=True,
+        )
+        db.add(slot)
+
+    db.commit()
+    db.refresh(slot)
+    return TriageSlotOut(
+        id=slot.id,
+        psychologist_name=slot.psychologist_name,
+        starts_at=ensure_utc(slot.starts_at),
+        ends_at=ensure_utc(slot.ends_at),
+        available=bool(slot.available),
+    )
+
+
+@app.delete("/psychologist/slots/{slot_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_my_psychologist_slot(
+    slot_id: int,
+    current_user: User = Depends(require_psychologist_or_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    slot = db.get(PsychologistSlot, slot_id)
+    if slot is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Horario nao encontrado.")
+    if not has_role(current_user, "admin") and slot.psychologist_name != current_user.nome:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voce nao pode remover este horario.")
+    if not slot.available:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nao e possivel remover horario ja agendado.")
+
+    db.delete(slot)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @app.post("/triage/request", response_model=TriageRequestOut, status_code=status.HTTP_201_CREATED)
 def create_triage_request(
     data: TriageRequestCreate,
@@ -5239,7 +5350,11 @@ def list_psychologist_triage_requests(
         select(TriageRequest, User, LiaInteraction)
         .join(User, TriageRequest.usuario_id == User.id)
         .outerjoin(LiaInteraction, TriageRequest.lia_interaction_id == LiaInteraction.id)
-        .order_by(TriageRequest.requested_at.desc())
+        .order_by(
+            TriageRequest.scheduled_for.is_(None).asc(),
+            TriageRequest.scheduled_for.asc(),
+            TriageRequest.requested_at.asc(),
+        )
         .limit(80)
     )
 

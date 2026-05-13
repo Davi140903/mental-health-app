@@ -74,6 +74,23 @@ export const appService = {
     return response.data;
   },
 
+  async listPsychologistSlots(): Promise<TriageSlot[]> {
+    const response = await api.get<TriageSlot[]>('/psychologist/slots');
+    return response.data;
+  },
+
+  async createPsychologistSlot(startsAt: string, endsAt?: string): Promise<TriageSlot> {
+    const response = await api.post<TriageSlot>('/psychologist/slots', {
+      starts_at: startsAt,
+      ends_at: endsAt,
+    });
+    return response.data;
+  },
+
+  async deletePsychologistSlot(slotId: number): Promise<void> {
+    await api.delete(`/psychologist/slots/${slotId}`);
+  },
+
   async createTriageRequest(interactionId?: string): Promise<TriageRequest> {
     const response = await api.post<TriageRequest>('/triage/request', {
       interaction_id: interactionId,

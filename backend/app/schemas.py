@@ -265,6 +265,11 @@ class TriageSlotOut(BaseModel):
     available: bool
 
 
+class PsychologistSlotCreate(BaseModel):
+    starts_at: datetime
+    ends_at: datetime | None = None
+
+
 class TriageRequestCreate(BaseModel):
     interaction_id: str | None = None
 
