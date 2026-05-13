@@ -1035,6 +1035,20 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "combined_text": combined_text,
         "duration": extract_duration_phrase(combined_text),
         "latest_duration": extract_duration_phrase(latest_text),
+        "asks_about_professional": contains_any(
+            latest_text,
+            [
+                "psicologo",
+                "psicologa",
+                "terapia",
+                "terapeuta",
+                "doutor",
+                "doutora",
+                "consulta",
+                "profissional",
+            ],
+        )
+        and contains_any(latest_text, ["ajudar", "ajuda", "conversar", "falar", "atendimento", "triagem"]),
         "mentions_help": contains_any(latest_text, ["preciso de ajuda", "quero ajuda", "me ajuda", "preciso conversar"]),
         "palpitacao": contains_any(combined_text, ["palpit", "coracao", "acelerado", "taquic", "peito"]),
         "ansiedade": contains_any(combined_text, ["ansios", "nervos", "tenso", "panico", "preocup", "alerta"]),
@@ -3601,6 +3615,12 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
 def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
+    if context["asks_about_professional"]:
+        return (
+            "Pode ajudar, sim. Conversar com um profissional pode ser um jeito de olhar para isso com mais calma, "
+            "organizar o que esta acontecendo e pensar em proximos passos que facam sentido para voce. "
+            "Nao precisa chegar la com tudo pronto; falar exatamente essa duvida ja e um bom comeco."
+        )
     if context["sono"] or context["energia"]:
         return "Entendi. Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
     if context["irritabilidade"]:

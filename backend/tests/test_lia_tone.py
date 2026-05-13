@@ -385,6 +385,26 @@ class LiaToneTests(unittest.TestCase):
         draft_mock.assert_called_once()
         result_mock.assert_not_called()
 
+    def test_followup_answers_professional_help_question_before_script(self) -> None:
+        session = self.build_session(stage="closing", turn_count=6)
+        session.followup_mode = True
+        session.followup_turns_left = 2
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="minha cabeca nao desliga quando chego em casa"),
+            main.LiaTranscriptMessage(role="assistant", content="Pode continuar. Eu sigo com voce daqui."),
+        ]
+
+        reply = main.build_followup_continuation_reply(
+            session,
+            "Lia, eu nao sei o que eu posso fazer, sera que conversar com esse doutor Davi pode me ajudar?",
+        )
+        lowered = main.normalize_for_match(reply)
+
+        self.assertIn("pode ajudar", lowered)
+        self.assertIn("profissional", lowered)
+        self.assertIn("nao precisa chegar la com tudo pronto", lowered)
+        self.assertNotIn("quando isso aparece em casa", lowered)
+
     def test_followup_final_close_marks_finished(self) -> None:
         session = self.build_session(stage="closing", turn_count=7)
         session.current_topic = "closing"
