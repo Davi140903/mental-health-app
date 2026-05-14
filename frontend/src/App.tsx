@@ -24,7 +24,7 @@ function roleHome(user?: Usuario | null) {
   }
 
   if (user?.role === 'psychologist') {
-    return '/psicologo';
+    return '/psic?logo';
   }
 
   return '/dashboard';
@@ -140,7 +140,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/psicologo"
+        path="/psic?logo"
         element={
           <RoleRoute allowedRoles={['psychologist', 'admin']}>
             <PsychologistDashboard />
@@ -148,7 +148,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/psicologo/agenda"
+        path="/psic?logo/agenda"
         element={
           <RoleRoute allowedRoles={['psychologist', 'admin']}>
             <PsychologistAgenda />

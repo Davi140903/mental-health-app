@@ -7,7 +7,7 @@ function buildCodeMessage(debugCode: string | null, fallback: string) {
   if (!debugCode) {
     return `${fallback} Confira sua caixa de entrada.`;
   }
-  return `${fallback} Neste ambiente local, use o codigo ${debugCode}.`;
+  return `${fallback} Neste ambiente local, use o c?digo ${debugCode}.`;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -40,10 +40,10 @@ export default function Register() {
       return 'A senha precisa ter pelo menos 6 caracteres.';
     }
     if (password !== confirmPassword) {
-      return 'As senhas nao coincidem.';
+      return 'As senhas n?o coincidem.';
     }
     if (!consentimentoLgpd) {
-      return 'Voce precisa aceitar o termo de privacidade para continuar.';
+      return 'Voc? precisa aceitar o termo de privacidade para continuar.';
     }
     return '';
   };
@@ -65,9 +65,9 @@ export default function Register() {
       if (response.debug_code) {
         setCodigo(response.debug_code);
       }
-      setInfo(buildCodeMessage(response.debug_code, 'Codigo de cadastro enviado.'));
+      setInfo(buildCodeMessage(response.debug_code, 'C?digo de cadastro enviado.'));
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel enviar o codigo. Verifique se o email ja esta em uso.'));
+      setError(getApiErrorMessage(error, 'N?o foi poss?vel enviar o c?digo. Verifique se o email j? est? em uso.'));
     } finally {
       setSendingCode(false);
     }
@@ -85,12 +85,12 @@ export default function Register() {
     }
 
     if (!codeRequested) {
-      setError('Primeiro solicite o codigo de verificacao do email.');
+      setError('Primeiro solicite o c?digo de verifica??o do email.');
       return;
     }
 
     if (codigo.trim().length !== 6) {
-      setError('Informe o codigo de 6 digitos para concluir o cadastro.');
+      setError('Informe o c?digo de 6 d?gitos para concluir o cadastro.');
       return;
     }
 
@@ -106,11 +106,11 @@ export default function Register() {
       navigate('/login', {
         state: {
           email,
-          info: 'Conta criada. Agora solicite um codigo para entrar com seguranca.',
+          info: 'Conta criada. Agora solicite um c?digo para entrar com seguran?a.',
         },
       });
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel criar a conta. Confira o codigo e tente de novo.'));
+      setError(getApiErrorMessage(error, 'N?o foi poss?vel criar a conta. Confira o c?digo e tente de novo.'));
     } finally {
       setSubmitting(false);
     }
@@ -120,7 +120,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card auth-card-wide">
         <h1>Criar conta</h1>
-        <p className="auth-subtitle">Confirme seu email com um codigo antes de concluir.</p>
+        <p className="auth-subtitle">Confirme seu email com um código antes de concluir.</p>
 
         {error ? <div className="alert error">{error}</div> : null}
         {info ? <div className="alert success">{info}</div> : null}
@@ -177,7 +177,7 @@ export default function Register() {
             onClick={() => void handleRequestCode()}
             disabled={sendingCode}
           >
-            {sendingCode ? 'Enviando codigo...' : 'Pedir codigo por email'}
+            {sendingCode ? 'Enviando c?digo...' : 'Pedir c?digo por email'}
           </button>
 
           {codeRequested ? (
@@ -189,7 +189,7 @@ export default function Register() {
                 maxLength={6}
                 value={codigo}
                 onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
-                placeholder="Codigo preenchido automaticamente no modo local"
+                placeholder="C?digo preenchido automaticamente no modo local"
                 required
               />
             </label>

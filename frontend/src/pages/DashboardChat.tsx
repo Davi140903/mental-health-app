@@ -60,7 +60,7 @@ function CompanionAvatar({ returning }: { returning: boolean }) {
       <div>
         <strong className="companion-name">Lia</strong>
         <p className="companion-copy">
-          {returning ? 'A gente continua de onde parou.' : 'Um espaco simples pra voce falar um pouco.'}
+          {returning ? 'A gente continua de onde parou.' : 'Um espa?o simples pra voc? falar um pouco.'}
         </p>
       </div>
     </div>
@@ -114,7 +114,7 @@ export default function DashboardChat() {
         void loadTriageSlots();
       }
     } catch (error) {
-      setLiaError(getApiErrorMessage(error, 'Nao foi possivel iniciar a conversa agora.'));
+      setLiaError(getApiErrorMessage(error, 'N?o foi poss?vel iniciar a conversa agora.'));
     } finally {
       setStartingLia(false);
     }
@@ -187,7 +187,7 @@ export default function DashboardChat() {
       setLiaSession(response.session);
     } catch (error) {
       setDraftMessage(trimmedMessage);
-      setLiaError(getApiErrorMessage(error, 'Nao consegui ouvir sua mensagem agora.'));
+      setLiaError(getApiErrorMessage(error, 'N?o consegui ouvir sua mensagem agora.'));
     } finally {
       setBusy(false);
     }
@@ -198,7 +198,7 @@ export default function DashboardChat() {
       return;
     }
 
-    const nextTranscript = [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voce daqui.' }];
+    const nextTranscript = [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com voc? daqui.' }];
 
     setLiaSession({
       ...liaSession,
@@ -222,7 +222,7 @@ export default function DashboardChat() {
       setTriageRequest(request);
       await loadTriageSlots();
     } catch (error) {
-      setLiaError(getApiErrorMessage(error, 'Nao foi possivel iniciar o pedido de triagem agora.'));
+      setLiaError(getApiErrorMessage(error, 'N?o foi poss?vel iniciar o pedido de triagem agora.'));
     } finally {
       setTriageBusy(false);
     }
@@ -240,7 +240,7 @@ export default function DashboardChat() {
       setTriageRequest(scheduled);
       await loadTriageSlots();
     } catch (error) {
-      setLiaError(getApiErrorMessage(error, 'Nao foi possivel agendar a triagem nesse horario.'));
+      setLiaError(getApiErrorMessage(error, 'N?o foi poss?vel agendar a triagem nesse hor?rio.'));
     } finally {
       setTriageBusy(false);
     }
@@ -270,8 +270,8 @@ export default function DashboardChat() {
               <h2>{isReturning ? 'Bom te ver de novo' : 'Pode ficar a vontade'}</h2>
               <p>
                 {isReturning
-                  ? 'Se quiser, voce pode continuar de onde parou ou trazer outra coisa.'
-                  : 'Pode comecar como for mais natural pra voce. A Lia acompanha a conversa a partir disso.'}
+                  ? 'Se quiser, voc? pode continuar de onde parou ou trazer outra coisa.'
+                  : 'Pode come?ar como for mais natural pra voc?. A Lia acompanha a conversa a partir disso.'}
               </p>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function DashboardChat() {
           {recentConversations.length > 1 ? (
             <div className="lia-memory-strip">
               <p>Nas ultimas conversas, a Lia guardou estes pontos para continuar com mais contexto:</p>
-              <div className="lia-topic-list" aria-label="Memoria breve das ultimas conversas">
+              <div className="lia-topic-list" aria-label="Mem?ria breve das ?ltimas conversas">
                 {recentConversations.slice(0, 3).map((item) => (
                   <span key={`${item.created_at}-${item.summary}`} className="pill subtle">
                     {item.summary}
@@ -330,7 +330,7 @@ export default function DashboardChat() {
                   <textarea
                     value={draftMessage}
                     onChange={(event) => setDraftMessage(event.target.value)}
-                    placeholder="Ex.: ando muito pressionado e minha mente nao desliga"
+                    placeholder="Ex.: ando muito pressionado e minha mente n?o desliga"
                     disabled={busy}
                   />
                   <button type="submit" className="chat-submit" disabled={busy || !draftMessage.trim()}>
@@ -344,10 +344,10 @@ export default function DashboardChat() {
               <div className="chat-composer">
                 <p className="chat-hint">
                   {liaSession.followup_finished
-                    ? 'Se por hoje ja foi suficiente, tudo bem parar por aqui. A triagem fica disponivel como proximo passo.'
+                    ? 'Se por hoje j? foi suficiente, tudo bem parar por aqui. A triagem fica dispon?vel como proximo passo.'
                     : triageRequest
-                    ? 'Se quiser, voce pode seguir com a triagem agora. E, se ainda nao for a hora, tambem pode continuar conversando por aqui.'
-                    : 'Se por hoje ja foi o suficiente, tudo bem parar por aqui. Mas, se ainda houver algo importante, voce pode continuar conversando.'}
+                    ? 'Se quiser, voc? pode seguir com a triagem agora. E, se ainda n?o for a hora, tamb?m pode continuar conversando por aqui.'
+                    : 'Se por hoje j? foi o suficiente, tudo bem parar por aqui. Mas, se ainda houver algo importante, voc? pode continuar conversando.'}
                 </p>
                 <div className="lia-post-chat-actions">
                   {!triageRequest ? (
@@ -360,8 +360,8 @@ export default function DashboardChat() {
                     <div className="lia-memory-strip">
                       <p>
                         {triageRequest.status === 'scheduled'
-                          ? `Triagem agendada com ${triageRequest.psychologist_name ?? 'psicologo'} em ${formatDateTime(triageRequest.scheduled_for ?? triageRequest.requested_at)}.`
-                          : 'Seu pedido de triagem entrou na fila. Escolha um horario disponivel para concluir o agendamento.'}
+                          ? `Triagem agendada com ${triageRequest.psychologist_name ?? 'psicólogo'} em ${formatDateTime(triageRequest.scheduled_for ?? triageRequest.requested_at)}.`
+                          : 'Seu pedido de triagem entrou na fila. Escolha um hor?rio dispon?vel para concluir o agendamento.'}
                       </p>
 
                       {triageRequest.status !== 'scheduled' && triageSlots.length ? (
@@ -384,7 +384,7 @@ export default function DashboardChat() {
                   ) : null}
                 </div>
                 {!liaSession.followup_finished ? (
-                  <button type="button" className="chat-submit chat-restart" onClick={handleContinueConversation}>
+                  <button type="button" className="chat-submit chat-rest?rt" onClick={handleContinueConversation}>
                     Continuar chat
                   </button>
                 ) : null}
@@ -406,10 +406,10 @@ export default function DashboardChat() {
             </Link>
             <Link to="/humor" className="quick-link-card">
               <strong>Humor</strong>
-              <span>Ver registros e adicionar um apontamento rapido.</span>
+              <span>Ver registros e adicionar um apontamento rápido.</span>
             </Link>
             <Link to="/contents" className="quick-link-card">
-              <strong>Conteudos</strong>
+              <strong>Conteúdos</strong>
               <span>Abrir leituras e praticas leves para o momento.</span>
             </Link>
             <Link to="/profile" className="quick-link-card">

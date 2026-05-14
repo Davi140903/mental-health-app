@@ -36,7 +36,7 @@ export default function Humor() {
       setFeedback('Registro salvo com sucesso no backend.');
       setNota('');
     } catch {
-      setError('Nao foi possivel salvar o humor.');
+      setError('N?o foi poss?vel salvar o humor.');
     } finally {
       setSubmitting(false);
     }
@@ -51,7 +51,7 @@ export default function Humor() {
               <h2>Registrar humor</h2>
             </div>
           </div>
-          <p>Escolha como voce esta se sentindo agora.</p>
+          <p>Escolha como você está se sentindo agora.</p>
 
           {feedback ? <div className="alert success">{feedback}</div> : null}
           {error ? <div className="alert error">{error}</div> : null}
