@@ -344,13 +344,13 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
             LiaTranscriptMessage(
                 role="assistant",
                 content=(
-                    "Eu estou aqui para te ouvir com calma, ajudar a organizar o que você está sentindo "
+                    "Eu estou aqui para te ouvir com calma, ajudar a organizar o que voce esta sentindo "
                     "e, se fizer sentido, te orientar daqui para a frente."
                 ),
             ),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Não precisa ter as palavras certas agora. Pode começar do seu jeito.",
+                content="Nao precisa ter as palavras certas agora. Pode comecar do seu jeito.",
             ),
         ]
 
@@ -362,7 +362,7 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
         ),
         LiaTranscriptMessage(
             role="assistant",
-            content="Hoje você quer retomar algo que ficou da última conversa ou prefere começar de outro ponto?",
+            content="Hoje voce quer retomar algo que ficou da ultima conversa ou prefere comecar de outro ponto?",
         ),
     ]
 
@@ -3017,7 +3017,7 @@ def rewrite_lia_from_analysis(
         "Voce vai apenas redigir melhor a resposta da Lia. "
         "Nao mude o sentido, nao mude o foco e nao invente um novo rumo para a conversa. "
         "Use portugues do Brasil simples, humano, natural e acolhedor. "
-        "Use acentos corretamente. Não use JSON. Não use cabeçalhos. "
+        "Nao use acentos. Nao use JSON. Nao use cabecalhos. "
         "Nao fale de si mesma. Nao use 'eu tambem'. "
         "Nao use a palavra 'doente'. "
         "Nao pergunte se o usuario tem uma pergunta para voce. "
@@ -3130,7 +3130,7 @@ def rewrite_lia_reply(
         else "Use no maximo uma pergunta. "
     )
     rewrite_system_prompt = (
-        "Você vai reescrever a resposta da Lia em português do Brasil, com acentos corretos. "
+        "Voce vai reescrever a resposta da Lia em portugues do Brasil usando apenas ASCII simples, sem acentos. "
         "Mantenha um tom humano e acolhedor. "
         "A nova resposta deve conter reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, "
         "e uma pergunta curta, observacional e clinica disfarcada de conversa. "
@@ -3788,8 +3788,8 @@ def save_lia_session_results(db: Session, current_user: User, session: LiaSessio
 def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["none", "attention", "urgent"]) -> list[str]:
     if risk_level == "urgent" or (session.phq9_scores[-1] or 0) > 0:
         return [
-            "Antes de qualquer outra coisa, sua segurança vem primeiro.",
-            "Se existir risco agora, procure ajuda presencial imediata ou alguém de confiança perto de você.",
+            "Antes de qualquer outra coisa, sua seguranca vem primeiro.",
+            "Se existir risco agora, procure ajuda presencial imediata ou alguem de confianca perto de voce.",
         ]
 
     gad_score = sum(score or 0 for score in session.gad7_scores)
@@ -3797,24 +3797,24 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
 
     if gad_score >= 10 and phq_score >= 10:
         return [
-            "Percebi sinais de ansiedade e cansaço emocional que merecem cuidado nas próximas semanas.",
-            "Para hoje, tente escolher uma pausa real e um apoio humano simples, como avisar alguém de confiança que o dia está pesado.",
+            "Percebi sinais de ansiedade e cansaco emocional que merecem cuidado nas proximas semanas.",
+            "Para hoje, tente escolher uma pausa real e um apoio humano simples, como avisar alguem de confianca que o dia esta pesado.",
         ]
 
     if gad_score >= 10:
         return [
-            "Percebi sinais de ansiedade que merecem atenção e pequenas pausas ao longo dos dias.",
-            "Se puder, vale fazer uma pausa curta de respiração e reduzir a cobrança para o próximo bloco do dia.",
+            "Percebi sinais de ansiedade que merecem atencao e pequenas pausas ao longo dos dias.",
+            "Se puder, vale fazer uma pausa curta de respiracao e reduzir a cobranca para o proximo bloco do dia.",
         ]
 
     if phq_score >= 10:
         return [
-            "Percebi sinais de humor mais rebaixado e pouca energia nos últimos dias.",
-            "Hoje, talvez ajude escolher só uma tarefa pequena e avisar alguém de confiança que você não está no seu melhor ritmo.",
+            "Percebi sinais de humor mais rebaixado e pouca energia nos ultimos dias.",
+            "Hoje, talvez ajude escolher so uma tarefa pequena e avisar alguem de confianca que voce nao esta no seu melhor ritmo.",
         ]
 
     return [
-        "Obrigada por conversar comigo. Já tenho um retrato inicial de como você está.",
+        "Obrigada por conversar comigo. Ja tenho um retrato inicial de como voce esta.",
         "Vou deixar isso registrado e, para hoje, vale escolher um passo pequeno de cuidado que caiba no seu ritmo.",
     ]
 
@@ -3822,41 +3822,41 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
 def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
     if context["quick_pass"] or context["no_issue"]:
-        return "Tudo certo. Se por hoje já deu, a gente pode parar por aqui. E, se você sentir vontade, ainda pode continuar conversando comigo um pouco mais."
+        return "Tudo certo. Se por hoje ja deu, a gente pode parar por aqui. E, se voce sentir vontade, ainda pode continuar conversando comigo um pouco mais."
     if context["wants_to_stop"]:
-        return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo. Se depois você quiser retomar, eu continuo daqui com você."
+        return "Tudo bem. A gente pode parar por aqui hoje. Obrigada por dividir isso comigo. Se depois voce quiser retomar, eu continuo daqui com voce."
 
     if session.followup_mode and (session.followup_turns_left or 0) <= 0:
         return (
-            "Obrigada por continuar comigo mais um pouco. Acho que por hoje a gente já conseguiu organizar uma parte importante do que você trouxe. "
-            "Um bom próximo passo pode ser seguir para a triagem com um dos nossos profissionais, para você não precisar carregar isso sozinho. "
-            "Agora, tenta fazer algo simples que te ajude a baixar um pouco o ritmo, como ouvir uma música calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
-            "A gente para por aqui hoje. Cuida de você, e quando voltar eu continuo de onde isso ficou."
+            "Obrigada por continuar comigo mais um pouco. Acho que por hoje a gente ja conseguiu organizar uma parte importante do que voce trouxe. "
+            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais, para voce nao precisar carregar isso sozinho. "
+            "Agora, tenta fazer algo simples que te ajude a baixar um pouco o ritmo, como ouvir uma musica calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
+            "A gente para por aqui hoje. Cuida de voce, e quando voltar eu continuo de onde isso ficou."
         )
 
-    return "Obrigada por me contar isso. Já consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se você quiser. Se ainda fizer sentido, você também pode continuar conversando comigo."
+    return "Obrigada por me contar isso. Ja consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se voce quiser. Se ainda fizer sentido, voce tambem pode continuar conversando comigo."
 
 
 def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
     context = build_lia_context(session, user_message)
     if not is_probably_meaningful_message(user_message, allow_short_contextual=False):
         return (
-            "Não consegui pegar bem essa última parte. Se ainda tiver algo importante, me conta com um pouco mais de contexto. "
-            "Se foi só uma resposta solta, tudo bem também; a gente pode parar por aqui por hoje."
+            "Nao consegui pegar bem essa ultima parte. Se ainda tiver algo importante, me conta com um pouco mais de contexto. "
+            "Se foi so uma resposta solta, tudo bem tambem; a gente pode parar por aqui por hoje."
         )
     if context["asks_about_professional"]:
         return (
             "Pode ajudar, sim. Conversar com um profissional pode ser um jeito de olhar para isso com mais calma, "
-            "organizar o que está acontecendo e pensar em próximos passos que façam sentido para você. "
-            "Não precisa chegar lá com tudo pronto; falar exatamente essa dúvida já é um bom começo."
+            "organizar o que esta acontecendo e pensar em proximos passos que facam sentido para voce. "
+            "Nao precisa chegar la com tudo pronto; falar exatamente essa duvida ja e um bom comeco."
         )
     if context["sono"] or context["energia"]:
-        return "Entendi. Isso ajuda a completar melhor o que você estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alívio, mesmo que pequeno?"
+        return "Entendi. Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
     if context["irritabilidade"]:
-        return "Entendi. Essa irritação junto com o afastamento parece ser uma parte importante do que ficou. Quando você percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciência com as pessoas?"
+        return "Entendi. Essa irritacao junto com o afastamento parece ser uma parte importante do que ficou. Quando voce percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciencia com as pessoas?"
     if context["controlar"] or context["ansiedade"]:
-        return "Entendi. Essa cabeça que não desliga parece estar acompanhando você depois do trabalho também. O que costuma ficar repetindo mais quando você chega em casa?"
-    return "Entendi. Pode me contar só mais esse pedaço. O que você acha importante a Lia guardar sobre isso?"
+        return "Entendi. Essa cabeca que nao desliga parece estar acompanhando voce depois do trabalho tambem. O que costuma ficar repetindo mais quando voce chega em casa?"
+    return "Entendi. Pode me contar so mais esse pedaco. O que voce acha importante a Lia guardar sobre isso?"
 
 
 def reply_sounds_like_closing(reply: str | None) -> bool:
@@ -3984,7 +3984,7 @@ def normalize_email(value: str) -> str:
 def normalize_verification_code(value: str) -> str:
     cleaned = re.sub(r"\D", "", value or "")
     if len(cleaned) != 6:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe um código de 6 dígitos.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe um codigo de 6 digitos.")
     return cleaned
 
 
@@ -4019,12 +4019,12 @@ def resend_is_configured() -> bool:
 
 def build_verification_email_subject(purpose: str) -> str:
     if purpose == "register":
-        return "Código de verificação para cadastro"
+        return "Codigo de verificacao para cadastro"
     if purpose == "login":
-        return "Código de verificação para login"
+        return "Codigo de verificacao para login"
     if purpose == "reset":
-        return "Código de verificação para redefinir sua senha"
-    return "Código de verificação"
+        return "Codigo de verificacao para redefinir sua senha"
+    return "Codigo de verificacao"
 
 
 def build_verification_email_body(code: str, purpose: str) -> str:
@@ -4037,11 +4037,11 @@ def build_verification_email_body(code: str, purpose: str) -> str:
     else:
         action_label = "continuar na sua conta"
     return (
-        "Seu código de verificação do Mental Health App é:\n\n"
+        "Seu codigo de verificacao do Mental Health App e:\n\n"
         f"{code}\n\n"
-        f"Use este código para {action_label}.\n"
+        f"Use este codigo para {action_label}.\n"
         f"Ele expira em {EMAIL_VERIFICATION_CODE_TTL_MINUTES} minutos.\n\n"
-        "Se você não pediu este código, ignore este email."
+        "Se voce nao pediu este codigo, ignore este email."
     )
 
 
@@ -4049,7 +4049,7 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
     if not resend_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="O envio por Resend ainda não foi configurado no servidor.",
+            detail="O envio por Resend ainda nao foi configurado no servidor.",
         )
 
     payload = {
@@ -4058,12 +4058,12 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
         "subject": build_verification_email_subject(purpose),
         "text": build_verification_email_body(code, purpose),
         "html": (
-            "<p>Seu código de verificação do Mental Health App é:</p>"
+            "<p>Seu codigo de verificacao do Mental Health App e:</p>"
             f"<p style=\"font-size:28px;font-weight:700;letter-spacing:4px;\">{code}</p>"
-            f"<p>Use este código para "
+            f"<p>Use este codigo para "
             f"{'concluir seu cadastro' if purpose == 'register' else 'entrar na sua conta' if purpose == 'login' else 'redefinir sua senha'}."
             f" Ele expira em {EMAIL_VERIFICATION_CODE_TTL_MINUTES} minutos.</p>"
-            "<p>Se você não pediu este código, ignore este email.</p>"
+            "<p>Se voce nao pediu este codigo, ignore este email.</p>"
         ),
     }
 
@@ -4083,7 +4083,7 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
             if response.status not in {200, 201, 202}:
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="O provedor de email recusou o envio do código.",
+                    detail="O provedor de email recusou o envio do codigo.",
                 )
     except urllib_error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="ignore")
@@ -4099,7 +4099,7 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
     except (TimeoutError, urllib_error.URLError, OSError) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Não foi possível conectar ao Resend. Confira o acesso de rede.",
+            detail="Nao foi possivel conectar ao Resend. Confira o acesso de rede.",
         ) from exc
 
 
@@ -4111,7 +4111,7 @@ def send_verification_email(email: str, code: str, purpose: str) -> None:
     if not smtp_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="O envio de email ainda não foi configurado no servidor.",
+            detail="O envio de email ainda nao foi configurado no servidor.",
         )
 
     message = EmailMessage()
@@ -4137,12 +4137,12 @@ def send_verification_email(email: str, code: str, purpose: str) -> None:
     except smtplib.SMTPAuthenticationError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Falha ao autenticar no servidor de email. Confira o usuário e a senha de app do Gmail.",
+            detail="Falha ao autenticar no servidor de email. Confira o usuario e a senha de app do Gmail.",
         ) from exc
     except (TimeoutError, socket.timeout, ConnectionError, OSError, smtplib.SMTPException) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Não foi possível conectar ao servidor de email. Confira SMTP, firewall ou acesso de rede.",
+            detail="Nao foi possivel conectar ao servidor de email. Confira SMTP, firewall ou acesso de rede.",
         ) from exc
 
 
@@ -5212,14 +5212,14 @@ def create_my_psychologist_slot(
     db: Session = Depends(get_db),
 ) -> TriageSlotOut:
     if has_role(current_user, "admin") and not has_role(current_user, "psychologist"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas psicólogos podem criar horários.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas psicologos podem criar horarios.")
 
     starts_at = ensure_utc(data.starts_at).replace(second=0, microsecond=0)
     ends_at = ensure_utc(data.ends_at).replace(second=0, microsecond=0) if data.ends_at else starts_at + timedelta(minutes=50)
     if starts_at <= utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Crie horários futuros.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Crie horarios futuros.")
     if ends_at <= starts_at:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Horário final deve ser depois do inicial.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Horario final deve ser depois do inicial.")
 
     existing = db.scalar(
         select(PsychologistSlot).where(
@@ -5229,7 +5229,7 @@ def create_my_psychologist_slot(
     )
     if existing:
         if not existing.available:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este horário já está ocupado.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este horario ja esta ocupado.")
         existing.ends_at = ends_at
         slot = existing
     else:
@@ -5260,11 +5260,11 @@ def delete_my_psychologist_slot(
 ) -> Response:
     slot = db.get(PsychologistSlot, slot_id)
     if slot is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Horário não encontrado.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Horario nao encontrado.")
     if not has_role(current_user, "admin") and slot.psychologist_name != current_user.nome:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Você não pode remover este horário.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Voce nao pode remover este horario.")
     if not slot.available:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível remover horário já agendado.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nao e possivel remover horario ja agendado.")
 
     db.delete(slot)
     db.commit()

@@ -40,7 +40,7 @@ export default function Profile() {
       });
       setMessage('Perfil atualizado com sucesso.');
     } catch {
-      setError('N?o foi poss?vel atualizar o perfil.');
+      setError('Nao foi possivel atualizar o perfil.');
     } finally {
       setSaving(false);
     }
@@ -62,14 +62,14 @@ export default function Profile() {
       window.URL.revokeObjectURL(url);
       setMessage('Exportacao concluida.');
     } catch {
-      setError('N?o foi poss?vel exportar os dados.');
+      setError('Nao foi possivel exportar os dados.');
     } finally {
       setExporting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Desej? realmente excluir sua conta e todos os dados salvos?')) {
+    if (!window.confirm('Deseja realmente excluir sua conta e todos os dados salvos?')) {
       return;
     }
 
@@ -82,7 +82,7 @@ export default function Profile() {
       logout();
       navigate('/register');
     } catch {
-      setError('N?o foi poss?vel excluir a conta.');
+      setError('Nao foi possivel excluir a conta.');
       setDeleting(false);
     }
   };
@@ -116,7 +116,7 @@ export default function Profile() {
             </label>
 
             <button type="submit" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar altera??es'}
+              {saving ? 'Salvando...' : 'Salvar alteracoes'}
             </button>
           </form>
         </article>
@@ -139,7 +139,7 @@ export default function Profile() {
             </div>
             <div className="summary-block">
               <span className="stat-label">Acoes</span>
-              <p>Você pode exportar ou excluir seus dados.</p>
+              <p>Voce pode exportar ou excluir seus dados.</p>
             </div>
           </div>
 

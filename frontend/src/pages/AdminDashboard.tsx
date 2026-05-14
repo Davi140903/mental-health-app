@@ -37,7 +37,7 @@ export default function AdminDashboard() {
       const response = await appService.listAdminPsychologists();
       setPsychologists(response);
     } catch {
-      setError('N?o foi poss?vel carregar os psic?logos agora.');
+      setError('Nao foi possivel carregar os psicologos agora.');
     } finally {
       setLoading(false);
     }
@@ -76,23 +76,23 @@ export default function AdminDashboard() {
           ...form,
           password: form.password?.trim() || undefined,
         });
-        setFeedback('Login do psic?logo atualizado.');
+        setFeedback('Login do psicologo atualizado.');
       } else {
         if (!form.password?.trim()) {
-          setError('Informe uma senha inicial para o psic?logo.');
+          setError('Informe uma senha inicial para o psicologo.');
           return;
         }
         await appService.createAdminPsychologist({
           ...form,
           password: form.password.trim(),
         });
-        setFeedback('Login do psic?logo criado.');
+        setFeedback('Login do psicologo criado.');
       }
 
       resetForm();
       await loadPsychologists();
     } catch {
-      setError('N?o foi poss?vel salvar este psic?logo. Verifique se o email j? existe.');
+      setError('Nao foi possivel salvar este psicologo. Verifique se o email ja existe.');
     } finally {
       setSaving(false);
     }
@@ -109,13 +109,13 @@ export default function AdminDashboard() {
 
     try {
       await appService.deleteAdminPsychologist(psychologist.id);
-      setFeedback('Login do psic?logo removido.');
+      setFeedback('Login do psicologo removido.');
       await loadPsychologists();
       if (editingId === psychologist.id) {
         resetForm();
       }
     } catch {
-      setError('N?o foi poss?vel remover este psic?logo agora.');
+      setError('Nao foi possivel remover este psicologo agora.');
     }
   };
 
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
           <div className="admin-panel">
             <div className="admin-toolbar">
               <div>
-                <h2>{editingId ? 'Editar psic?logo' : 'Novo psic?logo'}</h2>
+                <h2>{editingId ? 'Editar psicologo' : 'Novo psicologo'}</h2>
                 <p>Cadastre o profissional que podera acessar solicitacoes de triagem.</p>
               </div>
             </div>
@@ -188,7 +188,7 @@ export default function AdminDashboard() {
                   value={form.email}
                   onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                   required
-                  placeholder="psic?logo@email.com"
+                  placeholder="psicologo@email.com"
                 />
               </label>
 
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
 
               <div className="admin-form-actions">
                 <button type="submit" disabled={saving}>
-                  {saving ? 'Salvando...' : editingId ? 'Salvar altera??es' : 'Criar login'}
+                  {saving ? 'Salvando...' : editingId ? 'Salvar alteracoes' : 'Criar login'}
                 </button>
 
                 {editingId ? (
@@ -237,9 +237,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {loading ? <div className="empty-state">Carregando psicólogos...</div> : null}
+            {loading ? <div className="empty-state">Carregando psicologos...</div> : null}
             {!loading && !psychologists.length ? (
-              <div className="empty-state">Nenhum psicólogo cadastrado ainda.</div>
+              <div className="empty-state">Nenhum psicologo cadastrado ainda.</div>
             ) : null}
 
             {psychologists.length ? (

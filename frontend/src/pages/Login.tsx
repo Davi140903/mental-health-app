@@ -7,7 +7,7 @@ function buildCodeMessage(debugCode: string | null, fallback: string) {
   if (!debugCode) {
     return `${fallback} Confira sua caixa de entrada.`;
   }
-  return `${fallback} Neste ambiente local, use o c?digo ${debugCode}.`;
+  return `${fallback} Neste ambiente local, use o codigo ${debugCode}.`;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -39,7 +39,7 @@ export default function Login() {
     setInfo('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Informe email e senha antes de pedir o c?digo.');
+      setError('Informe email e senha antes de pedir o codigo.');
       return;
     }
 
@@ -50,9 +50,9 @@ export default function Login() {
       if (response.debug_code) {
         setCodigo(response.debug_code);
       }
-      setInfo(buildCodeMessage(response.debug_code, 'C?digo de login enviado.'));
+      setInfo(buildCodeMessage(response.debug_code, 'Codigo de login enviado.'));
     } catch (error) {
-      setError(getApiErrorMessage(error, 'N?o foi poss?vel enviar o c?digo. Confira se o email existe e se a senha est? correta.'));
+      setError(getApiErrorMessage(error, 'Nao foi possivel enviar o codigo. Confira se o email existe e se a senha esta correta.'));
     } finally {
       setSendingCode(false);
     }
@@ -63,12 +63,12 @@ export default function Login() {
     setError('');
 
     if (!codeRequested) {
-      setError('Primeiro solicite o c?digo de verifica??o.');
+      setError('Primeiro solicite o codigo de verificacao.');
       return;
     }
 
     if (codigo.trim().length !== 6) {
-      setError('Informe o c?digo de 6 d?gitos para entrar.');
+      setError('Informe o codigo de 6 digitos para entrar.');
       return;
     }
 
@@ -77,7 +77,7 @@ export default function Login() {
       await login(email, password, codigo);
       navigate('/dashboard');
     } catch (error) {
-      setError(getApiErrorMessage(error, 'N?o foi poss?vel entrar. Confira email, senha e c?digo.'));
+      setError(getApiErrorMessage(error, 'Nao foi possivel entrar. Confira email, senha e codigo.'));
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +87,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Mental Health App</h1>
-        <p className="auth-subtitle">Entre com email, senha e código de verificação.</p>
+        <p className="auth-subtitle">Entre com email, senha e codigo de verificacao.</p>
 
         {error ? <div className="alert error">{error}</div> : null}
         {info ? <div className="alert success">{info}</div> : null}
@@ -114,7 +114,7 @@ export default function Login() {
             onClick={() => void handleRequestCode()}
             disabled={sendingCode}
           >
-            {sendingCode ? 'Enviando c?digo...' : 'Pedir c?digo por email'}
+            {sendingCode ? 'Enviando codigo...' : 'Pedir codigo por email'}
           </button>
 
           {codeRequested ? (
@@ -126,7 +126,7 @@ export default function Login() {
                 maxLength={6}
                 value={codigo}
                 onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
-                placeholder="C?digo preenchido automaticamente no modo local"
+                placeholder="Codigo preenchido automaticamente no modo local"
                 required
               />
             </label>
@@ -138,7 +138,7 @@ export default function Login() {
         </form>
 
         <p className="auth-footer">
-          Ainda não tem conta? <Link to="/register">Criar conta</Link>
+          Ainda nao tem conta? <Link to="/register">Criar conta</Link>
         </p>
         <p className="auth-footer">
           Esqueceu a senha? <Link to="/recover">Recuperar acesso</Link>

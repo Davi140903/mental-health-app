@@ -22,7 +22,7 @@ export default function Contents() {
         }
       } catch {
         if (active) {
-          setError('N?o foi poss?vel carregar a biblioteca de conte?dos.');
+          setError('Nao foi possivel carregar a biblioteca de conteudos.');
         }
       } finally {
         if (active) {
@@ -57,7 +57,7 @@ export default function Contents() {
       <section className="section-card">
         <div className="section-heading">
           <div>
-            <h2>Conteúdos</h2>
+            <h2>Conteudos</h2>
           </div>
           <span className="pill">{filteredContents.length} itens exibidos</span>
         </div>

@@ -10,8 +10,8 @@ import {
 
 const lightQuestions = [
   {
-    label: 'Uma curiosidade pra come?ar',
-    question: 'Qual dessas coisas voc? curte mais?',
+    label: 'Uma curiosidade pra comecar',
+    question: 'Qual dessas coisas voce curte mais?',
     options: [
       { label: 'Musica', value: 'musica' },
       { label: 'Filmes e series', value: 'filmes e series' },
@@ -21,7 +21,7 @@ const lightQuestions = [
   },
   {
     label: 'Um assunto leve pra guardar',
-    question: 'Qual dessas coisas mais te ajuda a distrair a cabe?a?',
+    question: 'Qual dessas coisas mais te ajuda a distrair a cabeca?',
     options: [
       { label: 'Conversar com alguem', value: 'conversar com alguem' },
       { label: 'Ouvir musica', value: 'ouvir musica' },
@@ -30,8 +30,8 @@ const lightQuestions = [
     ],
   },
   {
-    label: 'Uma entrada r?pida',
-    question: 'Se voc? pudesse escolher uma pausa agora, qual seria?',
+    label: 'Uma entrada rapida',
+    question: 'Se voce pudesse escolher uma pausa agora, qual seria?',
     options: [
       { label: 'Comida boa', value: 'comida boa' },
       { label: 'Descanso', value: 'descanso' },
@@ -41,7 +41,7 @@ const lightQuestions = [
   },
   {
     label: 'Um jeito de chegar',
-    question: 'Qual dessas coisas combina mais com voc? quando quer dar uma respirada?',
+    question: 'Qual dessas coisas combina mais com voce quando quer dar uma respirada?',
     options: [
       { label: 'Ficar sozinho', value: 'ficar sozinho' },
       { label: 'Ouvir alguma coisa', value: 'ouvir alguma coisa' },
@@ -61,7 +61,7 @@ const lightQuestions = [
   },
   {
     label: 'Uma pergunta simples',
-    question: 'Se voc? pudesse escolher uma companhia leve agora, qual seria?',
+    question: 'Se voce pudesse escolher uma companhia leve agora, qual seria?',
     options: [
       { label: 'Musica', value: 'musica' },
       { label: 'Silencio', value: 'silencio' },
@@ -90,8 +90,8 @@ const lightQuestions = [
     ],
   },
   {
-    label: 'So pra come?ar',
-    question: 'Qual dessas coisas voc? escolheria agora sem pensar muito?',
+    label: 'So pra comecar',
+    question: 'Qual dessas coisas voce escolheria agora sem pensar muito?',
     options: [
       { label: 'Musica', value: 'musica' },
       { label: 'Comida boa', value: 'comida boa' },
@@ -101,7 +101,7 @@ const lightQuestions = [
   },
   {
     label: 'Uma escolha leve',
-    question: 'Quando voc? quer se distrair um pouco, pra onde costuma ir primeiro?',
+    question: 'Quando voce quer se distrair um pouco, pra onde costuma ir primeiro?',
     options: [
       { label: 'Musica', value: 'musica' },
       { label: 'Video ou serie', value: 'video ou serie' },
@@ -110,7 +110,7 @@ const lightQuestions = [
     ],
   },
   {
-    label: 'Uma preferencia r?pida',
+    label: 'Uma preferencia rapida',
     question: 'Se tivesse que escolher uma dessas agora, qual seria?',
     options: [
       { label: 'Descanso', value: 'descanso' },
@@ -252,7 +252,7 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        <p className="chat-hint">Depois disso, você vai direto pra conversa e pode falar do jeito que quiser.</p>
+        <p className="chat-hint">Depois disso, voce vai direto pra conversa e pode falar do jeito que quiser.</p>
       </section>
     </div>
   );

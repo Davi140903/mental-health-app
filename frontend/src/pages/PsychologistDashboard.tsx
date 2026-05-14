@@ -12,7 +12,7 @@ const statusOptions = [
 
 function formatDateTime(value?: string | null) {
   if (!value) {
-    return 'Sem hor?rio definido';
+    return 'Sem horario definido';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
@@ -62,7 +62,7 @@ function isRawConversationText(value?: string | null) {
 }
 
 function patientFirstName(name: string) {
-  return name.trim().split(' ')[0] || 'Usu?rio';
+  return name.trim().split(' ')[0] || 'Usuario';
 }
 
 function hasTranscript(interaction: LiaRecentInteraction) {
@@ -109,7 +109,7 @@ function moodLabel(value: number) {
     1: 'Muito dificil',
     2: 'Pesado',
     3: 'Instavel',
-    4: 'Mais favor?vel',
+    4: 'Mais favoravel',
     5: 'Bem',
   };
 
@@ -119,9 +119,9 @@ function moodLabel(value: number) {
 function moodDescription(value: number) {
   const labels: Record<number, string> = {
     1: 'Registro indica um momento mais dificil.',
-    2: 'Registro indica um per?odo pesado.',
+    2: 'Registro indica um periodo pesado.',
     3: 'Registro indica oscilacao ou instabilidade.',
-    4: 'Registro indica um momento um pouco mais favor?vel.',
+    4: 'Registro indica um momento um pouco mais favoravel.',
     5: 'Registro indica um momento positivo.',
   };
 
@@ -158,7 +158,7 @@ export default function PsychologistDashboard() {
         }
       } catch {
         if (active) {
-          setError('N?o foi poss?vel carregar os pedidos de triagem agora.');
+          setError('Nao foi possivel carregar os pedidos de triagem agora.');
         }
       } finally {
         if (active) {
@@ -200,7 +200,7 @@ export default function PsychologistDashboard() {
       setNoteDraft(detail.psychologist_note?.content ?? '');
     } catch {
       setPatientDetail(null);
-      setDetailError('N?o foi poss?vel abrir os detalhes deste paciente agora.');
+      setDetailError('Nao foi possivel abrir os detalhes deste paciente agora.');
     } finally {
       setDetailLoading(false);
     }
@@ -244,7 +244,7 @@ export default function PsychologistDashboard() {
             .chat-legacy-note strong { display: block; color: #315d74; margin-bottom: 4px; }
             .chat-legacy-note p { margin: 0; color: #5f7480; }
             ul { padding-left: 18px; }
-            @m?dia print { body { margin: 20mm; } button { display: none; } }
+            @media print { body { margin: 20mm; } button { display: none; } }
           </style>
         </head>
         <body>${html}</body>
@@ -262,7 +262,7 @@ export default function PsychologistDashboard() {
           <p class="meta">${formatDateTime(interaction.created_at)}</p>
           <div class="chat-legacy-note">
             <strong>Registro antigo</strong>
-            <p>Esta conversa foi salva antes do app guardar a transcri??o completa. O resumo cl?nico j? aparece acima; as pr?ximas conversas ser?o exibidas aqui como chat, com falas da Lia e do paciente.</p>
+            <p>Esta conversa foi salva antes do app guardar a transcricao completa. O resumo clinico ja aparece acima; as proximas conversas serao exibidas aqui como chat, com falas da Lia e do paciente.</p>
           </div>
         </div>
       `;
@@ -290,7 +290,7 @@ export default function PsychologistDashboard() {
   };
 
   const buildPatientReportHtml = (detail: PsychologistPatientDetail) => {
-    const note = noteDraft.trim() || detail.psychologist_note?.content || 'Sem anota??es registradas.';
+    const note = noteDraft.trim() || detail.psychologist_note?.content || 'Sem anotacoes registradas.';
     const questionnaires = detail.questionnaires.length
       ? detail.questionnaires
           .map((item) => `<li>${questionnaireLabel(item)}: ${item.pontuacao} pontos, ${escapeHtml(item.classificacao)}</li>`)
@@ -311,7 +311,7 @@ export default function PsychologistDashboard() {
 
     return `
       <header>
-        <h1>Relat?rio de triagem e prepara??o</h1>
+        <h1>Relatorio de triagem e preparacao</h1>
         <p class="meta">Paciente: ${escapeHtml(detail.user.nome)} | ${escapeHtml(detail.user.email)}</p>
         <p class="meta">Gerado em ${formatDateTime(new Date().toISOString())}</p>
       </header>
@@ -319,7 +319,7 @@ export default function PsychologistDashboard() {
       <div class="box"><p>${escapeHtml(
         detail.current_request.interaction?.report ??
           detail.current_request.interaction?.summary ??
-          'Ainda não há relatório detalhado da Lia.',
+          'Ainda nao ha relatorio detalhado da Lia.',
       )}</p></div>
       <h2>Triagens recentes</h2>
       <ul>${questionnaires}</ul>
@@ -327,7 +327,7 @@ export default function PsychologistDashboard() {
       <ul>${moods}</ul>
       <h2>Conversas recentes com a Lia</h2>
       ${conversations}
-      <h2>Anota??es do profissional</h2>
+      <h2>Anotacoes do profissional</h2>
       <div class="box"><p>${escapeHtml(note).replaceAll('\\n', '<br />')}</p></div>
     `;
   };
@@ -342,9 +342,9 @@ export default function PsychologistDashboard() {
     try {
       const saved = await appService.updatePsychologistPatientNote(selectedRequestId, noteDraft);
       setPatientDetail((current) => (current ? { ...current, psychologist_note: saved } : current));
-      setNoteFeedback('Anota??o salva.');
+      setNoteFeedback('Anotacao salva.');
     } catch {
-      setNoteFeedback('N?o foi poss?vel salvar agora.');
+      setNoteFeedback('Nao foi possivel salvar agora.');
     } finally {
       setNoteSaving(false);
     }
@@ -360,14 +360,14 @@ export default function PsychologistDashboard() {
       `Email: ${patientDetail.user.email}`,
       `Gerado em: ${formatDateTime(new Date().toISOString())}`,
       '',
-      'Anota??es do profissional:',
-      noteDraft.trim() || 'Sem anota??es registradas.',
+      'Anotacoes do profissional:',
+      noteDraft.trim() || 'Sem anotacoes registradas.',
     ].join('\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `anota??es-${patientDetail.user.nome.toLowerCase().replaceAll(' ', '-')}.txt`;
+    link.download = `anotacoes-${patientDetail.user.nome.toLowerCase().replaceAll(' ', '-')}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -378,10 +378,10 @@ export default function PsychologistDashboard() {
     }
 
     openPrintDocument(
-      `Anota??es - ${patientDetail.user.nome}`,
+      `Anotacoes - ${patientDetail.user.nome}`,
       `
         <header>
-          <h1>Anota??es do profissional</h1>
+          <h1>Anotacoes do profissional</h1>
           <p class="meta">Paciente: ${escapeHtml(patientDetail.user.nome)} | ${escapeHtml(patientDetail.user.email)}</p>
           <p class="meta">Gerado em ${formatDateTime(new Date().toISOString())}</p>
         </header>
@@ -395,7 +395,7 @@ export default function PsychologistDashboard() {
       return;
     }
 
-    openPrintDocument(`Relat?rio - ${patientDetail.user.nome}`, buildPatientReportHtml(patientDetail));
+    openPrintDocument(`Relatorio - ${patientDetail.user.nome}`, buildPatientReportHtml(patientDetail));
   };
 
   return (
@@ -403,12 +403,12 @@ export default function PsychologistDashboard() {
       <header className="psychologist-topbar">
         <div>
           <span className="role-pill">Painel profissional</span>
-          <h1>Solicitações de triagem</h1>
+          <h1>Solicitacoes de triagem</h1>
           <p>{user?.nome ? `Profissional: ${user.nome}` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
         </div>
 
         <div className="psychologist-top-actions">
-          <Link to="/psic?logo/agenda" className="psychologist-nav-button primary">
+          <Link to="/psicologo/agenda" className="psychologist-nav-button primary">
             Minha agenda
           </Link>
           <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
@@ -420,7 +420,7 @@ export default function PsychologistDashboard() {
       <main className="psychologist-page">
         <section className="psychologist-summary-grid">
           <article className="psychologist-metric">
-            <span>Pedidos visíveis</span>
+            <span>Pedidos visiveis</span>
             <strong>{requests.length}</strong>
             <p>Registros encontrados para o filtro atual.</p>
           </article>
@@ -442,7 +442,7 @@ export default function PsychologistDashboard() {
           <div className="psychologist-toolbar">
             <div>
               <h2>Registros recebidos</h2>
-              <p>Selecione um paciente para abrir o contexto de preparação da primeira consulta.</p>
+              <p>Selecione um paciente para abrir o contexto de preparacao da primeira consulta.</p>
             </div>
 
             <div className="segmented-control" aria-label="Filtrar pedidos">
@@ -463,7 +463,7 @@ export default function PsychologistDashboard() {
           {loading ? <div className="empty-state">Carregando pedidos...</div> : null}
 
           {!loading && !requests.length ? (
-            <div className="empty-state">Ainda não há pedidos para este filtro.</div>
+            <div className="empty-state">Ainda nao ha pedidos para este filtro.</div>
           ) : null}
 
           <div className="triage-request-list">
@@ -493,7 +493,7 @@ export default function PsychologistDashboard() {
                     </div>
                     <div>
                       <span className="field-label">Profissional</span>
-                      <p>{request.psychologist_name ?? 'Ainda n?o definido'}</p>
+                      <p>{request.psychologist_name ?? 'Ainda nao definido'}</p>
                     </div>
                     <div>
                       <span className="field-label">Origem</span>
@@ -548,11 +548,11 @@ export default function PsychologistDashboard() {
 
                         <div className="patient-detail-grid">
                           <section className="patient-detail-card wide">
-                            <span className="field-label">Relatório da Lia</span>
+                            <span className="field-label">Relatorio da Lia</span>
                             <p>
                               {patientDetail.current_request.interaction?.report ??
                                 patientDetail.current_request.interaction?.summary ??
-                                'Ainda n?o ha um relat?rio detalhado da Lia para este pedido.'}
+                                'Ainda nao ha um relatorio detalhado da Lia para este pedido.'}
                             </p>
                           </section>
 
@@ -633,10 +633,10 @@ export default function PsychologistDashboard() {
                                       <div className="patient-chat-transcript legacy">
                                         <div className="patient-chat-legacy-card">
                                           <span>Registro antigo</span>
-                                          <strong>Transcrição completa indisponível</strong>
+                                          <strong>Transcricao completa indisponivel</strong>
                                           <p>
                                             Esta conversa foi salva antes do app guardar as falas completas. O resumo
-                                            profissional já aparece em “Relatório da Lia”; novas conversas aparecerão aqui
+                                            profissional ja aparece em “Relatorio da Lia”; novas conversas aparecerao aqui
                                             em formato de chat, com mensagens da Lia e do paciente.
                                           </p>
                                         </div>
@@ -646,7 +646,7 @@ export default function PsychologistDashboard() {
                                 ))}
                               </div>
                             ) : (
-                              <p>Ainda não há conversas recentes para exibir.</p>
+                              <p>Ainda nao ha conversas recentes para exibir.</p>
                             )}
                           </section>
                         </div>
@@ -667,7 +667,7 @@ export default function PsychologistDashboard() {
               <div>
                 <span className="field-label">Bloco de notas</span>
                 <h2>{patientDetail.user.nome}</h2>
-                <p>Anotações privadas do profissional para esta solicitação de triagem.</p>
+                <p>Anotacoes privadas do profissional para esta solicitacao de triagem.</p>
               </div>
               <button type="button" className="psychologist-ghost-button" onClick={() => setNoteModalOpen(false)}>
                 Fechar
@@ -678,14 +678,14 @@ export default function PsychologistDashboard() {
               className="professional-note-area"
               value={noteDraft}
               onChange={(event) => setNoteDraft(event.target.value)}
-              placeholder="Registre hip?teses de acolhimento, pontos para investigar na primeira consulta, observa??es e encaminhamentos combinados."
+              placeholder="Registre hipoteses de acolhimento, pontos para investigar na primeira consulta, observacoes e encaminhamentos combinados."
             />
 
             {noteFeedback ? <div className="alert success">{noteFeedback}</div> : null}
 
             <div className="professional-modal-actions">
               <button type="button" className="psychologist-primary-button" onClick={() => void handleSaveNote()} disabled={noteSaving}>
-                {noteSaving ? 'Salvando...' : 'Salvar anota??o'}
+                {noteSaving ? 'Salvando...' : 'Salvar anotacao'}
               </button>
               <button type="button" className="psychologist-ghost-button" onClick={handleDownloadNote}>
                 Baixar .txt
