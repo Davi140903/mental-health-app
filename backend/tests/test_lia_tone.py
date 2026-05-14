@@ -533,6 +533,54 @@ class LiaToneTests(unittest.TestCase):
         self.assertIsNone(reply)
         self.assertEqual(session.off_scope_count, 0)
 
+    def test_scope_guard_allows_financial_caregiving_distress(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.build_scope_guard_reply(
+            session,
+            "estou com a cabeca cheia, tenho muitas contas para pagar e um filho para cuidar",
+        )
+
+        self.assertIsNone(reply)
+        self.assertEqual(session.off_scope_count, 0)
+
+    def test_scope_guard_allows_user_who_is_lost_and_needs_help(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.build_scope_guard_reply(session, "nao sei explicar direito, so sinto que nao estou bem e precisava de ajuda")
+
+        self.assertIsNone(reply)
+        self.assertEqual(session.off_scope_count, 0)
+
+    def test_scope_guard_allows_stage_pressure_context(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.build_scope_guard_reply(session, "comecei um estagio novo e estou me cobrando demais")
+
+        self.assertIsNone(reply)
+        self.assertEqual(session.off_scope_count, 0)
+
+    def test_noise_message_asks_for_clarification_instead_of_inventing_distress(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.normalize_for_match(main.build_scope_guard_reply(session, "ain uiuiui nada com nada") or "")
+
+        self.assertIn("nao consegui entender", reply)
+        self.assertNotIn("pressao", reply)
+        self.assertNotIn("estresse", reply)
+
+    def test_recipe_redirect_mentions_work_without_inventing_offenses(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="acho que e por causa do trabalho, mas nao sei explicar"),
+        ]
+
+        reply = main.normalize_for_match(main.build_scope_guard_reply(session, "quero uma receita de bolo agora") or "")
+
+        self.assertIn("nao consigo seguir por receita", reply)
+        self.assertIn("trabalho", reply)
+        self.assertNotIn("ofensas", reply)
+
     def test_figurative_distress_is_treated_as_distress_not_creative_image(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         user_message = "estou sentindo que minha cabeca vai explodir, estou com muitos problemas para resolver"
@@ -590,6 +638,37 @@ class LiaToneTests(unittest.TestCase):
             main.reply_respects_support_context(
                 session,
                 "quero uma receita de macarronada a bolonhesa",
+                model_reply,
+            )
+        )
+
+    def test_rejects_coachy_or_multi_question_support_reply(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        model_reply = (
+            "Isso pode ser muito estressante! "
+            "Qual e o primeiro passo que voce gostaria de dar para lidar com isso? "
+            "Foi o medo de nao ter controle sobre sua vida?"
+        )
+
+        self.assertFalse(
+            main.reply_respects_support_context(
+                session,
+                "minha cabeca nao desliga e eu fico com medo de nao dar conta",
+                model_reply,
+            )
+        )
+
+    def test_rejects_generic_normalizing_work_reply(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        model_reply = (
+            "Isso e normal, mas e importante que voce encontre maneira de lidar com esses sentimentos "
+            "para nao afetar sua saude emocional. Quer falar um pouco mais sobre o trabalho?"
+        )
+
+        self.assertFalse(
+            main.reply_respects_support_context(
+                session,
+                "acho que e por causa do trabalho, mas nao sei explicar",
                 model_reply,
             )
         )

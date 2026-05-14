@@ -658,6 +658,19 @@ def is_probably_meaningful_message(user_message: str, allow_short_contextual: bo
     return False
 
 
+def is_noise_or_mocking_message(user_message: str) -> bool:
+    normalized = normalize_for_match(user_message)
+    compact = re.sub(r"[^a-z]", "", normalized)
+    if not compact:
+        return True
+    if compact in {"ain", "ui", "uiuiui", "kkkk", "kkk", "haha", "hehe", "nada"}:
+        return True
+    if contains_any(normalized, ["uiuiui", "ain ui", "nada com nada"]):
+        tokens = tokenize_for_match(user_message)
+        return not any(token_matches_roots(token, MEANINGFUL_TOKEN_ROOTS) for token in tokens)
+    return False
+
+
 def build_clarification_reply(session: LiaSessionState) -> str:
     stage_replies = {
         "opening": [
@@ -680,7 +693,14 @@ def build_clarification_reply(session: LiaSessionState) -> str:
             "Ainda nao peguei direito sua ultima mensagem. Se ajudar, escreva de forma simples o que continua mais pesado agora.",
             "Quero fechar esse check-in de um jeito fiel ao que voce sente. Se preferir, me diga em uma frase o que mais esta te pesando hoje.",
         ],
-    }.get(session.stage, [])
+    }.get(
+        session.stage,
+        [
+            "Nao consegui entender bem essa ultima parte. Pode me contar de outro jeito o que esta pesando agora?",
+            "Ainda nao peguei bem o sentido do que voce quis dizer. Se ficar mais facil, escreva uma frase simples sobre como voce esta.",
+            "Quero te acompanhar sem adivinhar. Se preferir, me diga em poucas palavras o que voce quer trazer agora.",
+        ],
+    )
 
     reply_index = min(max(session.clarification_streak - 1, 0), len(stage_replies) - 1)
     return stage_replies[reply_index]
@@ -1198,10 +1218,33 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             ],
         )
         and contains_any(latest_text, ["ajudar", "ajuda", "conversar", "falar", "atendimento", "triagem"]),
-        "mentions_help": contains_any(latest_text, ["preciso de ajuda", "quero ajuda", "me ajuda", "preciso conversar"]),
+        "mentions_help": contains_any(
+            latest_text,
+            [
+                "preciso de ajuda",
+                "precisava de ajuda",
+                "quero ajuda",
+                "queria ajuda",
+                "me ajuda",
+                "preciso conversar",
+                "queria conversar",
+            ],
+        ),
         "palpitacao": contains_any(combined_text, ["palpit", "coracao", "acelerado", "taquic", "peito"]),
         "ansiedade": contains_any(combined_text, ["ansios", "nervos", "tenso", "panico", "preocup", "alerta"]),
-        "pressure": contains_any(combined_text, ["pression", "cobranc", "muita exigencia", "muita demanda", "muita responsabilidade"]),
+        "pressure": contains_any(
+            combined_text,
+            [
+                "pression",
+                "cobranc",
+                "cobrando",
+                "me cobro",
+                "cobrando demais",
+                "muita exigencia",
+                "muita demanda",
+                "muita responsabilidade",
+            ],
+        ),
         "worn_out": contains_any(
             combined_text,
             [
@@ -1344,6 +1387,9 @@ def is_support_related_message(context: dict[str, Any]) -> bool:
         "relationship",
         "work_study",
         "work_offense",
+        "financial_pressure",
+        "caregiving",
+        "alone_burden",
         "figurative_distress",
         "controlar",
         "relaxar",
@@ -1486,10 +1532,15 @@ def build_off_scope_reply(session: LiaSessionState) -> str:
 
 def build_specific_off_scope_reply(session: LiaSessionState, context: dict[str, Any]) -> str | None:
     if context["recipe_request"]:
-        if context["work_offense"] or context["work_study"]:
+        if context["work_offense"]:
             return (
                 "Eu nao consigo seguir por receita aqui. Posso continuar com voce no que apareceu sobre as ofensas "
                 "no trabalho, ou a gente pode fazer uma pausa breve dentro da conversa."
+            )
+        if context["work_study"]:
+            return (
+                "Eu nao consigo seguir por receita aqui. Posso continuar com voce no que apareceu sobre o trabalho, "
+                "ou a gente pode fazer uma pausa breve dentro da conversa."
             )
         return (
             "Eu nao consigo seguir por receita aqui. Meu papel e ficar no apoio, bem-estar e triagem. "
@@ -1499,6 +1550,10 @@ def build_specific_off_scope_reply(session: LiaSessionState, context: dict[str, 
 
 
 def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str | None:
+    if is_noise_or_mocking_message(user_message):
+        session.clarification_streak = min(int(session.clarification_streak or 0) + 1, 3)
+        return build_clarification_reply(session)
+
     context = build_lia_context(session, user_message)
     related_reply = build_related_question_reply(session, context)
     if related_reply:
@@ -1663,6 +1718,9 @@ WEAK_COACHING_QUESTION_FRAGMENTS = [
     "maior diversao",
     "quando nao esta preocupado",
     "o que voce pode fazer",
+    "qual e o primeiro passo",
+    "primeiro passo",
+    "gostaria de dar",
     "o que voce costuma fazer",
     "o que voce faz",
     "como voce se sente em geral",
@@ -1760,6 +1818,7 @@ GENERIC_MINIMIZING_FRAGMENTS = [
     "isso e normal",
     "normal ter dias assim",
     "normal ter dias desse jeito",
+    "isso e normal",
     "de vez em quando",
     "isso acontece",
     "todo mundo passa",
@@ -1788,6 +1847,16 @@ WEAK_COACHING_REPLY_FRAGMENTS = [
     "isso ja e uma vitoria",
     "muito comum",
     "grande obstaculo",
+    "desafio grande",
+    "causando mais dor",
+    "causando mais ansiedade",
+    "controle sobre sua vida",
+    "sobre sua vida",
+    "e importante que voce encontre",
+    "encontre maneira",
+    "encontrar maneira",
+    "para nao afetar sua saude emocional",
+    "saude emocional",
     "correndo maratona",
     "recarregar as baterias",
     "o que me faz pensar",
@@ -1924,6 +1993,12 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     question_count = text_value.count("?")
 
     if reply_looks_like_model_leak(text_value):
+        return False
+
+    if question_count > 1 and (is_support_related_message(context) or context["figurative_distress"] or context["work_offense"]):
+        return False
+
+    if contains_any(normalized, WEAK_COACHING_QUESTION_FRAGMENTS + WEAK_COACHING_REPLY_FRAGMENTS):
         return False
 
     if context["quick_pass"]:
