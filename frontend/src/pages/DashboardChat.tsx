@@ -77,6 +77,7 @@ export default function DashboardChat() {
   const [triageRequest, setTriageRequest] = useState<TriageRequest | null>(null);
   const [triageSlots, setTriageSlots] = useState<TriageSlot[]>([]);
   const [triageBusy, setTriageBusy] = useState(false);
+  const [triageIntroShown, setTriageIntroShown] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const sessionStorageKey = user?.id ? getSessionStorageKey(user.id) : null;
@@ -220,6 +221,7 @@ export default function DashboardChat() {
     try {
       const request = await appService.createTriageRequest(liaSession.active_interaction_id ?? undefined);
       setTriageRequest(request);
+      setTriageIntroShown(true);
       await loadTriageSlots();
     } catch (error) {
       setLiaError(getApiErrorMessage(error, 'Não foi possível iniciar o pedido de triagem agora.'));
@@ -358,6 +360,20 @@ export default function DashboardChat() {
 
                   {triageRequest ? (
                     <div className="lia-memory-strip">
+                      {triageIntroShown && triageRequest.status !== 'scheduled' ? (
+                        <div className="lia-triage-intro">
+                          <span className="pill">Lia</span>
+                          <p>
+                            Obrigada por conversar comigo até aqui. A partir de agora, o melhor próximo passo é escolher um
+                            horário com um dos nossos profissionais, para você não precisar seguir com isso sozinho.
+                          </p>
+                          <p>
+                            Eu fico por aqui nesta etapa, mas deixo esse encaminhamento com cuidado. Escolha o profissional e
+                            o horário que fizerem mais sentido para você.
+                          </p>
+                        </div>
+                      ) : null}
+
                       <p>
                         {triageRequest.status === 'scheduled'
                           ? `Triagem agendada com ${triageRequest.psychologist_name ?? 'psicólogo'} em ${formatDateTime(triageRequest.scheduled_for ?? triageRequest.requested_at)}.`

@@ -568,6 +568,20 @@ a {
   gap: 0.75rem;
 }
 
+.lia-triage-intro {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(69, 95, 85, 0.1);
+  box-shadow: 0 10px 24px rgba(56, 78, 69, 0.05);
+}
+
+.lia-triage-intro p {
+  margin: 0;
+}
+
 .choice-cluster {
   display: flex;
   flex-wrap: wrap;
