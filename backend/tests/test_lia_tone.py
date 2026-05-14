@@ -246,6 +246,26 @@ class LiaToneTests(unittest.TestCase):
             "Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
         )
 
+    def test_question_uses_concrete_financial_and_caregiving_context(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=1)
+        session.current_topic = "distress_context"
+
+        user_message = (
+            "estou com minha mente cheia e preocupada, tenho muitas contas para pagar "
+            "e um filho para cuidar, nao sei como lidar com tudo isso sozinha"
+        )
+        question = main.build_contextual_question(session, user_message, "anxiety") or ""
+        reply = main.fallback_lia_analysis(session, user_message).assistant_reply or ""
+
+        normalized_question = main.normalize_for_match(question)
+        normalized_reply = main.normalize_for_match(reply)
+        self.assertIn("contas", normalized_question)
+        self.assertIn("filho", normalized_question)
+        self.assertIn("sozinha", normalized_question)
+        self.assertNotIn("trabalho, da rotina ou de alguma situacao especifica", normalized_question)
+        self.assertIn("contas", normalized_reply)
+        self.assertIn("filho", normalized_reply)
+
     def test_topic_states_progress_with_user_messages(self) -> None:
         session = self.build_session(stage="support", turn_count=0)
 

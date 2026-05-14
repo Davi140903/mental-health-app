@@ -1117,6 +1117,9 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         ),
         "relationship": contains_any(combined_text, ["namoro", "relacionamento", "namorado", "namorada", "parceiro", "parceira", "casamento"]),
         "work_study": contains_any(combined_text, ["trabalho", "estudo", "faculdade", "prova", "prazo", "chefe", "empresa", "emprego", "servico"]),
+        "financial_pressure": contains_any(combined_text, ["conta", "contas", "boleto", "boletos", "pagar", "dinheiro", "divida", "dividas", "aluguel"]),
+        "caregiving": contains_any(combined_text, ["filho", "filha", "crianca", "cuidar", "cuidado", "mae", "mãe", "sozinho com", "sozinha com"]),
+        "alone_burden": contains_any(combined_text, ["sozinha", "sozinho", "sem ajuda", "sem apoio", "tudo sozinha", "tudo sozinho"]),
         "controlar": contains_any(combined_text, ["controlar", "nao consigo parar", "nao desligo", "nao para"]),
         "relaxar": contains_any(combined_text, ["relax", "desaceler", "acalmar", "respirar"]),
         "medo": contains_any(combined_text, ["medo", "algo ruim", "vai dar errado", "perder o controle"]),
@@ -1915,6 +1918,11 @@ def build_contextual_reflection(
     if context["mentions_help"] and session.turn_count == 1:
         return "Tudo bem falar disso aqui. A gente pode ir por partes."
 
+    if session.turn_count == 1 and context["financial_pressure"] and context["caregiving"]:
+        if context["alone_burden"]:
+            return "Entendi. Contas para pagar, cuidado com filho e essa sensacao de estar sozinha nisso tudo e muita coisa para carregar."
+        return "Entendi. Lidar com contas e cuidado com filho ao mesmo tempo pode pesar muito."
+
     if session.turn_count == 1 and context["ending"] and context["pressure"]:
         return "Entendi. Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
 
@@ -2083,6 +2091,31 @@ def build_contextual_question(
 
     if topic == "distress_context":
         remember_question_intent(session, "distress_context")
+        if context["financial_pressure"] and context["caregiving"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Se a gente for por partes, o que esta apertando mais agora: as contas, o cuidado com seu filho ou a sensacao de estar sozinha?",
+                    "Entre dinheiro, cuidado com seu filho e essa sensacao de carregar tudo, qual parte esta mais urgente hoje?",
+                    "O que parece pesar primeiro quando voce pensa nisso tudo: pagar as contas, cuidar do seu filho ou nao ter apoio suficiente?",
+                ],
+            )
+        if context["financial_pressure"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Quando voce pensa nessas contas, o que aperta mais: o valor, o prazo ou a sensacao de nao saber por onde comecar?",
+                    "Essa preocupacao com dinheiro esta mais ligada ao que vence agora ou ao medo do que pode vir depois?",
+                ],
+            )
+        if context["caregiving"]:
+            return first_fresh_question(
+                session,
+                [
+                    "No cuidado com seu filho, qual parte tem pesado mais para voce agora?",
+                    "Isso pesa mais pela responsabilidade do cuidado ou pela sensacao de ter pouco apoio?",
+                ],
+            )
         return first_fresh_question(
             session,
             [
