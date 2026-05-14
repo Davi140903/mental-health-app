@@ -5,7 +5,7 @@ const links = [
   { to: '/painel', label: 'Painel' },
   { to: '/lia', label: 'Lia' },
   { to: '/humor', label: 'Humor' },
-  { to: '/contents', label: 'Conteudos' },
+  { to: '/contents', label: 'Conteúdos' },
   { to: '/profile', label: 'Perfil' },
 ];
 
@@ -29,7 +29,7 @@ export default function Layout({
       <header className={immersive ? 'topbar topbar-quiet' : 'topbar'}>
         <div className="topbar-brand">
           <h1>{immersive ? 'Lia' : 'Mental Health App'}</h1>
-          <p>{user?.nome ? `Ola, ${user.nome}.` : 'Seu espaco de cuidado.'}</p>
+          <p>{user?.nome ? `Olá, ${user.nome}.` : 'Seu espaço de cuidado.'}</p>
         </div>
 
         <button type="button" className="secondary-button" onClick={handleLogout}>
@@ -38,7 +38,7 @@ export default function Layout({
       </header>
 
       {!immersive ? (
-        <nav className="nav-strip" aria-label="Navegacao principal">
+        <nav className="nav-strip" aria-label="Navegação principal">
           {links.map((link) => (
             <NavLink
               key={link.to}

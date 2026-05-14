@@ -37,7 +37,7 @@ export default function AdminDashboard() {
       const response = await appService.listAdminPsychologists();
       setPsychologists(response);
     } catch {
-      setError('Nao foi possivel carregar os psicologos agora.');
+      setError('Não foi possível carregar os psicólogos agora.');
     } finally {
       setLoading(false);
     }
@@ -76,23 +76,23 @@ export default function AdminDashboard() {
           ...form,
           password: form.password?.trim() || undefined,
         });
-        setFeedback('Login do psicologo atualizado.');
+        setFeedback('Login do psicólogo atualizado.');
       } else {
         if (!form.password?.trim()) {
-          setError('Informe uma senha inicial para o psicologo.');
+          setError('Informe uma senha inicial para o psicólogo.');
           return;
         }
         await appService.createAdminPsychologist({
           ...form,
           password: form.password.trim(),
         });
-        setFeedback('Login do psicologo criado.');
+        setFeedback('Login do psicólogo criado.');
       }
 
       resetForm();
       await loadPsychologists();
     } catch {
-      setError('Nao foi possivel salvar este psicologo. Verifique se o email ja existe.');
+      setError('Não foi possível salvar este psicólogo. Verifique se o email já existe.');
     } finally {
       setSaving(false);
     }
@@ -109,13 +109,13 @@ export default function AdminDashboard() {
 
     try {
       await appService.deleteAdminPsychologist(psychologist.id);
-      setFeedback('Login do psicologo removido.');
+      setFeedback('Login do psicólogo removido.');
       await loadPsychologists();
       if (editingId === psychologist.id) {
         resetForm();
       }
     } catch {
-      setError('Nao foi possivel remover este psicologo agora.');
+      setError('Não foi possível remover este psicólogo agora.');
     }
   };
 
@@ -161,8 +161,8 @@ export default function AdminDashboard() {
           <div className="admin-panel">
             <div className="admin-toolbar">
               <div>
-                <h2>{editingId ? 'Editar psicologo' : 'Novo psicologo'}</h2>
-                <p>Cadastre o profissional que podera acessar solicitacoes de triagem.</p>
+                <h2>{editingId ? 'Editar psicólogo' : 'Novo psicólogo'}</h2>
+                <p>Cadastre o profissional que poderá acessar solicitações de triagem.</p>
               </div>
             </div>
 
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
                   onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
                   minLength={editingId ? undefined : 6}
                   required={!editingId}
-                  placeholder={editingId ? 'Deixe vazio para manter a senha' : 'Minimo de 6 caracteres'}
+                  placeholder={editingId ? 'Deixe vazio para manter a senha' : 'Mínimo de 6 caracteres'}
                 />
               </label>
 
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
 
               <div className="admin-form-actions">
                 <button type="submit" disabled={saving}>
-                  {saving ? 'Salvando...' : editingId ? 'Salvar alteracoes' : 'Criar login'}
+                  {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Criar login'}
                 </button>
 
                 {editingId ? (
@@ -237,9 +237,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {loading ? <div className="empty-state">Carregando psicologos...</div> : null}
+            {loading ? <div className="empty-state">Carregando psicólogos...</div> : null}
             {!loading && !psychologists.length ? (
-              <div className="empty-state">Nenhum psicologo cadastrado ainda.</div>
+              <div className="empty-state">Nenhum psicólogo cadastrado ainda.</div>
             ) : null}
 
             {psychologists.length ? (
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
                       <tr key={psychologist.id}>
                         <td>
                           <strong>{psychologist.nome}</strong>
-                          <span>Psicologo</span>
+                          <span>Psicólogo</span>
                         </td>
                         <td>{psychologist.email}</td>
                         <td>{formatDate(psychologist.criado_em)}</td>

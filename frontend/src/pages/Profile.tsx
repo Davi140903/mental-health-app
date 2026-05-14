@@ -40,7 +40,7 @@ export default function Profile() {
       });
       setMessage('Perfil atualizado com sucesso.');
     } catch {
-      setError('Nao foi possivel atualizar o perfil.');
+      setError('Não foi possível atualizar o perfil.');
     } finally {
       setSaving(false);
     }
@@ -62,7 +62,7 @@ export default function Profile() {
       window.URL.revokeObjectURL(url);
       setMessage('Exportacao concluida.');
     } catch {
-      setError('Nao foi possivel exportar os dados.');
+      setError('Não foi possível exportar os dados.');
     } finally {
       setExporting(false);
     }
@@ -82,7 +82,7 @@ export default function Profile() {
       logout();
       navigate('/register');
     } catch {
-      setError('Nao foi possivel excluir a conta.');
+      setError('Não foi possível excluir a conta.');
       setDeleting(false);
     }
   };
@@ -116,7 +116,7 @@ export default function Profile() {
             </label>
 
             <button type="submit" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar alteracoes'}
+              {saving ? 'Salvando...' : 'Salvar alterações'}
             </button>
           </form>
         </article>
@@ -139,7 +139,7 @@ export default function Profile() {
             </div>
             <div className="summary-block">
               <span className="stat-label">Acoes</span>
-              <p>Voce pode exportar ou excluir seus dados.</p>
+              <p>Você pode exportar ou excluir seus dados.</p>
             </div>
           </div>
 

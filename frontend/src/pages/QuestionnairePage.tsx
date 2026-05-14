@@ -48,7 +48,7 @@ export default function QuestionnairePage({ kind, title, description, questions 
         }
       } catch {
         if (active) {
-          setError('Nao foi possivel carregar o historico desse questionario.');
+          setError('Não foi possível carregar o histórico desse questionário.');
         }
       } finally {
         if (active) {
@@ -88,7 +88,7 @@ export default function QuestionnairePage({ kind, title, description, questions 
       setResult(createdResult);
       setHistory((current) => [createdResult, ...current]);
     } catch {
-      setError('Nao foi possivel salvar suas respostas.');
+      setError('Não foi possível salvar suas respostas.');
     } finally {
       setSubmitting(false);
     }
@@ -151,11 +151,11 @@ export default function QuestionnairePage({ kind, title, description, questions 
         <article className="section-card">
           <div className="section-heading">
             <div>
-              <h2>Ultimas aplicacoes</h2>
+              <h2>Últimas aplicações</h2>
             </div>
           </div>
 
-          {loadingHistory ? <div className="empty-state">Carregando historico...</div> : null}
+          {loadingHistory ? <div className="empty-state">Carregando histórico...</div> : null}
 
           {!loadingHistory && history.length === 0 ? (
             <div className="empty-state">Nenhuma resposta salva ainda.</div>

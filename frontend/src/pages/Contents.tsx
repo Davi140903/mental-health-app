@@ -22,7 +22,7 @@ export default function Contents() {
         }
       } catch {
         if (active) {
-          setError('Nao foi possivel carregar a biblioteca de conteudos.');
+          setError('Não foi possível carregar a biblioteca de conteúdos.');
         }
       } finally {
         if (active) {
@@ -57,7 +57,7 @@ export default function Contents() {
       <section className="section-card">
         <div className="section-heading">
           <div>
-            <h2>Conteudos</h2>
+            <h2>Conteúdos</h2>
           </div>
           <span className="pill">{filteredContents.length} itens exibidos</span>
         </div>
@@ -82,11 +82,11 @@ export default function Contents() {
           </label>
         </div>
 
-        {loading ? <div className="empty-state">Carregando conteudos...</div> : null}
+        {loading ? <div className="empty-state">Carregando conteúdos...</div> : null}
         {error ? <div className="alert error">{error}</div> : null}
 
         {!loading && !filteredContents.length ? (
-          <div className="empty-state">Nenhum conteudo encontrado com os filtros atuais.</div>
+          <div className="empty-state">Nenhum conteúdo encontrado com os filtros atuais.</div>
         ) : null}
 
         <div className="content-grid">

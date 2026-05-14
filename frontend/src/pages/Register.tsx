@@ -7,7 +7,7 @@ function buildCodeMessage(debugCode: string | null, fallback: string) {
   if (!debugCode) {
     return `${fallback} Confira sua caixa de entrada.`;
   }
-  return `${fallback} Neste ambiente local, use o codigo ${debugCode}.`;
+  return `${fallback} Neste ambiente local, use o código ${debugCode}.`;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -40,10 +40,10 @@ export default function Register() {
       return 'A senha precisa ter pelo menos 6 caracteres.';
     }
     if (password !== confirmPassword) {
-      return 'As senhas nao coincidem.';
+      return 'As senhas não coincidem.';
     }
     if (!consentimentoLgpd) {
-      return 'Voce precisa aceitar o termo de privacidade para continuar.';
+      return 'Você precisa aceitar o termo de privacidade para continuar.';
     }
     return '';
   };
@@ -65,9 +65,9 @@ export default function Register() {
       if (response.debug_code) {
         setCodigo(response.debug_code);
       }
-      setInfo(buildCodeMessage(response.debug_code, 'Codigo de cadastro enviado.'));
+      setInfo(buildCodeMessage(response.debug_code, 'Código de cadastro enviado.'));
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel enviar o codigo. Verifique se o email ja esta em uso.'));
+      setError(getApiErrorMessage(error, 'Não foi possível enviar o código. Verifique se o email já está em uso.'));
     } finally {
       setSendingCode(false);
     }
@@ -85,12 +85,12 @@ export default function Register() {
     }
 
     if (!codeRequested) {
-      setError('Primeiro solicite o codigo de verificacao do email.');
+      setError('Primeiro solicite o código de verificação do email.');
       return;
     }
 
     if (codigo.trim().length !== 6) {
-      setError('Informe o codigo de 6 digitos para concluir o cadastro.');
+      setError('Informe o código de 6 dígitos para concluir o cadastro.');
       return;
     }
 
@@ -106,11 +106,11 @@ export default function Register() {
       navigate('/login', {
         state: {
           email,
-          info: 'Conta criada. Agora solicite um codigo para entrar com seguranca.',
+          info: 'Conta criada. Agora solicite um código para entrar com segurança.',
         },
       });
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel criar a conta. Confira o codigo e tente de novo.'));
+      setError(getApiErrorMessage(error, 'Não foi possível criar a conta. Confira o código e tente de novo.'));
     } finally {
       setSubmitting(false);
     }
@@ -120,7 +120,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card auth-card-wide">
         <h1>Criar conta</h1>
-        <p className="auth-subtitle">Confirme seu email com um codigo antes de concluir.</p>
+        <p className="auth-subtitle">Confirme seu email com um código antes de concluir.</p>
 
         {error ? <div className="alert error">{error}</div> : null}
         {info ? <div className="alert success">{info}</div> : null}
@@ -177,19 +177,19 @@ export default function Register() {
             onClick={() => void handleRequestCode()}
             disabled={sendingCode}
           >
-            {sendingCode ? 'Enviando codigo...' : 'Pedir codigo por email'}
+            {sendingCode ? 'Enviando código...' : 'Pedir código por email'}
           </button>
 
           {codeRequested ? (
             <label className="field">
-              <span>Codigo de verificacao</span>
+              <span>Código de verificação</span>
               <input
                 type="text"
                 inputMode="numeric"
                 maxLength={6}
                 value={codigo}
                 onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
-                placeholder="Codigo preenchido automaticamente no modo local"
+                placeholder="Código preenchido automaticamente no modo local"
                 required
               />
             </label>
@@ -201,7 +201,7 @@ export default function Register() {
         </form>
 
         <p className="auth-footer">
-          Ja possui conta? <Link to="/login">Entrar</Link>
+          Já possui conta? <Link to="/login">Entrar</Link>
         </p>
       </div>
     </div>

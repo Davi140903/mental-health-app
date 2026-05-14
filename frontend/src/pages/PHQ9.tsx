@@ -16,8 +16,8 @@ export default function PHQ9() {
   return (
     <QuestionnairePage
       kind="phq9"
-      title="Humor nas ultimas semanas"
-      description="Responda pensando nas ultimas duas semanas."
+      title="Humor nas últimas semanas"
+      description="Responda pensando nas últimas duas semanas."
       questions={questions}
     />
   );

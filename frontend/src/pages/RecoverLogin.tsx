@@ -7,7 +7,7 @@ function buildCodeMessage(debugCode: string | null, fallback: string) {
   if (!debugCode) {
     return `${fallback} Confira sua caixa de entrada.`;
   }
-  return `${fallback} Neste ambiente local, use o codigo ${debugCode}.`;
+  return `${fallback} Neste ambiente local, use o código ${debugCode}.`;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -38,7 +38,7 @@ export default function RecoverLogin() {
       return 'A nova senha precisa ter pelo menos 6 caracteres.';
     }
     if (novaSenha !== confirmNovaSenha) {
-      return 'As senhas nao coincidem.';
+      return 'As senhas não coincidem.';
     }
     return '';
   };
@@ -48,7 +48,7 @@ export default function RecoverLogin() {
     setInfo('');
 
     if (!email.trim()) {
-      setError('Informe o email da conta antes de pedir o codigo.');
+      setError('Informe o email da conta antes de pedir o código.');
       return;
     }
 
@@ -59,9 +59,9 @@ export default function RecoverLogin() {
       if (response.debug_code) {
         setCodigo(response.debug_code);
       }
-      setInfo(buildCodeMessage(response.debug_code, 'Codigo de recuperacao enviado.'));
+      setInfo(buildCodeMessage(response.debug_code, 'Código de recuperação enviado.'));
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel enviar o codigo de recuperacao.'));
+      setError(getApiErrorMessage(error, 'Não foi possível enviar o código de recuperação.'));
     } finally {
       setSendingCode(false);
     }
@@ -79,12 +79,12 @@ export default function RecoverLogin() {
     }
 
     if (!codeRequested) {
-      setError('Primeiro solicite o codigo de recuperacao.');
+      setError('Primeiro solicite o código de recuperação.');
       return;
     }
 
     if (codigo.trim().length !== 6) {
-      setError('Informe o codigo de 6 digitos para redefinir a senha.');
+      setError('Informe o código de 6 dígitos para redefinir a senha.');
       return;
     }
 
@@ -98,11 +98,11 @@ export default function RecoverLogin() {
       navigate('/login', {
         state: {
           email,
-          info: 'Senha redefinida. Agora voce ja pode entrar com a nova senha.',
+          info: 'Senha redefinida. Agora você já pode entrar com a nova senha.',
         },
       });
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Nao foi possivel redefinir a senha. Confira o codigo e tente de novo.'));
+      setError(getApiErrorMessage(error, 'Não foi possível redefinir a senha. Confira o código e tente de novo.'));
     } finally {
       setSubmitting(false);
     }
@@ -112,7 +112,7 @@ export default function RecoverLogin() {
     <div className="auth-page">
       <div className="auth-card auth-card-wide">
         <h1>Recuperar acesso</h1>
-        <p className="auth-subtitle">Confirme seu email com um codigo e defina uma nova senha.</p>
+        <p className="auth-subtitle">Confirme seu email com um código e defina uma nova senha.</p>
 
         {error ? <div className="alert error">{error}</div> : null}
         {info ? <div className="alert success">{info}</div> : null}
@@ -129,20 +129,20 @@ export default function RecoverLogin() {
             onClick={() => void handleRequestCode()}
             disabled={sendingCode}
           >
-            {sendingCode ? 'Enviando codigo...' : 'Pedir codigo de recuperacao'}
+            {sendingCode ? 'Enviando código...' : 'Pedir código de recuperação'}
           </button>
 
           {codeRequested ? (
             <>
               <label className="field">
-                <span>Codigo de verificacao</span>
+                <span>Código de verificação</span>
                 <input
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
                   value={codigo}
                   onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
-                  placeholder="Codigo preenchido automaticamente no modo local"
+                  placeholder="Código preenchido automaticamente no modo local"
                   required
                 />
               </label>

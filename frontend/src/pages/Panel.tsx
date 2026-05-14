@@ -24,17 +24,17 @@ function formatMoodLabel(value: number | null) {
     return 'Estavel';
   }
 
-  return 'Mais favoravel';
+  return 'Mais favorável';
 }
 
 function normalizeTopicLabel(topic: string) {
   const normalized = topic.trim().toLowerCase();
   const topicMap: Record<string, string> = {
-    ansiedade: 'cabeca acelerada',
+    ansiedade: 'cabeça acelerada',
     'pressao do dia a dia': 'dias mais pesados',
     'trabalho ou estudos': 'rotina e cobrancas',
     sono: 'sono',
-    humor: 'como voce tem se sentido',
+    humor: 'como você tem se sentido',
     energia: 'energia',
     relacionamentos: 'relacoes e convivio',
     'corpo em alerta': 'corpo em alerta',
@@ -59,7 +59,7 @@ export default function Panel() {
         }
       } catch {
         if (active) {
-          setError('Nao foi possivel carregar seu painel agora.');
+          setError('Não foi possível carregar seu painel agora.');
         }
       } finally {
         if (active) {
@@ -102,7 +102,7 @@ export default function Panel() {
     return (
       <Layout>
         <section className="section-card">
-          <div className="alert error">{error || 'Nao foi possivel montar o painel.'}</div>
+          <div className="alert error">{error || 'Não foi possível montar o painel.'}</div>
         </section>
       </Layout>
     );
@@ -113,11 +113,11 @@ export default function Panel() {
   const periodSummary =
     data.memoria_lia.recent_summary ??
     data.memoria_lia.summary ??
-    'A Lia ainda esta juntando mais contexto para montar um retrato breve daqui.';
+    'A Lia ainda está juntando mais contexto para montar um retrato breve daqui.';
   const triageSummary = data.triagem_atual
     ? data.triagem_atual.status === 'scheduled'
-      ? `Triagem marcada com ${data.triagem_atual.psychologist_name ?? 'psicologo'} para ${formatDate(data.triagem_atual.scheduled_for ?? data.triagem_atual.requested_at)}.`
-      : 'Voce ja tem um pedido de triagem em andamento e pode concluir o agendamento com um psicologo.'
+      ? `Triagem marcada com ${data.triagem_atual.psychologist_name ?? 'psicólogo'} para ${formatDate(data.triagem_atual.scheduled_for ?? data.triagem_atual.requested_at)}.`
+      : 'Você já tem um pedido de triagem em andamento e pode concluir o agendamento com um psicólogo.'
     : null;
 
   return (
@@ -126,7 +126,7 @@ export default function Panel() {
         <section className="dashboard-intro panel-hero">
           <div>
             <span className="pill">Seu panorama</span>
-            <h2>{data.usuario.nome}, aqui esta um retrato breve do que vem aparecendo</h2>
+          <h2>{data.usuario.nome}, aqui está um retrato breve do que vem aparecendo</h2>
             <p>
               A ideia deste painel e te mostrar o que a Lia vem guardando com cuidado, como seu humor tem aparecido e
               o que pode te ajudar a se perceber melhor ao longo do tempo.
@@ -147,13 +147,13 @@ export default function Panel() {
           <article className="section-card panel-stat-card">
             <span className="stat-label">Conversas com a Lia</span>
             <strong className="stat-value">{data.estatisticas.total_conversas_lia}</strong>
-            <p>Historico que ajuda a dar continuidade ao seu cuidado.</p>
+            <p>Histórico que ajuda a dar continuidade ao seu cuidado.</p>
           </article>
           <article className="section-card">
             <div className="section-heading">
               <div>
                 <h3>Cuidados que podem fazer sentido agora</h3>
-                <p className="section-copy">Sugestoes simples com base no que ja apareceu no seu acompanhamento.</p>
+                <p className="section-copy">Sugestões simples com base no que já apareceu no seu acompanhamento.</p>
               </div>
             </div>
 
@@ -175,8 +175,8 @@ export default function Panel() {
           <section className="section-card">
             <div className="section-heading">
               <div>
-                <h3>Triagem com psicologo</h3>
-                <p className="section-copy">Quando voce encerra com a Lia e pede continuidade, o acompanhamento aparece aqui.</p>
+                <h3>Triagem com psicólogo</h3>
+                <p className="section-copy">Quando você encerra com a Lia e pede continuidade, o acompanhamento aparece aqui.</p>
               </div>
             </div>
             <div className="summary-block calm-card">
@@ -189,8 +189,8 @@ export default function Panel() {
           <article className="section-card">
             <div className="section-heading">
               <div>
-                <h3>Ultimas conversas com a Lia</h3>
-                <p className="section-copy">Trechos resumidos para voce lembrar do que ja foi dito por aqui, sem pesar demais.</p>
+                <h3>Últimas conversas com a Lia</h3>
+                <p className="section-copy">Trechos resumidos para você lembrar do que já foi dito por aqui, sem pesar demais.</p>
               </div>
             </div>
 
@@ -215,8 +215,8 @@ export default function Panel() {
           <article className="section-card">
             <div className="section-heading">
               <div>
-                <h3>Conteudos para seguir por perto</h3>
-                <p className="section-copy">Sugestoes escolhidas a partir do que ja apareceu na sua jornada.</p>
+                <h3>Conteúdos para seguir por perto</h3>
+                <p className="section-copy">Sugestões escolhidas a partir do que já apareceu na sua jornada.</p>
               </div>
             </div>
 
@@ -252,15 +252,15 @@ export default function Panel() {
             <div className="stack-list">
               <div className="list-row stretch">
                 <div>
-                  <strong>Ultima conversa guardada</strong>
-                  <p>{lastConversation?.summary ?? 'Assim que voce terminar mais conversas com a Lia, esse bloco fica mais rico.'}</p>
+                  <strong>Última conversa guardada</strong>
+                  <p>{lastConversation?.summary ?? 'Assim que você terminar mais conversas com a Lia, esse bloco fica mais rico.'}</p>
                 </div>
               </div>
               <div className="list-row stretch">
                 <div>
                   <strong>Registros no app</strong>
                   <p>
-                    Voce ja deixou {data.estatisticas.total_registros_humor} registro{data.estatisticas.total_registros_humor === 1 ? '' : 's'} de humor e{' '}
+                    Você já deixou {data.estatisticas.total_registros_humor} registro{data.estatisticas.total_registros_humor === 1 ? '' : 's'} de humor e{' '}
                     {data.estatisticas.triagens_realizadas} triagem{data.estatisticas.triagens_realizadas === 1 ? '' : 'ens'} breve{data.estatisticas.triagens_realizadas === 1 ? '' : 's'}.
                   </p>
                 </div>
@@ -270,18 +270,18 @@ export default function Panel() {
                   <strong>Ultimo registro de humor</strong>
                   <p>
                     {data.ultimo_humor
-                      ? `Seu ultimo apontamento ficou em ${formatMoodLabel(data.ultimo_humor.valor).toLowerCase()}, salvo em ${lastMoodDate}.`
-                      : 'Seu ultimo registro de humor vai aparecer aqui quando voce salvar um apontamento.'}
+                      ? `Seu último apontamento ficou em ${formatMoodLabel(data.ultimo_humor.valor).toLowerCase()}, salvo em ${lastMoodDate}.`
+                      : 'Seu último registro de humor vai aparecer aqui quando você salvar um apontamento.'}
                   </p>
                 </div>
               </div>
               <div className="list-row stretch">
                 <div>
-                  <strong>Media recente de humor</strong>
+                  <strong>Média recente de humor</strong>
                   <p>
                     {data.estatisticas.media_humor_7_dias !== null
-                      ? `Nos ultimos dias, sua media ficou em ${data.estatisticas.media_humor_7_dias.toFixed(1)} de 5.`
-                      : 'Assim que voce acumular mais registros, a media recente vai aparecer aqui.'}
+                      ? `Nos últimos dias, sua média ficou em ${data.estatisticas.media_humor_7_dias.toFixed(1)} de 5.`
+                      : 'Assim que você acumular mais registros, a média recente vai aparecer aqui.'}
                   </p>
                 </div>
               </div>
@@ -311,7 +311,7 @@ export default function Panel() {
             <div className="divider" />
 
             <div className="summary-block calm-card">
-              <span className="stat-label">Memoria breve da Lia</span>
+              <span className="stat-label">Memória breve da Lia</span>
               <p>{periodSummary}</p>
             </div>
           </article>
