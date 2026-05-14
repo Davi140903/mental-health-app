@@ -1006,8 +1006,10 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         for item in get_recent_transcript_by_role(session, "user", limit=6)
         if is_probably_meaningful_message(item)
     ][-4:]
-    if not recent_user_messages and is_probably_meaningful_message(user_message):
-        recent_user_messages = [user_message]
+    if is_probably_meaningful_message(user_message):
+        if not recent_user_messages or recent_user_messages[-1].strip() != user_message.strip():
+            recent_user_messages.append(user_message)
+            recent_user_messages = recent_user_messages[-4:]
     combined_text = normalize_for_match(" ".join(recent_user_messages))
     latest_text = normalize_for_match(user_message)
     latest_trimmed = latest_text.strip()
@@ -1083,6 +1085,67 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "dificil explicar",
         "nao consigo explicar",
     }
+    figurative_distress = contains_any(
+        combined_text,
+        [
+            "cabeca vai explodir",
+            "cabeca parece que vai explodir",
+            "mente vai explodir",
+            "vou explodir",
+            "explodir de tanta coisa",
+            "cabeca cheia",
+            "mente cheia",
+            "muitos problemas",
+            "muita coisa para resolver",
+            "muita coisa pra resolver",
+            "nao dou conta",
+            "nao estou dando conta",
+            "nao to dando conta",
+        ],
+    )
+    work_offense = contains_any(
+        combined_text,
+        [
+            "ofensa",
+            "ofensas",
+            "xing",
+            "humilh",
+            "desrespeito",
+            "ataque",
+            "critica",
+            "criticas",
+        ],
+    )
+    recipe_request = contains_any(
+        latest_text,
+        [
+            "quero uma receita",
+            "me da uma receita",
+            "me de uma receita",
+            "faz uma receita",
+            "faca uma receita",
+            "receita de",
+            "macarronada",
+            "bolonhesa",
+            "modo de preparo",
+            "ingredientes",
+        ],
+    )
+    external_task_request = recipe_request or contains_any(
+        latest_text,
+        [
+            "faz um codigo",
+            "faca um codigo",
+            "codigo em python",
+            "codigo javascript",
+            "me ensina a programar",
+            "resolva essa conta",
+            "calcule uma conta",
+            "qual e a capital",
+            "previsao do tempo",
+            "noticia de hoje",
+        ],
+    )
 
     return {
         "latest_text": latest_text,
@@ -1137,6 +1200,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         ),
         "relationship": contains_any(combined_text, ["namoro", "relacionamento", "namorado", "namorada", "parceiro", "parceira", "casamento"]),
         "work_study": contains_any(combined_text, ["trabalho", "estudo", "faculdade", "prova", "prazo", "chefe", "empresa", "emprego", "servico"]),
+        "work_offense": work_offense,
         "financial_pressure": contains_any(combined_text, ["conta", "contas", "boleto", "boletos", "pagar", "dinheiro", "divida", "dividas", "aluguel"]),
         "caregiving": contains_any(combined_text, ["filho", "filha", "crianca", "cuidar", "cuidado", "mae", "mãe", "sozinho com", "sozinha com"]),
         "alone_burden": contains_any(combined_text, ["sozinha", "sozinho", "sem ajuda", "sem apoio", "tudo sozinha", "tudo sozinho"]),
@@ -1153,10 +1217,14 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "no_issue": no_issue,
         "unwell": unwell,
         "mixed_feeling": contains_any(latest_text, ["mais ou menos", "meio assim", "nem bem nem mal", "entre bem e mal"]),
-        "creative": contains_any(
+        "figurative_distress": figurative_distress,
+        "creative": not figurative_distress
+        and contains_any(
             latest_text,
             ["flores", "flor", "ceu", "mar", "chuva", "vento", "sol", "silencio", "recolher", "quietude"],
         ),
+        "recipe_request": recipe_request,
+        "external_task_request": external_task_request,
         "light_topic": contains_any(
             latest_text,
             ["musica", "filme", "filmes", "serie", "series", "esporte", "comida", "livro", "livros"],
@@ -1243,6 +1311,8 @@ def is_support_related_message(context: dict[str, Any]) -> bool:
         "ending",
         "relationship",
         "work_study",
+        "work_offense",
+        "figurative_distress",
         "controlar",
         "relaxar",
         "medo",
@@ -1314,6 +1384,9 @@ def is_probably_question_or_request(text_value: str) -> bool:
 
 
 def is_off_scope_message(context: dict[str, Any], user_message: str) -> bool:
+    if context["external_task_request"]:
+        return True
+
     if is_support_related_message(context) or context["light_topic"] or context["creative"]:
         return False
 
@@ -1379,6 +1452,20 @@ def build_off_scope_reply(session: LiaSessionState) -> str:
     )
 
 
+def build_specific_off_scope_reply(session: LiaSessionState, context: dict[str, Any]) -> str | None:
+    if context["recipe_request"]:
+        if context["work_offense"] or context["work_study"]:
+            return (
+                "Eu nao consigo seguir por receita aqui. Posso continuar com voce no que apareceu sobre as ofensas "
+                "no trabalho, ou a gente pode fazer uma pausa breve dentro da conversa."
+            )
+        return (
+            "Eu nao consigo seguir por receita aqui. Meu papel e ficar no apoio, bem-estar e triagem. "
+            "Se quiser, a gente volta para o que esta pesando hoje."
+        )
+    return None
+
+
 def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str | None:
     context = build_lia_context(session, user_message)
     related_reply = build_related_question_reply(session, context)
@@ -1390,6 +1477,9 @@ def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str 
 
     if is_off_scope_message(context, user_message):
         session.off_scope_count = min(int(session.off_scope_count or 0) + 1, 5)
+        specific_reply = build_specific_off_scope_reply(session, context)
+        if specific_reply:
+            return specific_reply
         return build_off_scope_reply(session)
 
     session.off_scope_count = 0
@@ -1909,6 +1999,48 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     ):
         return False
 
+    if contains_any(
+        normalized,
+        [
+            "ingredientes",
+            "modo de preparo",
+            "macarrao",
+            "macarronada",
+            "bolonhesa",
+            "carne moida",
+            "cebola picada",
+            "cozinhe",
+            "refogue",
+        ],
+    ):
+        return False
+
+    if context["figurative_distress"] and contains_any(
+        normalized,
+        [
+            "nao precisa transformar isso em problema",
+            "partir dessa imagem",
+            "essa imagem apareceu",
+        ],
+    ):
+        return False
+
+    if (is_support_related_message(context) or context["figurative_distress"] or context["work_offense"]) and question_count == 0:
+        if not contains_any(
+            normalized,
+            [
+                "podemos parar",
+                "podemos fechar",
+                "por aqui",
+                "triagem",
+                "continuar comigo",
+                "eu sigo com voce",
+                "nao consigo seguir",
+                "foge um pouco do meu papel",
+            ],
+        ):
+            return False
+
     return True
 
 
@@ -1949,6 +2081,9 @@ def build_contextual_reflection(
 
     if context["mentions_help"] and session.turn_count == 1:
         return "Tudo bem falar disso aqui. A gente pode ir por partes."
+
+    if session.turn_count == 1 and context["figurative_distress"]:
+        return "Entendi. Quando voce fala que sua cabeca esta cheia desse jeito, parece que tem muita coisa passando do limite."
 
     if session.turn_count == 1 and context["financial_pressure"] and context["caregiving"]:
         if context["alone_burden"]:
@@ -2015,6 +2150,9 @@ def build_contextual_reflection(
 
     if session.stage == "anxiety" and context["medo"]:
         return "Entendi. Isso parece te deixar em um modo de alerta bem desconfortavel."
+
+    if context["work_offense"] and context["work_study"]:
+        return "Entendi. Ofensas no trabalho podem mexer bastante com a forma como voce passa pelo dia."
 
     if session.stage == "mood" and context["sono"] and context["energia"]:
         return first_fresh_phrase(
@@ -2101,6 +2239,24 @@ def build_contextual_question(
 
     if topic == "main_focus":
         remember_question_intent(session, "main_focus")
+        if context["work_offense"] and context["work_study"]:
+            return first_fresh_question(
+                session,
+                [
+                    "O que mais machuca nessas ofensas no trabalho: o que dizem, a frequencia ou a sensacao de ficar sem defesa?",
+                    "Essas ofensas no trabalho acontecem mais com uma pessoa especifica ou no ambiente como um todo?",
+                    "Quando essas ofensas acontecem, o que fica mais forte depois: tristeza, raiva ou medo de voltar para la?",
+                ],
+            )
+        if context["figurative_distress"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Se a gente for por partes, qual problema parece mais urgente agora?",
+                    "Entre tudo que esta enchendo sua cabeca, o que mais precisa de cuidado primeiro?",
+                    "O que mais pesa nessa sensacao de cabeca cheia: a quantidade de problemas, o medo de nao dar conta ou ter que resolver tudo sozinho?",
+                ],
+            )
         return first_fresh_question(
             session,
             [
@@ -2130,6 +2286,24 @@ def build_contextual_question(
                     "Se a gente for por partes, o que esta apertando mais agora: as contas, o cuidado com seu filho ou a sensacao de estar sozinha?",
                     "Entre dinheiro, cuidado com seu filho e essa sensacao de carregar tudo, qual parte esta mais urgente hoje?",
                     "O que parece pesar primeiro quando voce pensa nisso tudo: pagar as contas, cuidar do seu filho ou nao ter apoio suficiente?",
+                ],
+            )
+        if context["work_offense"] and context["work_study"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Essas ofensas no trabalho acontecem mais com uma pessoa especifica ou no ambiente como um todo?",
+                    "O que mais pesa nessas ofensas: ouvir aquilo, ter que continuar trabalhando depois ou sentir que ninguem segura junto?",
+                    "Quando isso acontece no trabalho, voce costuma conseguir se proteger de algum jeito ou fica tendo que engolir tudo?",
+                ],
+            )
+        if context["figurative_distress"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Se a gente for por partes, o que esta mais urgente agora: os problemas para resolver, a sensacao de cabeca cheia ou algo que aconteceu hoje?",
+                    "Quando sua cabeca fica assim, isso vem mais da quantidade de coisas para resolver ou de alguma situacao especifica?",
+                    "Qual parte disso parece estar fazendo mais barulho agora?",
                 ],
             )
         if context["financial_pressure"]:
@@ -2219,6 +2393,10 @@ def build_contextual_question(
             return "O que voce mais curte nisso?"
         if context["creative"]:
             return "Flores te passam calma ou essa imagem apareceu por algum motivo especial?"
+        if context["work_offense"] and context["work_study"]:
+            return "O que mais machuca nessas ofensas no trabalho?"
+        if context["figurative_distress"]:
+            return "Se a gente for por partes, qual problema parece mais urgente agora?"
         if context["mentions_help"] or context["asks_to_talk"]:
             return "Quer me contar o que mais esta batendo forte ai agora?"
         if context["work_study"] and context["pressure"]:

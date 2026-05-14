@@ -520,6 +520,67 @@ class LiaToneTests(unittest.TestCase):
         self.assertIsNone(reply)
         self.assertEqual(session.off_scope_count, 0)
 
+    def test_figurative_distress_is_treated_as_distress_not_creative_image(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        user_message = "estou sentindo que minha cabeca vai explodir, estou com muitos problemas para resolver"
+
+        analysis = main.fallback_lia_analysis(session, user_message)
+        reply = main.normalize_for_match(analysis.assistant_reply)
+
+        self.assertIn("cabeca", reply)
+        self.assertIn("limite", reply)
+        self.assertIn("qual problema parece mais urgente", reply)
+        self.assertNotIn("nao precisa transformar isso em problema", reply)
+        self.assertNotIn("partir dessa imagem", reply)
+
+    def test_work_offense_followup_stays_anchored_to_user_context(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.current_topic = "main_focus"
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="user",
+                content="minha cabeca vai explodir, tenho muitos problemas para resolver",
+            )
+        ]
+
+        question = main.normalize_for_match(main.build_contextual_question(session, "as ofensas que recebo no trabalho", "support") or "")
+
+        self.assertIn("ofensas", question)
+        self.assertIn("trabalho", question)
+        self.assertIn("?", question)
+        self.assertNotIn("vida profissional", question)
+
+    def test_recipe_request_is_blocked_even_after_support_context(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="as ofensas que recebo no trabalho"),
+        ]
+
+        reply = main.normalize_for_match(
+            main.build_scope_guard_reply(session, "quero uma receita de macarronada a bolonhesa") or ""
+        )
+
+        self.assertIn("nao consigo seguir por receita", reply)
+        self.assertIn("ofensas", reply)
+        self.assertIn("trabalho", reply)
+        self.assertNotIn("ingredientes", reply)
+        self.assertNotIn("modo de preparo", reply)
+
+    def test_model_recipe_reply_is_rejected_by_support_validator(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="as ofensas que recebo no trabalho"),
+        ]
+        model_reply = "Vou te dar uma receita: ingredientes, macarrao, carne moida, cebola picada e modo de preparo."
+
+        self.assertFalse(
+            main.reply_respects_support_context(
+                session,
+                "quero uma receita de macarronada a bolonhesa",
+                model_reply,
+            )
+        )
+
     def test_followup_final_close_marks_finished(self) -> None:
         session = self.build_session(stage="closing", turn_count=7)
         session.current_topic = "closing"
