@@ -816,7 +816,21 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
     ):
         update_topic_state(session, "distress_nature", latest_text, 0.9)
     if current_topic == "distress_context" and contains_any(
-        context["latest_text"], ["trabalho", "estudo", "faculdade", "rotina", "relacionamento", "corpo", "critica", "cobranca"]
+        context["latest_text"],
+        [
+            "trabalho",
+            "estudo",
+            "faculdade",
+            "rotina",
+            "relacionamento",
+            "corpo",
+            "critica",
+            "cobranca",
+            "situacao especifica",
+            "tarefa",
+            "tarefas",
+            "responsabilidade",
+        ],
     ):
         update_topic_state(session, "distress_context", latest_text, 0.9)
     if current_topic == "functional_impact" and contains_any(
@@ -875,6 +889,10 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
         context_parts.append("relacionamentos")
     if contains_any(context["latest_text"], ["rotina", "dia a dia"]):
         context_parts.append("rotina")
+    if contains_any(context["latest_text"], ["tarefa", "tarefas", "responsabilidade"]):
+        context_parts.append("tarefas e responsabilidades")
+    if contains_any(context["latest_text"], ["situacao especifica"]):
+        context_parts.append("situacao especifica")
     if contains_any(context["latest_text"], ["corpo", "fisico"]):
         context_parts.append("corpo")
     if context["pressure"] and not context_parts:
@@ -967,6 +985,8 @@ def next_lia_topic(session: LiaSessionState) -> str:
 
 
 def extract_duration_phrase(text_value: str) -> str | None:
+    if contains_any(text_value, ["um mes", "1 mes", "ha um mes", "faz um mes", "mais de um mes"]):
+        return "ha cerca de um mes"
     if contains_any(text_value, ["meses", "alguns meses", "ha meses", "faz meses"]):
         return "ha alguns meses"
     if contains_any(text_value, ["semanas", "algumas semanas", "ha semanas", "faz semanas"]):
@@ -1877,6 +1897,18 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
             ],
         )
 
+    if context["latest_duration"] and contains_any(
+        normalized,
+        [
+            "tempo estivesse passando",
+            "tempo estava passando",
+            "tempo diferente",
+            "mais rapido",
+            "mais devagar",
+        ],
+    ):
+        return False
+
     return True
 
 
@@ -2138,6 +2170,8 @@ def build_contextual_question(
 
     if topic == "frequency_duration":
         remember_question_intent(session, "frequency_duration")
+        if context["duration"] or context["latest_duration"] or session.topic_states["frequency_duration"].filled:
+            return "Entendi. Isso ja vem te acompanhando ha algum tempo. Acho que por hoje a gente pode parar por aqui com calma, se voce quiser."
         return first_fresh_question(
             session,
             [
