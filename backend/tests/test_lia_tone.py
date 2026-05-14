@@ -38,6 +38,19 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("Me conta, como voce ta hoje?", contents)
         self.assertNotIn("Esse pode ser nosso primeiro cuidado por aqui. Nao precisa acertar as palavras.", contents)
 
+    def test_lia_knowledge_base_is_loaded_into_system_prompt(self) -> None:
+        knowledge = main.normalize_for_match(main.load_lia_knowledge_base())
+        prompt = main.normalize_for_match(main.build_lia_system_prompt("support"))
+
+        self.assertIn("assistente virtual de apoio", knowledge)
+        self.assertIn("fora de escopo", knowledge)
+        self.assertIn("receita", knowledge)
+        self.assertIn("codigo", knowledge)
+        self.assertIn("triagem", knowledge)
+        self.assertIn("base interna da lia", prompt)
+        self.assertIn("nao cite esta base para o usuario", prompt)
+        self.assertIn("pedidos fora do escopo nao devem apagar o contexto emocional anterior", prompt)
+
     def test_returning_contact_does_not_dump_previous_summary(self) -> None:
         user = main.User(nome="Davi", email="davi@example.com", hashed_password="x")
         memory = LiaMemorySnapshot(

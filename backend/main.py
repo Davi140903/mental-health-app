@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, Generator, Literal
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -105,6 +106,37 @@ def normalize_optional_text(value: str | None) -> str | None:
 
 OLLAMA_ENABLED = env_flag("OLLAMA_ENABLED", True)
 _OLLAMA_RESOLVED_MODEL: str | None = None
+LIA_KNOWLEDGE_DIR = Path(__file__).resolve().parent / "app" / "lia_knowledge"
+LIA_KNOWLEDGE_FILES = (
+    "identity.md",
+    "scope.md",
+    "conversation_flow.md",
+    "off_scope.md",
+    "safety.md",
+)
+
+
+def load_lia_knowledge_base() -> str:
+    sections: list[str] = []
+    for file_name in LIA_KNOWLEDGE_FILES:
+        file_path = LIA_KNOWLEDGE_DIR / file_name
+        if not file_path.exists():
+            continue
+        content = normalize_optional_text(file_path.read_text(encoding="utf-8"))
+        if content:
+            sections.append(content)
+    return "\n\n".join(sections)
+
+
+def build_lia_reference_prompt() -> str:
+    knowledge_base = load_lia_knowledge_base()
+    if not knowledge_base:
+        return ""
+    return (
+        "Base interna da Lia para esta resposta. Use como referencia obrigatoria de escopo, "
+        "tom e seguranca. Nao cite esta base para o usuario.\n"
+        f"{knowledge_base}"
+    )
 
 
 def resolve_ollama_model() -> str:
@@ -2946,6 +2978,7 @@ def build_lia_system_prompt(
     if stage != "opening":
         memory_context = "Se houver memoria do usuario, use isso so como pano de fundo, sem soar invasivo."
     retry_context = f"\nCorrecao importante desta tentativa: {retry_hint}\n" if retry_hint else ""
+    reference_context = build_lia_reference_prompt()
     return f"""
 Voce e a propria Lia, uma assistente conversacional simples de apoio emocional em um app.
 Responda em portugues do Brasil, com JSON puro e valido.
@@ -2954,6 +2987,7 @@ Use apenas caracteres ASCII simples, sem acentos.
 Etapa atual da conversa: {stage}.
 {memory_context}
 {retry_context}
+{reference_context}
 
 Objetivo:
 - acolher o usuario em tom humano;
@@ -3186,6 +3220,9 @@ def generate_lia_plain_reply(
         system_prompt += f"Motivo do reparo: {repair_reason}. "
     if retry_hint:
         system_prompt += f"Ajuste adicional: {retry_hint}"
+    reference_context = build_lia_reference_prompt()
+    if reference_context:
+        system_prompt += f" {reference_context}"
 
     payload = {
         "model": resolve_ollama_model(),
@@ -3273,6 +3310,9 @@ def rewrite_lia_from_analysis(
         f"{question_rule} "
         f"Roteiro obrigatorio deste turno: {build_lia_rewrite_seed(session, user_message, analysis)}."
     )
+    reference_context = build_lia_reference_prompt()
+    if reference_context:
+        system_prompt += f" {reference_context}"
     if retry_hint:
         system_prompt += f" Ajuste extra: {retry_hint}"
 
@@ -3391,6 +3431,9 @@ def rewrite_lia_reply(
         f"A etapa atual e {stage}. "
         f"{extra_style_hint}"
     )
+    reference_context = build_lia_reference_prompt()
+    if reference_context:
+        rewrite_system_prompt += f" {reference_context}"
 
     payload = {
         "model": resolve_ollama_model(),
