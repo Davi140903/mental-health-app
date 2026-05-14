@@ -3814,8 +3814,8 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
         ]
 
     return [
-        "Obrigada por conversar comigo. Ja tenho um retrato inicial de como voce esta.",
-        "Vou deixar isso registrado e, para hoje, vale escolher um passo pequeno de cuidado que caiba no seu ritmo.",
+        "Obrigada por conversar comigo. Por hoje, voce nao precisa resolver tudo de uma vez.",
+        "Se fizer sentido, escolha um cuidado simples para agora e deixe o resto para continuar com mais apoio.",
     ]
 
 
@@ -3828,13 +3828,16 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
     if session.followup_mode and (session.followup_turns_left or 0) <= 0:
         return (
-            "Obrigada por continuar comigo mais um pouco. Acho que por hoje a gente ja conseguiu organizar uma parte importante do que voce trouxe. "
-            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais, para voce nao precisar carregar isso sozinho. "
-            "Agora, tenta fazer algo simples que te ajude a baixar um pouco o ritmo, como ouvir uma musica calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
-            "A gente para por aqui hoje. Cuida de voce, e quando voltar eu continuo de onde isso ficou."
+            "Obrigada por continuar comigo mais um pouco. Pelo que voce trouxe, acho importante que voce nao fique carregando isso sozinho. "
+            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais e conversar com alguem que possa te acompanhar com mais calma. "
+            "Por agora, tenta fazer algo simples para baixar um pouco o ritmo, como ouvir uma musica calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
+            "A gente para por aqui hoje. Cuida de voce; quando voltar, eu continuo de onde isso ficou."
         )
 
-    return "Obrigada por me contar isso. Ja consegui guardar o essencial do que apareceu hoje, e podemos fechar por aqui se voce quiser. Se ainda fizer sentido, voce tambem pode continuar conversando comigo."
+    return (
+        "Obrigada por me contar isso. Por hoje, talvez ja seja suficiente ter colocado essa parte para fora. "
+        "Se quiser, podemos parar por aqui sem pressa; e, se ainda tiver algo importante, voce pode continuar comigo um pouco mais."
+    )
 
 
 def build_followup_continuation_reply(session: LiaSessionState, user_message: str) -> str:
@@ -3870,6 +3873,8 @@ def reply_sounds_like_closing(reply: str | None) -> bool:
             "podemos fechar",
             "ja consegui montar um retrato",
             "ja consegui guardar o essencial",
+            "por hoje, talvez ja seja suficiente",
+            "acho importante que voce nao fique carregando",
         ],
     )
 

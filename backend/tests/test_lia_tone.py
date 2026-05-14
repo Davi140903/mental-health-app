@@ -349,8 +349,10 @@ class LiaToneTests(unittest.TestCase):
         reply = main.build_simple_closing_reply(session, "na maior parte dos dias")
         lowered = main.normalize_for_match(reply)
 
-        self.assertIn("podemos fechar por aqui", lowered)
+        self.assertIn("podemos parar por aqui", lowered)
+        self.assertIn("colocado essa parte para fora", lowered)
         self.assertNotIn("pode falar mais", lowered)
+        self.assertNotIn("guardar o essencial", lowered)
 
     def test_followup_closing_reply_can_be_more_final(self) -> None:
         session = self.build_session(stage="closing", turn_count=6)
@@ -363,6 +365,7 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("triagem", lowered)
         self.assertIn("baixar um pouco o ritmo", lowered)
         self.assertIn("para por aqui", lowered)
+        self.assertNotIn("organizar uma parte importante", lowered)
 
     def test_followup_mode_keeps_conversation_open_for_extra_turn(self) -> None:
         session = self.build_session(stage="closing", turn_count=6)
