@@ -8,7 +8,7 @@ const agendaHours = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:0
 
 function formatDateTime(value?: string | null) {
   if (!value) {
-    return 'Sem horario definido';
+    return 'Sem horário definido';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
@@ -49,7 +49,7 @@ export default function PsychologistAgenda() {
         }
       } catch {
         if (active) {
-          setSlotFeedback('Nao foi possivel carregar sua agenda agora.');
+          setSlotFeedback('Não foi possível carregar sua agenda agora.');
         }
       }
     };
@@ -76,9 +76,9 @@ export default function PsychologistAgenda() {
           (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
         ),
       );
-      setSlotFeedback(`Horario de ${hour} publicado para os pacientes.`);
+      setSlotFeedback(`Horário de ${hour} publicado para os pacientes.`);
     } catch {
-      setSlotFeedback('Nao foi possivel criar esse horario.');
+      setSlotFeedback('Não foi possível criar esse horário.');
     } finally {
       setSlotBusy(false);
     }
@@ -90,9 +90,9 @@ export default function PsychologistAgenda() {
     try {
       await appService.deletePsychologistSlot(slotId);
       setSlots((current) => current.filter((slot) => slot.id !== slotId));
-      setSlotFeedback('Horario removido da agenda.');
+      setSlotFeedback('Horário removido da agenda.');
     } catch {
-      setSlotFeedback('Nao foi possivel remover esse horario.');
+      setSlotFeedback('Não foi possível remover esse horário.');
     } finally {
       setSlotBusy(false);
     }
@@ -108,12 +108,12 @@ export default function PsychologistAgenda() {
         <div>
           <span className="role-pill">Agenda profissional</span>
           <h1>Minha agenda</h1>
-          <p>{user?.nome ? `Profissional: ${user.nome}` : 'Defina os horarios disponiveis para triagem.'}</p>
+          <p>{user?.nome ? `Profissional: ${user.nome}` : 'Defina os horários disponíveis para triagem.'}</p>
         </div>
 
         <div className="psychologist-top-actions">
           <Link to="/psicologo" className="psychologist-nav-button primary">
-            Ver relatorios
+            Ver relatórios
           </Link>
           <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
             Sair
@@ -125,8 +125,8 @@ export default function PsychologistAgenda() {
         <section className="psychologist-workspace agenda-panel">
           <div className="psychologist-toolbar">
             <div>
-              <h2>Horarios disponiveis</h2>
-              <p>Escolha uma data e publique os horarios que os pacientes poderao selecionar ao finalizar a triagem.</p>
+              <h2>Horários disponíveis</h2>
+              <p>Escolha uma data e publique os horários que os pacientes poderão selecionar ao finalizar a triagem.</p>
             </div>
           </div>
 
@@ -135,7 +135,7 @@ export default function PsychologistAgenda() {
               Data da agenda
               <input type="date" value={agendaDate} onChange={(event) => setAgendaDate(event.target.value)} />
             </label>
-            <p>Cada horario usa a duracao padrao da triagem. Clique em um horario vazio para publicar, ou em um disponivel para remover.</p>
+            <p>Cada horário usa a duração padrão da triagem. Clique em um horário vazio para publicar, ou em um disponível para remover.</p>
           </div>
 
           {slotFeedback ? <div className="alert success">{slotFeedback}</div> : null}
@@ -152,7 +152,7 @@ export default function PsychologistAgenda() {
                   disabled={slotBusy || Boolean(slot && !slot.available)}
                 >
                   <strong>{hour}</strong>
-                  <span>{slot ? (slot.available ? 'Disponivel, clique para remover' : 'Agendado') : 'Livre para publicar'}</span>
+                  <span>{slot ? (slot.available ? 'Disponível, clique para remover' : 'Agendado') : 'Livre para publicar'}</span>
                 </button>
               );
             })}
@@ -162,8 +162,8 @@ export default function PsychologistAgenda() {
         <section className="psychologist-workspace">
           <div className="psychologist-toolbar">
             <div>
-              <h2>Proximos horarios publicados</h2>
-              <p>Resumo rapido da agenda futura.</p>
+              <h2>Próximos horários publicados</h2>
+              <p>Resumo rápido da agenda futura.</p>
             </div>
           </div>
 
@@ -173,12 +173,12 @@ export default function PsychologistAgenda() {
                 <article key={slot.id} className={`agenda-slot-card ${slot.available ? '' : 'busy'}`}>
                   <div>
                     <strong>{formatDateTime(slot.starts_at)}</strong>
-                    <span>{slot.available ? 'Disponivel para pacientes' : 'Horario ja agendado'}</span>
+                    <span>{slot.available ? 'Disponível para pacientes' : 'Horário já agendado'}</span>
                   </div>
                 </article>
               ))
             ) : (
-              <div className="empty-state">Nenhum horario futuro cadastrado ainda.</div>
+              <div className="empty-state">Nenhum horário futuro cadastrado ainda.</div>
             )}
           </div>
         </section>
