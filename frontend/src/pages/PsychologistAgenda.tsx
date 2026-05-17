@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth';
+import AppFooter from '../components/AppFooter';
+import PsychologistHeader from '../components/PsychologistHeader';
 import { appService } from '../services/app';
 import type { TriageSlot } from '../types/app';
 
@@ -31,8 +31,6 @@ function combineDateAndHour(dateValue: string, hourValue: string) {
 }
 
 export default function PsychologistAgenda() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [slots, setSlots] = useState<TriageSlot[]>([]);
   const [agendaDate, setAgendaDate] = useState(toDateInputValue());
   const [slotFeedback, setSlotFeedback] = useState('');
@@ -60,11 +58,6 @@ export default function PsychologistAgenda() {
       active = false;
     };
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleCreateSlotAt = async (hour: string) => {
     setSlotBusy(true);
@@ -104,22 +97,11 @@ export default function PsychologistAgenda() {
 
   return (
     <div className="psychologist-app-shell">
-      <header className="psychologist-topbar">
-        <div>
-          <span className="role-pill">Agenda profissional</span>
-          <h1>Minha agenda</h1>
-          <p>{user?.nome ? `Profissional: ${user.nome}` : 'Defina os horários disponíveis para triagem.'}</p>
-        </div>
-
-        <div className="psychologist-top-actions">
-          <Link to="/psicologo" className="psychologist-nav-button primary">
-            Ver relatórios
-          </Link>
-          <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
-            Sair
-          </button>
-        </div>
-      </header>
+      <PsychologistHeader
+        eyebrow="Agenda profissional"
+        title="Minha agenda"
+        description="Defina os horários disponíveis para triagem."
+      />
 
       <main className="psychologist-page">
         <section className="psychologist-workspace agenda-panel">
@@ -183,6 +165,7 @@ export default function PsychologistAgenda() {
           </div>
         </section>
       </main>
+      <AppFooter tone="psychologist" />
     </div>
   );
 }

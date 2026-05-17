@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AppFooter from '../components/AppFooter';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
 import type { AdminPsychologistInput } from '../types/app';
@@ -285,6 +286,7 @@ export default function AdminDashboard() {
           </div>
         </section>
       </main>
+      <AppFooter tone="admin" />
     </div>
   );
 }

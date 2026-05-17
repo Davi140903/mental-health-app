@@ -267,6 +267,11 @@ a {
   box-shadow: 0 8px 24px rgba(56, 78, 69, 0.05);
 }
 
+.nav-strip-quiet {
+  width: min(880px, calc(100% - 1.5rem));
+  margin-bottom: 0.7rem;
+}
+
 .nav-link,
 .secondary-button,
 .link-button,
@@ -300,6 +305,43 @@ a {
 
 .secondary-button:hover:enabled {
   background: rgba(127, 155, 138, 0.2);
+}
+
+.app-footer {
+  width: min(940px, calc(100% - 1.5rem));
+  margin: 2rem auto 0;
+  padding: 1rem 0 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid rgba(69, 95, 85, 0.1);
+  color: #657972;
+  font-size: 0.86rem;
+}
+
+.app-footer strong {
+  color: #305144;
+}
+
+.app-footer-psychologist {
+  width: min(1180px, calc(100% - 1.5rem));
+  border-top-color: rgba(31, 62, 80, 0.12);
+  color: #5f7480;
+}
+
+.app-footer-psychologist strong {
+  color: #315d74;
+}
+
+.app-footer-admin {
+  width: min(1180px, calc(100% - 1.5rem));
+  border-top-color: rgba(118, 78, 72, 0.13);
+  color: #765d58;
+}
+
+.app-footer-admin strong {
+  color: #8a493f;
 }
 
 .danger-button {
@@ -2108,6 +2150,7 @@ a {
 
 @media (max-width: 720px) {
   .topbar,
+  .app-footer,
   .psychologist-topbar,
   .psychologist-toolbar,
   .admin-topbar,
@@ -2152,6 +2195,7 @@ a {
   .page-container,
   .topbar,
   .nav-strip,
+  .app-footer,
   .psychologist-topbar,
   .psychologist-page,
   .admin-topbar,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth';
+import AppFooter from '../components/AppFooter';
+import PsychologistHeader from '../components/PsychologistHeader';
 import { appService } from '../services/app';
 import type { LiaRecentInteraction, PsychologistPatientDetail, PsychologistTriageRequest, QuestionnaireResult } from '../types/app';
 
@@ -129,8 +129,6 @@ function moodDescription(value: number) {
 }
 
 export default function PsychologistDashboard() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [requests, setRequests] = useState<PsychologistTriageRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -176,11 +174,6 @@ export default function PsychologistDashboard() {
 
   const pendingCount = requests.filter((item) => item.status === 'pending').length;
   const scheduledCount = requests.filter((item) => item.status === 'scheduled').length;
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleSelectRequest = async (request: PsychologistTriageRequest) => {
     if (selectedRequestId === request.id) {
@@ -400,22 +393,11 @@ export default function PsychologistDashboard() {
 
   return (
     <div className="psychologist-app-shell">
-      <header className="psychologist-topbar">
-        <div>
-          <span className="role-pill">Painel profissional</span>
-          <h1>Solicitações de triagem</h1>
-          <p>{user?.nome ? `Profissional: ${user.nome}` : 'Acompanhe os pedidos que chegaram pela Lia.'}</p>
-        </div>
-
-        <div className="psychologist-top-actions">
-          <Link to="/psicologo/agenda" className="psychologist-nav-button primary">
-            Minha agenda
-          </Link>
-          <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
-            Sair
-          </button>
-        </div>
-      </header>
+      <PsychologistHeader
+        eyebrow="Painel profissional"
+        title="Solicitações de triagem"
+        description="Acompanhe os pedidos que chegaram pela Lia."
+      />
 
       <main className="psychologist-page">
         <section className="psychologist-summary-grid">
@@ -659,6 +641,7 @@ export default function PsychologistDashboard() {
           </div>
         </section>
       </main>
+      <AppFooter tone="psychologist" />
 
       {noteModalOpen && patientDetail ? (
         <div className="modal-backdrop" role="presentation">

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
+import AppFooter from './AppFooter';
 
 const links = [
   { to: '/painel', label: 'Painel' },
@@ -37,21 +38,20 @@ export default function Layout({
         </button>
       </header>
 
-      {!immersive ? (
-        <nav className="nav-strip" aria-label="Navegação principal">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-      ) : null}
+      <nav className={immersive ? 'nav-strip nav-strip-quiet' : 'nav-strip'} aria-label="Navegação principal">
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          >
+            {link.label}
+          </NavLink>
+        ))}
+      </nav>
 
       <main className={immersive ? 'page-container page-container-immersive' : 'page-container'}>{children}</main>
+      <AppFooter tone="user" />
     </div>
   );
 }
