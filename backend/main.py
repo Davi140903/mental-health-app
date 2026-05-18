@@ -51,6 +51,7 @@ from app.config import (
     env_flag,
 )
 from app.db import SessionLocal, ensure_utc, engine, pwd_context, utcnow
+from app.crypto import decrypt_text, encrypt_text
 from app.models import Base, EducationalContent, EmailVerificationCode, LiaInteraction, LiaUserMemory, MoodEntry, PsychologistPatientNote, PsychologistSlot, QuestionnaireResult, TriageRequest, User
 from app.schemas import (
     AdminPsychologistCreate,
@@ -4256,6 +4257,10 @@ def ensure_database_shape() -> None:
         statements.append("ALTER TABLE users ADD COLUMN consentimento_lgpd BOOLEAN NOT NULL DEFAULT 1")
     if "role" not in user_columns:
         statements.append("ALTER TABLE users ADD COLUMN role VARCHAR NOT NULL DEFAULT 'user'")
+    if "professional_email_encrypted" not in user_columns:
+        statements.append("ALTER TABLE users ADD COLUMN professional_email_encrypted TEXT")
+    if "professional_name_encrypted" not in user_columns:
+        statements.append("ALTER TABLE users ADD COLUMN professional_name_encrypted TEXT")
 
     if "lia_interactions" in inspector.get_table_names():
         lia_columns = {column["name"] for column in inspector.get_columns("lia_interactions")}
@@ -4272,6 +4277,40 @@ def ensure_database_shape() -> None:
         with engine.begin() as connection:
             for statement in statements:
                 connection.execute(text(statement))
+
+
+def sync_professional_encryption(db: Session) -> None:
+    psychologists = db.scalars(select(User).where(User.role == "psychologist")).all()
+    changed = False
+    for psychologist in psychologists:
+        encrypted_email = encrypt_text(psychologist.email)
+        encrypted_name = encrypt_text(psychologist.nome)
+        if psychologist.professional_email_encrypted != encrypted_email:
+            psychologist.professional_email_encrypted = encrypted_email
+            changed = True
+        if psychologist.professional_name_encrypted != encrypted_name:
+            psychologist.professional_name_encrypted = encrypted_name
+            changed = True
+        if changed:
+            db.add(psychologist)
+    if changed:
+        db.commit()
+
+
+def set_professional_private_fields(user: User, email: str, name: str) -> None:
+    user.professional_email_encrypted = encrypt_text(email)
+    user.professional_name_encrypted = encrypt_text(name)
+
+
+def build_admin_psychologist_out(user: User) -> UsuarioOut:
+    return UsuarioOut(
+        id=user.id,
+        email=decrypt_text(user.professional_email_encrypted) or user.email,
+        nome=decrypt_text(user.professional_name_encrypted) or user.nome,
+        role="psychologist",
+        consentimento_lgpd=user.consentimento_lgpd,
+        criado_em=user.criado_em,
+    )
 
 
 def seed_contents(db: Session) -> None:
@@ -4310,6 +4349,7 @@ async def lifespan(_: FastAPI):
     ensure_database_shape()
     with SessionLocal() as db:
         ensure_initial_admin(db)
+        sync_professional_encryption(db)
         seed_contents(db)
     yield
 
@@ -5073,8 +5113,9 @@ def get_me(current_user: User = Depends(get_current_user)) -> User:
 def list_psychologists(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> list[User]:
-    return list(db.scalars(select(User).where(User.role == "psychologist").order_by(User.nome.asc())).all())
+) -> list[UsuarioOut]:
+    psychologists = list(db.scalars(select(User).where(User.role == "psychologist").order_by(User.nome.asc())).all())
+    return [build_admin_psychologist_out(item) for item in psychologists]
 
 
 @app.post("/admin/psychologists", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
@@ -5082,7 +5123,7 @@ def create_psychologist(
     data: AdminPsychologistCreate,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> User:
+) -> UsuarioOut:
     normalized_email = normalize_email(data.email)
     existing_user = get_user_by_email(db, normalized_email)
     if existing_user:
@@ -5095,10 +5136,11 @@ def create_psychologist(
         consentimento_lgpd=data.consentimento_lgpd,
         hashed_password=hash_password(data.password),
     )
+    set_professional_private_fields(user, normalized_email, data.nome.strip())
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return build_admin_psychologist_out(user)
 
 
 @app.patch("/admin/psychologists/{psychologist_id}", response_model=UsuarioOut)
@@ -5107,7 +5149,7 @@ def update_psychologist(
     data: AdminPsychologistUpdate,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> User:
+) -> UsuarioOut:
     psychologist = db.get(User, psychologist_id)
     if not psychologist or psychologist.role != "psychologist":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Psicologo nao encontrado.")
@@ -5119,13 +5161,14 @@ def update_psychologist(
 
     psychologist.email = normalized_email
     psychologist.nome = data.nome.strip()
+    set_professional_private_fields(psychologist, normalized_email, data.nome.strip())
     psychologist.consentimento_lgpd = data.consentimento_lgpd
     if data.password:
         psychologist.hashed_password = hash_password(data.password)
     db.add(psychologist)
     db.commit()
     db.refresh(psychologist)
-    return psychologist
+    return build_admin_psychologist_out(psychologist)
 
 
 @app.delete("/admin/psychologists/{psychologist_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -18,6 +18,8 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     email = Column(String, unique=True, nullable=False, index=True)
     nome = Column(String, nullable=False)
+    professional_email_encrypted = Column(Text, nullable=True)
+    professional_name_encrypted = Column(Text, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="user", index=True)
     consentimento_lgpd = Column(Boolean, nullable=False, default=True)

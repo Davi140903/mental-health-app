@@ -43,6 +43,7 @@ if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY must be configured outside development.")
 
 ALGORITHM = "HS256"
+DATA_ENCRYPTION_KEY = os.getenv("DATA_ENCRYPTION_KEY", "").strip()
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 FRONTEND_ORIGINS = [
     "http://localhost:5173",
