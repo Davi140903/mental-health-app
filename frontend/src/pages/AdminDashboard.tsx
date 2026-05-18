@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AppFooter from '../components/AppFooter';
+import AppHeader from '../components/AppHeader';
 import { useAuth } from '../contexts/useAuth';
 import { appService } from '../services/app';
 import type { AdminPsychologistInput } from '../types/app';
@@ -20,8 +20,7 @@ function formatDate(value: string) {
 }
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [psychologists, setPsychologists] = useState<Usuario[]>([]);
   const [form, setForm] = useState<AdminPsychologistInput>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -120,28 +119,23 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
     <div className="admin-app-shell">
-      <header className="admin-topbar">
+      <AppHeader
+        tone="admin"
+        brand="Lia"
+        subtitle={user?.nome ? `Operador: ${user.nome}` : 'Área administrativa'}
+        links={[{ to: '/admin', label: 'Psicólogos' }]}
+      />
+      <div className="admin-page-heading">
         <div>
           <span className="admin-role-pill">Painel administrativo</span>
           <h1>Gestao de acessos profissionais</h1>
           <p>
-            {user?.nome
-              ? `Operador: ${user.nome}`
-              : 'Controle os perfis profissionais autorizados na plataforma.'}
+            Controle os perfis profissionais autorizados na plataforma.
           </p>
         </div>
-
-        <button type="button" className="admin-ghost-button" onClick={handleLogout}>
-          Sair
-        </button>
-      </header>
+      </div>
 
       <main className="admin-page">
         <section className="admin-summary-grid">

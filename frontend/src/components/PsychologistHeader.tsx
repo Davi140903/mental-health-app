@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
+import AppHeader from './AppHeader';
 
 type PsychologistHeaderProps = {
   eyebrow: string;
@@ -8,42 +8,24 @@ type PsychologistHeaderProps = {
 };
 
 export default function PsychologistHeader({ eyebrow, title, description }: PsychologistHeaderProps) {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { user } = useAuth();
 
   return (
-    <header className="psychologist-topbar">
-      <div>
+    <>
+      <AppHeader
+        tone="psychologist"
+        brand="Lia"
+        subtitle={user?.nome ? `Profissional: ${user.nome}` : 'Área profissional'}
+        links={[
+          { to: '/psicologo', label: 'Relatórios' },
+          { to: '/psicologo/agenda', label: 'Minha agenda' },
+        ]}
+      />
+      <div className="professional-page-heading">
         <span className="role-pill">{eyebrow}</span>
         <h1>{title}</h1>
-        <p>{user?.nome ? `Profissional: ${user.nome}` : description}</p>
+        <p>{description}</p>
       </div>
-
-      <div className="psychologist-top-actions" aria-label="Navegacao profissional">
-        <Link
-          to="/psicologo"
-          className={location.pathname === '/psicologo' ? 'psychologist-nav-button primary' : 'psychologist-nav-button'}
-        >
-          Relatorios
-        </Link>
-        <Link
-          to="/psicologo/agenda"
-          className={
-            location.pathname === '/psicologo/agenda' ? 'psychologist-nav-button primary' : 'psychologist-nav-button'
-          }
-        >
-          Minha agenda
-        </Link>
-        <button type="button" className="psychologist-nav-button" onClick={handleLogout}>
-          Sair
-        </button>
-      </div>
-    </header>
+    </>
   );
 }

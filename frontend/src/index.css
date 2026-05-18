@@ -216,6 +216,139 @@ a {
   min-height: 100vh;
 }
 
+.site-header {
+  border-bottom: 1px solid rgba(69, 95, 85, 0.1);
+  background: rgba(247, 251, 248, 0.84);
+  backdrop-filter: blur(18px);
+}
+
+.site-header-inner {
+  width: min(1180px, calc(100% - 1.5rem));
+  min-height: 4.7rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.site-brand {
+  min-width: 10rem;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.site-brand strong {
+  color: #253b34;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+}
+
+.site-brand span {
+  color: #687b74;
+  font-size: 0.88rem;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.site-nav-link {
+  padding: 0.58rem 0.8rem;
+  border-radius: 999px;
+  color: #63766f;
+  font-weight: 750;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.site-nav-link:hover {
+  background: rgba(127, 155, 138, 0.1);
+}
+
+.site-nav-link.active {
+  background: #e6f0ea;
+  color: #305144;
+}
+
+.site-logout {
+  min-height: 2.35rem;
+  padding-inline: 0.95rem;
+  background: rgba(127, 155, 138, 0.12);
+  color: #4a655a;
+  border: 1px solid rgba(127, 155, 138, 0.16);
+}
+
+.site-logout:hover:enabled {
+  background: rgba(127, 155, 138, 0.2);
+}
+
+.site-header-psychologist {
+  border-bottom-color: rgba(31, 62, 80, 0.12);
+  background: rgba(245, 248, 250, 0.86);
+}
+
+.site-header-psychologist .site-brand strong,
+.site-header-psychologist .site-nav-link.active {
+  color: #315d74;
+}
+
+.site-header-psychologist .site-brand span {
+  color: #5f7480;
+}
+
+.site-header-psychologist .site-nav-link {
+  color: #4f6977;
+}
+
+.site-header-psychologist .site-nav-link:hover,
+.site-header-psychologist .site-nav-link.active {
+  background: #dcebf2;
+}
+
+.site-header-psychologist .site-logout {
+  background: rgba(49, 93, 116, 0.08);
+  color: #315d74;
+  border-color: rgba(49, 93, 116, 0.16);
+}
+
+.site-header-psychologist .site-logout:hover:enabled {
+  background: #cfe4ef;
+}
+
+.site-header-admin {
+  border-bottom-color: rgba(118, 78, 72, 0.13);
+  background: rgba(251, 247, 246, 0.88);
+}
+
+.site-header-admin .site-brand strong,
+.site-header-admin .site-nav-link.active {
+  color: #8a493f;
+}
+
+.site-header-admin .site-brand span,
+.site-header-admin .site-nav-link {
+  color: #765d58;
+}
+
+.site-header-admin .site-nav-link:hover,
+.site-header-admin .site-nav-link.active {
+  background: #f4dbd7;
+}
+
+.site-header-admin .site-logout {
+  background: #ffffff;
+  color: #8a493f;
+  border-color: rgba(180, 107, 98, 0.22);
+}
+
+.site-header-admin .site-logout:hover:enabled {
+  background: #f7e7e4;
+}
+
 .topbar,
 .nav-strip,
 .page-container {
@@ -822,6 +955,30 @@ a {
     linear-gradient(90deg, rgba(70, 127, 157, 0.08) 1px, transparent 1px),
     linear-gradient(180deg, #f5f8fa 0%, #edf3f6 100%);
   background-size: 28px 28px, auto;
+}
+
+.professional-page-heading,
+.admin-page-heading {
+  width: min(1180px, calc(100% - 1.5rem));
+  margin: 0 auto;
+  padding: 1.3rem 0 1rem;
+}
+
+.professional-page-heading h1,
+.admin-page-heading h1 {
+  margin: 0.3rem 0 0.1rem;
+  font-size: clamp(1.55rem, 3vw, 2.05rem);
+  letter-spacing: -0.03em;
+}
+
+.professional-page-heading p {
+  margin: 0;
+  color: #5f7480;
+}
+
+.admin-page-heading p {
+  margin: 0;
+  color: #765d58;
 }
 
 .psychologist-topbar,
@@ -2149,6 +2306,23 @@ a {
 }
 
 @media (max-width: 720px) {
+  .site-header-inner {
+    min-height: 0;
+    padding: 0.9rem 0;
+    flex-wrap: wrap;
+  }
+
+  .site-brand {
+    min-width: 0;
+    flex: 1 1 calc(100% - 4.5rem);
+  }
+
+  .site-nav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .topbar,
   .app-footer,
   .psychologist-topbar,
@@ -2193,6 +2367,7 @@ a {
   }
 
   .page-container,
+  .site-header-inner,
   .topbar,
   .nav-strip,
   .app-footer,
