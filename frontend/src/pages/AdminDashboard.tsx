@@ -19,6 +19,19 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function maskName(value: string) {
+  const parts = value.trim().split(/\s+/);
+  return parts
+    .map((part) => (part.length <= 2 ? '•'.repeat(part.length) : `${part[0]}${'•'.repeat(Math.max(part.length - 1, 2))}`))
+    .join(' ');
+}
+
+function maskEmail(value: string) {
+  const [localPart, domain = ''] = value.split('@');
+  const visibleLocal = localPart.slice(0, 2);
+  return `${visibleLocal}${'•'.repeat(Math.max(localPart.length - 2, 3))}@${domain}`;
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [psychologists, setPsychologists] = useState<Usuario[]>([]);
@@ -28,6 +41,7 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
 
   const loadPsychologists = async () => {
     setLoading(true);
@@ -52,7 +66,20 @@ export default function AdminDashboard() {
     setEditingId(null);
   };
 
+  const toggleReveal = (psychologistId: string) => {
+    setRevealedIds((current) => {
+      const next = new Set(current);
+      if (next.has(psychologistId)) {
+        next.delete(psychologistId);
+      } else {
+        next.add(psychologistId);
+      }
+      return next;
+    });
+  };
+
   const handleEdit = (psychologist: Usuario) => {
+    setRevealedIds((current) => new Set(current).add(psychologist.id));
     setEditingId(psychologist.id);
     setForm({
       email: psychologist.email,
@@ -228,7 +255,7 @@ export default function AdminDashboard() {
             <div className="admin-toolbar">
               <div>
                 <h2>Registro de profissionais</h2>
-                <p>Lista administrativa dos logins autorizados para atendimento.</p>
+                <p>Dados pessoais protegidos por padrão; revele apenas quando houver necessidade administrativa.</p>
               </div>
             </div>
 
@@ -252,13 +279,20 @@ export default function AdminDashboard() {
                     {psychologists.map((psychologist) => (
                       <tr key={psychologist.id}>
                         <td>
-                          <strong>{psychologist.nome}</strong>
-                          <span>Psicólogo</span>
+                          <strong>{revealedIds.has(psychologist.id) ? psychologist.nome : maskName(psychologist.nome)}</strong>
+                          <span>{revealedIds.has(psychologist.id) ? 'Psicólogo' : 'Dado protegido'}</span>
                         </td>
-                        <td>{psychologist.email}</td>
+                        <td>{revealedIds.has(psychologist.id) ? psychologist.email : maskEmail(psychologist.email)}</td>
                         <td>{formatDate(psychologist.criado_em)}</td>
                         <td>
                           <div className="admin-card-actions">
+                            <button
+                              type="button"
+                              className="admin-ghost-button"
+                              onClick={() => toggleReveal(psychologist.id)}
+                            >
+                              {revealedIds.has(psychologist.id) ? 'Ocultar' : 'Mostrar'}
+                            </button>
                             <button type="button" className="admin-ghost-button" onClick={() => handleEdit(psychologist)}>
                               Editar
                             </button>
