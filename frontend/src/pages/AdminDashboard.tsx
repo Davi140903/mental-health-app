@@ -19,13 +19,6 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function maskName(value: string) {
-  const parts = value.trim().split(/\s+/);
-  return parts
-    .map((part) => (part.length <= 2 ? '•'.repeat(part.length) : `${part[0]}${'•'.repeat(Math.max(part.length - 1, 2))}`))
-    .join(' ');
-}
-
 function maskEmail(value: string) {
   const [localPart, domain = ''] = value.split('@');
   const visibleLocal = localPart.slice(0, 2);
@@ -255,7 +248,7 @@ export default function AdminDashboard() {
             <div className="admin-toolbar">
               <div>
                 <h2>Registro de profissionais</h2>
-                <p>Dados pessoais protegidos por padrão; revele apenas quando houver necessidade administrativa.</p>
+                <p>Emails protegidos por padrão; revele apenas quando houver necessidade administrativa.</p>
               </div>
             </div>
 
@@ -279,8 +272,8 @@ export default function AdminDashboard() {
                     {psychologists.map((psychologist) => (
                       <tr key={psychologist.id}>
                         <td>
-                          <strong>{revealedIds.has(psychologist.id) ? psychologist.nome : maskName(psychologist.nome)}</strong>
-                          <span>{revealedIds.has(psychologist.id) ? 'Psicólogo' : 'Dado protegido'}</span>
+                          <strong>{psychologist.nome}</strong>
+                          <span>Psicólogo</span>
                         </td>
                         <td>{revealedIds.has(psychologist.id) ? psychologist.email : maskEmail(psychologist.email)}</td>
                         <td>{formatDate(psychologist.criado_em)}</td>
