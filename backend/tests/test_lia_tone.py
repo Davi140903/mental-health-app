@@ -814,6 +814,34 @@ class LiaToneTests(unittest.TestCase):
                 for fragment in forbidden_fragments:
                     self.assertNotIn(fragment, lowered)
 
+    def test_fallback_conversation_reduces_repeated_openings_and_support(self) -> None:
+        session = self.build_session(stage="support", turn_count=0)
+        messages = [
+            "estou me sentindo pressionado no trabalho",
+            "meu chefe critica tudo que eu faco",
+            "isso tem me deixado irritado e sem vontade de falar com ninguem",
+            "ja vem acontecendo ha algumas semanas",
+        ]
+        replies: list[str] = []
+
+        for message in messages:
+            session.turn_count += 1
+            session.transcript.append(main.LiaTranscriptMessage(role="user", content=message))
+            main.infer_topic_states(session, message)
+            session.current_topic = main.next_lia_topic(session)
+            analysis = main.fallback_lia_analysis(session, message)
+            reply = analysis.assistant_reply or ""
+            replies.append(reply)
+            session.stage = analysis.recommended_stage
+            session.transcript.append(main.LiaTranscriptMessage(role="assistant", content=reply))
+
+        joined = main.normalize_for_match(" ".join(replies))
+        entendi_starts = sum(1 for reply in replies if main.normalize_for_match(reply).startswith("entendi"))
+
+        self.assertLessEqual(entendi_starts, 1)
+        self.assertLessEqual(joined.count("nao precisa desenrolar tudo de uma vez"), 1)
+        self.assertLessEqual(joined.count("se quiser me conta no seu ritmo"), 1)
+
     def test_study_context_checks_attention_reading_or_organization_without_diagnosis(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.current_topic = "distress_context"

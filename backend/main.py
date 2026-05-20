@@ -829,6 +829,50 @@ def first_fresh_phrase(session: LiaSessionState, options: list[str]) -> str:
     return options[0]
 
 
+def recent_assistant_starts_with(session: LiaSessionState, prefix: str, *, limit: int = 2) -> bool:
+    normalized_prefix = normalize_for_match(prefix)
+    return any(
+        normalize_for_match(message).startswith(normalized_prefix)
+        for message in get_recent_transcript_by_role(session, "assistant", limit=limit)
+    )
+
+
+def reduce_repeated_opening(session: LiaSessionState, reflection: str) -> str:
+    if not reflection.startswith("Entendi."):
+        return reflection
+    if len(get_recent_transcript_by_role(session, "assistant", limit=6)) >= 1:
+        without_prefix = re.sub(r"^Entendi\.\s*", "", reflection, count=1).strip()
+        if without_prefix:
+            return without_prefix
+        return first_fresh_phrase(session, ["Certo.", "Estou acompanhando.", "Vamos por essa parte."])
+    if not recent_assistant_starts_with(session, "Entendi."):
+        return reflection
+    without_prefix = re.sub(r"^Entendi\.\s*", "", reflection, count=1).strip()
+    if without_prefix:
+        return without_prefix
+    return first_fresh_phrase(session, ["Certo.", "Estou acompanhando.", "Vamos por essa parte."])
+
+
+def reduce_repeated_first_sentence(session: LiaSessionState, reply: str) -> str:
+    cleaned_reply = reply.strip()
+    match = re.match(r"^(.+?[.!?])\s+(.+)$", cleaned_reply)
+    if not match:
+        return cleaned_reply
+
+    first_sentence = match.group(1).strip()
+    rest = match.group(2).strip()
+    normalized_first = normalize_for_match(first_sentence)
+    if len(normalized_first) < 18:
+        return cleaned_reply
+
+    recent_assistant_messages = [
+        normalize_for_match(message) for message in get_recent_transcript_by_role(session, "assistant", limit=3)
+    ]
+    if any(normalized_first in message for message in recent_assistant_messages):
+        return rest
+    return cleaned_reply
+
+
 def remember_question_intent(session: LiaSessionState, intent: str) -> None:
     session.recent_question_intents = [*session.recent_question_intents[-4:], intent]
 
@@ -2812,11 +2856,32 @@ def build_contextual_support(
         if session.turn_count == 1 and context["ansiedade"]:
             return None
         if context["pressure"] and context["work_study"]:
-            return "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje."
+            return first_fresh_phrase(
+                session,
+                [
+                    "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje.",
+                    "Vamos ficar primeiro no pedaco que mais apertou.",
+                    "A gente pode separar uma parte disso antes de tentar entender tudo.",
+                ],
+            )
         if context["pressure"] or context["worn_out"]:
-            return "Pode me contar isso sem precisar deixar tudo bem explicado."
+            return first_fresh_phrase(
+                session,
+                [
+                    "Pode me contar isso sem precisar deixar tudo bem explicado.",
+                    "Nao precisa organizar tudo antes de falar.",
+                    "Da para ir por uma parte menor agora.",
+                ],
+            )
         if context["palpitacao"] or context["ansiedade"] or context["controlar"] or context["relaxar"] or context["short_both"]:
-            return "Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar."
+            return first_fresh_phrase(
+                session,
+                [
+                    "Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar.",
+                    "Pode falar so o pedaco que estiver mais claro agora.",
+                    "A gente nao precisa fechar tudo nessa mensagem.",
+                ],
+            )
         if context["medo"]:
             return "Vamos so ficar no que esta acontecendo agora, sem tentar resolver tudo de uma vez."
 
@@ -3862,8 +3927,10 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
     else:
         reflection = build_contextual_reflection(session, user_message, risk_level)
 
+    reflection = reduce_repeated_opening(session, reflection)
     support = build_contextual_support(session, user_message, recommended_stage)
     assistant_reply = join_reply_parts(reflection, support, next_question if recommended_stage != "closing" else None)
+    assistant_reply = reduce_repeated_first_sentence(session, assistant_reply)
     analysis = LiaAnalysis(
         assistant_reply=assistant_reply,
         reflection=reflection,
