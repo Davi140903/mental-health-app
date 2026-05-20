@@ -2311,7 +2311,7 @@ def build_contextual_reflection(
         return "Entendi. Parece que voce chegou bem no limite nesses ultimos dias."
 
     if session.turn_count == 1 and context["ansiedade"]:
-        return "Entendi. Quando voce fala em ansiedade, eu prefiro ir com calma antes de concluir qualquer coisa."
+        return "Entendi. Ansiedade pode aparecer de jeitos diferentes."
 
     if session.turn_count == 1 and context["tristeza"]:
         return "Entendi. Tem um peso ai que nao parece pequeno."
@@ -2771,6 +2771,8 @@ def build_contextual_support(
         return None
 
     if stage == "anxiety":
+        if session.turn_count == 1 and context["ansiedade"]:
+            return None
         if context["pressure"] and context["work_study"]:
             return "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje."
         if context["pressure"] or context["worn_out"]:
@@ -3262,7 +3264,7 @@ Regras:
 - se a fala for simbolica, fale da imagem ou do significado dela; nao reescreva isso como sofrimento escondido;
 - se o usuario disser que esta ansioso, confirme com calma como isso aparece antes de afirmar intensidade, duracao ou padrao;
 - nao diga que o usuario "tem ansiedade ultimamente" se ele so mencionou estar ansioso agora;
-- se a fala for apenas "estou ansioso" ou parecida, diga algo como "quando voce fala em ansiedade..." e pergunte como isso aparece; nao transforme em "voce tem ansiedade";
+- se a fala for apenas "estou ansioso" ou parecida, responda com linguagem livre e natural, sem frase fixa, mas confirme como isso aparece; nao transforme em "voce tem ansiedade";
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;
@@ -3498,6 +3500,10 @@ def build_lia_rewrite_seed(
         intent_parts.append("check-in breve: nao investigar sintomas")
     if user_needs_active_guidance(session, user_message):
         intent_parts.append("o usuario precisa de acolhimento concreto e continuidade")
+    if context["ansiedade"] and not (context["duration"] or context["latest_duration"]):
+        intent_parts.append(
+            "ansiedade: falar de forma livre, sem diagnosticar, sem dizer que e frequente, e confirmar como aparece"
+        )
 
     return " | ".join(part for part in intent_parts if part)
 
@@ -3534,6 +3540,7 @@ def rewrite_lia_from_analysis(
         "Nao cite emergencia, crise, suicidio ou ajuda profissional se o roteiro nao trouxer isso. "
         "Nao use texto meta como 'ultima mensagem do usuario', 'resposta anterior da Lia' ou 'reescreva agora'. "
         "Seu trabalho e apenas pegar a intencao ja definida e dizer isso de um jeito mais vivo. "
+        "Nao copie frases base como se fossem obrigatorias; preserve o roteiro, mas escreva com linguagem livre e natural. "
         f"{question_rule} "
         f"Roteiro obrigatorio deste turno: {build_lia_rewrite_seed(session, user_message, analysis)}."
     )

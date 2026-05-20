@@ -762,9 +762,11 @@ class LiaToneTests(unittest.TestCase):
         analysis = main.fallback_lia_analysis(session, "estou ansioso por causa da prova")
         lowered = main.normalize_for_match(analysis.assistant_reply or "")
 
-        self.assertIn("quando voce fala em ansiedade", lowered)
+        self.assertIn("ansiedade", lowered)
         self.assertIn("hora da prova", lowered)
         self.assertNotIn("ansiedade ultimamente", lowered)
+        self.assertNotIn("prefiro ir com calma", lowered)
+        self.assertNotIn("me conta no seu ritmo", lowered)
 
     def test_rejects_anxiety_diagnosis_when_user_only_says_anxious(self) -> None:
         session = self.build_session(stage="anxiety", turn_count=1)
@@ -787,7 +789,7 @@ class LiaToneTests(unittest.TestCase):
             main.reply_respects_support_context(
                 session,
                 "estou ansioso",
-                "Quando voce fala em ansiedade, eu prefiro entender com calma. Isso aparece mais no corpo, nos pensamentos ou na dificuldade de focar?",
+                "Ansiedade pode aparecer de jeitos diferentes. Isso aparece mais no corpo, nos pensamentos ou na dificuldade de focar?",
             )
         )
 
