@@ -578,6 +578,15 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("caminho para seguir", reply)
         self.assertNotIn("preocupacoes", reply)
 
+    def test_short_gibberish_asks_for_clarification_without_specific_patch(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.normalize_for_match(main.build_scope_guard_reply(session, "ui owe") or "")
+
+        self.assertIn("nao consegui entender", reply)
+        self.assertNotIn("obrigada por ter compartilhado", reply)
+        self.assertNotIn("pensamento ou sensacao", reply)
+
     def test_recipe_redirect_mentions_work_without_inventing_offenses(self) -> None:
         session = self.build_session(stage="support", turn_count=3)
         session.transcript = [

@@ -1720,6 +1720,10 @@ def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str 
             return specific_reply
         return build_off_scope_reply(session)
 
+    if not context["unsure"] and not is_probably_meaningful_message(user_message):
+        session.clarification_streak = min(int(session.clarification_streak or 0) + 1, 3)
+        return build_clarification_reply(session)
+
     session.off_scope_count = 0
     return None
 
