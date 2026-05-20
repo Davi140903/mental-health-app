@@ -182,6 +182,10 @@ export default function DashboardChat() {
     setBusy(true);
     setLiaError('');
     setDraftMessage('');
+    setLiaSession({
+      ...liaSession,
+      transcript: [...liaSession.transcript, { role: 'user', content: trimmedMessage }],
+    });
 
     try {
       const response = await appService.sendLiaMessage(trimmedMessage, liaSession);
@@ -312,6 +316,16 @@ export default function DashboardChat() {
                 <div className="chat-bubble">{message.content}</div>
               </div>
             ))}
+
+            {busy ? (
+              <div className="chat-message assistant">
+                <div className="chat-bubble chat-typing" aria-label="Lia esta respondendo">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            ) : null}
 
             {!startingLia && transcript.length === 0 ? (
               <div className="empty-state">A conversa vai aparecer aqui.</div>
