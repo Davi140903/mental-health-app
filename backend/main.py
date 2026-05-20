@@ -1300,6 +1300,10 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         contains_any(combined_text, ["dias", "semanas", "mes", "meses", "ha ", "faz "])
         or contains_any(combined_text, ["sono", "dorm", "rotina", "trabalho", "estudo", "fome", "energia", "sem vontade"])
     )
+    social_withdrawal = contains_any(
+        combined_text,
+        ["me isolo", "me isolei", "isolado", "isolada", "isolamento", "me afasto", "afastando", "evitado meus amigos"],
+    )
 
     return {
         "latest_text": latest_text,
@@ -1394,13 +1398,15 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "asks_for_options": asks_for_options,
         "persistent_distress": persistent_distress,
         "irritabilidade": contains_any(combined_text, ["irrit", "raiva", "estress"]),
+        "social_withdrawal": social_withdrawal,
         "positive": positive,
         "no_issue": no_issue,
         "unwell": unwell,
         "mixed_feeling": contains_any(latest_text, ["mais ou menos", "meio assim", "nem bem nem mal", "entre bem e mal"]),
         "figurative_distress": figurative_distress,
         "creative": not figurative_distress
-        and contains_any(
+        and not social_withdrawal
+        and contains_exact_phrase(
             latest_text,
             ["flores", "flor", "ceu", "mar", "chuva", "vento", "sol", "silencio", "recolher", "quietude"],
         ),
@@ -1520,6 +1526,7 @@ def is_support_related_message(context: dict[str, Any]) -> bool:
         "interesse",
         "concentracao",
         "irritabilidade",
+        "social_withdrawal",
         "unwell",
         "mixed_feeling",
         "no_issue",

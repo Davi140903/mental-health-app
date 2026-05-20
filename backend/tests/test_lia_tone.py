@@ -594,6 +594,17 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("nao precisa transformar isso em problema", reply)
         self.assertNotIn("partir dessa imagem", reply)
 
+    def test_social_withdrawal_is_not_treated_as_creative_sun_image(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        user_message = "depois eu fico culpado e me isolo"
+
+        analysis = main.fallback_lia_analysis(session, user_message)
+        reply = main.normalize_for_match(analysis.assistant_reply)
+
+        self.assertNotIn("gostei dessa imagem", reply)
+        self.assertNotIn("partir dessa imagem", reply)
+        self.assertNotIn("flores", reply)
+
     def test_work_offense_followup_stays_anchored_to_user_context(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.current_topic = "main_focus"
