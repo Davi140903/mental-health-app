@@ -2337,16 +2337,6 @@ def build_contextual_reflection(
     if session.turn_count == 1 and context["worn_out"]:
         return "Parece que voce chegou bem no limite nesses ultimos dias."
 
-    if session.turn_count == 1 and context["study_test_context"] and context["ansiedade"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Essa prova parece estar puxando ansiedade antes mesmo de chegar o dia.",
-                "Quando a prova entra no meio, a ansiedade pode ficar grudada no estudo.",
-                "Pelo que voce trouxe, a prova parece ter virado um ponto de pressao para voce.",
-            ],
-        )
-
     if session.turn_count == 1 and context["ansiedade"]:
         return first_fresh_phrase(
             session,
@@ -2399,36 +2389,6 @@ def build_contextual_reflection(
 
     if session.stage == "anxiety" and context["medo"]:
         return "Parece que tem um medo aparecendo ai, mas quero confirmar com calma como isso chega para voce."
-
-    if context["asks_for_options"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Quando chega nesse ponto de nao saber o que fazer, ajuda separar uma coisa de cada vez.",
-                "Esse pedido de ajuda mostra que isso ja ficou grande demais para organizar sozinho agora.",
-                "Da para transformar esse bolo todo em partes menores, sem decidir tudo de uma vez.",
-            ],
-        )
-
-    if context["sono"] and context["study_test_context"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Se isso ja esta entrando no seu sono, a prova nao esta ficando so no estudo.",
-                "Quando a preocupacao com estudo chega no sono, o corpo tambem comeca a pagar a conta.",
-                "Sono mexido costuma deixar a cabeca ainda menos disponivel para estudar no dia seguinte.",
-            ],
-        )
-
-    if context["study_test_context"] and context["learning_attention_context"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Esse ciclo de tentar estudar, perder o foco e reler a mesma coisa deve cansar bastante.",
-                "Ficar voltando no mesmo conteudo e sentir que nao rende costuma deixar a prova ainda maior na cabeca.",
-                "Quando o estudo trava desse jeito, nao e so a prova que pesa; a confianca tambem pode balancar.",
-            ],
-        )
 
     if context["work_offense"] and context["work_study"]:
         return "Ofensas no trabalho podem mexer bastante com a forma como voce passa pelo dia."
@@ -2881,8 +2841,6 @@ def build_contextual_support(
             return "Vamos so ficar no que esta acontecendo agora, sem tentar resolver tudo de uma vez."
 
     if stage == "mood":
-        if context["study_test_context"] and context["sono"]:
-            return None
         if context["interesse"] or contains_any(context["latest_text"], ["nao estou com vontade", "sem vontade", "nao tenho vontade"]):
             return first_fresh_phrase(
                 session,

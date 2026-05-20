@@ -762,9 +762,8 @@ class LiaToneTests(unittest.TestCase):
         analysis = main.fallback_lia_analysis(session, "estou ansioso por causa da prova")
         lowered = main.normalize_for_match(analysis.assistant_reply or "")
 
-        self.assertIn("prova", lowered)
-        self.assertIn("ansiedade", lowered)
-        self.assertTrue(any(term in lowered for term in ["hora da prova", "antes mesmo de chegar o dia"]))
+        self.assertIn("quando voce fala em ansiedade", lowered)
+        self.assertIn("hora da prova", lowered)
         self.assertNotIn("ansiedade ultimamente", lowered)
 
     def test_study_context_checks_attention_reading_or_organization_without_diagnosis(self) -> None:
