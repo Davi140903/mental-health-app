@@ -2190,16 +2190,32 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     ):
         return False
 
-    if context["ansiedade"] and contains_any(
-        normalized,
-        [
-            "voce esta ansioso ultimamente",
-            "voce tem ansiedade ultimamente",
-            "sua ansiedade ultimamente",
-            "essa ansiedade ultimamente",
-        ],
-    ):
-        return False
+    if context["ansiedade"]:
+        if contains_any(
+            normalized,
+            [
+                "voce esta ansioso ultimamente",
+                "voce tem ansiedade ultimamente",
+                "sua ansiedade ultimamente",
+                "essa ansiedade ultimamente",
+                "voce anda ansioso ultimamente",
+                "voce vem ansioso ultimamente",
+            ],
+        ):
+            return False
+        if not (context["duration"] or context["latest_duration"]) and contains_any(
+            normalized,
+            [
+                "voce tem ansiedade",
+                "sua ansiedade vem",
+                "sua ansiedade parece",
+                "essa ansiedade vem",
+                "essa ansiedade parece",
+                "a ansiedade esta presente",
+                "a ansiedade esta afetando",
+            ],
+        ):
+            return False
 
     if context["study_test_context"] and contains_any(
         normalized,
@@ -3246,6 +3262,7 @@ Regras:
 - se a fala for simbolica, fale da imagem ou do significado dela; nao reescreva isso como sofrimento escondido;
 - se o usuario disser que esta ansioso, confirme com calma como isso aparece antes de afirmar intensidade, duracao ou padrao;
 - nao diga que o usuario "tem ansiedade ultimamente" se ele so mencionou estar ansioso agora;
+- se a fala for apenas "estou ansioso" ou parecida, diga algo como "quando voce fala em ansiedade..." e pergunte como isso aparece; nao transforme em "voce tem ansiedade";
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;

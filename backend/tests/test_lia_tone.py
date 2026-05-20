@@ -766,6 +766,31 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("hora da prova", lowered)
         self.assertNotIn("ansiedade ultimamente", lowered)
 
+    def test_rejects_anxiety_diagnosis_when_user_only_says_anxious(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=1)
+
+        self.assertFalse(
+            main.reply_respects_support_context(
+                session,
+                "estou ansioso",
+                "Voce tem ansiedade e ela esta afetando sua rotina. Como isso aparece?",
+            )
+        )
+        self.assertFalse(
+            main.reply_respects_support_context(
+                session,
+                "estou ansioso",
+                "Sua ansiedade parece estar presente ultimamente. O que mais pesa?",
+            )
+        )
+        self.assertTrue(
+            main.reply_respects_support_context(
+                session,
+                "estou ansioso",
+                "Quando voce fala em ansiedade, eu prefiro entender com calma. Isso aparece mais no corpo, nos pensamentos ou na dificuldade de focar?",
+            )
+        )
+
     def test_study_context_checks_attention_reading_or_organization_without_diagnosis(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.current_topic = "distress_context"
