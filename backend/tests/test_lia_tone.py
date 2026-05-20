@@ -569,6 +569,15 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("pressao", reply)
         self.assertNotIn("estresse", reply)
 
+    def test_repeated_interjection_asks_for_clarification(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+
+        reply = main.normalize_for_match(main.build_scope_guard_reply(session, "ain ain") or "")
+
+        self.assertIn("nao consegui entender", reply)
+        self.assertNotIn("caminho para seguir", reply)
+        self.assertNotIn("preocupacoes", reply)
+
     def test_recipe_redirect_mentions_work_without_inventing_offenses(self) -> None:
         session = self.build_session(stage="support", turn_count=3)
         session.transcript = [

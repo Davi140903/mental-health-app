@@ -661,6 +661,7 @@ a {
 
 .chat-message {
   display: flex;
+  animation: chat-message-in 0.24s ease-out both;
 }
 
 .chat-message.user {
@@ -717,6 +718,18 @@ a {
   40% {
     opacity: 1;
     transform: translateY(-3px);
+  }
+}
+
+@keyframes chat-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 

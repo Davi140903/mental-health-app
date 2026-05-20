@@ -664,10 +664,13 @@ def is_noise_or_mocking_message(user_message: str) -> bool:
     compact = re.sub(r"[^a-z]", "", normalized)
     if not compact:
         return True
-    if compact in {"ain", "ui", "uiuiui", "kkkk", "kkk", "haha", "hehe", "nada"}:
+    if compact in {"ain", "ainain", "ui", "uiui", "uiuiui", "kkkk", "kkk", "haha", "hehe", "nada"}:
+        return True
+    tokens = tokenize_for_match(user_message)
+    noise_tokens = {"ain", "ui", "uiui", "uiuiui", "kkk", "kkkk", "haha", "hehe"}
+    if tokens and all(token in noise_tokens for token in tokens):
         return True
     if contains_any(normalized, ["uiuiui", "ain ui", "nada com nada"]):
-        tokens = tokenize_for_match(user_message)
         return not any(token_matches_roots(token, MEANINGFUL_TOKEN_ROOTS) for token in tokens)
     return False
 
