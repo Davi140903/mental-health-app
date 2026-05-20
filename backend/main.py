@@ -972,6 +972,8 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
         nature_parts.append("cansaco")
     if context["irritabilidade"]:
         nature_parts.append("irritacao")
+    if context["social_withdrawal"]:
+        nature_parts.append("isolamento")
     if contains_any(context["latest_text"], ["insuficiente", "sem animo", "desanimo", "falta de animo", "me sentir pequeno"]):
         nature_parts.append("desanimo")
     if nature_parts:
@@ -982,6 +984,8 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
     context_parts: list[str] = []
     if context["work_study"]:
         context_parts.append("trabalho ou estudos")
+    if context["social_withdrawal"]:
+        context_parts.append("isolamento ou afastamento")
     if context["relationship"]:
         context_parts.append("relacionamentos")
     if contains_any(context["latest_text"], ["rotina", "dia a dia"]):
@@ -1008,6 +1012,8 @@ def infer_topic_states(session: LiaSessionState, user_message: str) -> None:
         impact_parts.append("vontade")
     if context["tristeza"]:
         impact_parts.append("humor")
+    if context["social_withdrawal"]:
+        impact_parts.append("convivio")
     if context["concentracao"]:
         impact_parts.append("foco")
     if contains_any(context["latest_text"], ["corpo", "fisico"]):
@@ -1237,6 +1243,8 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         [
             "faz um codigo",
             "faca um codigo",
+            "faz o codigo",
+            "so faz o codigo",
             "codigo em python",
             "codigo javascript",
             "me ensina a programar",
@@ -1336,7 +1344,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
                 "queria conversar",
             ],
         ),
-        "palpitacao": contains_any(combined_text, ["palpit", "coracao", "acelerado", "taquic", "peito"]),
+        "palpitacao": contains_any(combined_text, ["palpit", "coracao", "acelerado", "taquic", "peito", "respirar", "respiracao", "falta de ar"]),
         "ansiedade": contains_any(combined_text, ["ansios", "nervos", "tenso", "panico", "preocup", "alerta"]),
         "pressure": contains_any(
             combined_text,
@@ -1625,10 +1633,23 @@ def is_off_scope_message(context: dict[str, Any], user_message: str) -> bool:
 
 def build_related_question_reply(session: LiaSessionState, context: dict[str, Any]) -> str | None:
     if context["asks_about_professional"]:
-        return (
-            "Pode ajudar, sim. Conversar com um profissional pode te ajudar a olhar para isso com mais calma, "
-            "organizar o que esta acontecendo e pensar em proximos passos. "
-            "Voce nao precisa chegar com tudo pronto; levar essa duvida para a consulta ja e um bom comeco."
+        return first_fresh_phrase(
+            session,
+            [
+                (
+                    "Pode ajudar, sim. Conversar com um profissional pode te ajudar a olhar para isso com mais calma, "
+                    "organizar o que esta acontecendo e pensar em proximos passos. "
+                    "Voce nao precisa chegar com tudo pronto; levar essa duvida para a consulta ja e um bom comeco."
+                ),
+                (
+                    "Essa vergonha antes da consulta pode acontecer. Voce nao precisa chegar sabendo explicar tudo; "
+                    "um profissional pode te ajudar justamente a organizar isso aos poucos."
+                ),
+                (
+                    "Seu problema nao precisa estar perfeito ou grave o bastante para ser levado. "
+                    "Se algo esta pesando em voce, ja e um motivo valido para conversar com o profissional."
+                ),
+            ],
         )
 
     if asks_about_lia_or_triage(context):
@@ -2472,6 +2493,16 @@ def build_contextual_reflection(
     if session.stage == "support" and context["mixed_feeling"]:
         return "Entendi. Parece que o dia ficou num meio termo cansativo."
 
+    if context["social_withdrawal"]:
+        return first_fresh_phrase(
+            session,
+            [
+                "Esse afastamento dos outros parece estar ficando importante nessa historia.",
+                "Ficar se isolando depois pode pesar de um jeito silencioso.",
+                "Essa vontade de se afastar tambem merece entrar no que a gente esta olhando.",
+            ],
+        )
+
     if session.stage == "support" and context["light_topic"]:
         return "Pode me contar por onde voce quer comecar nesse assunto."
 
@@ -2513,6 +2544,10 @@ def build_contextual_question(
         remember_question_intent(session, "closing")
         return "Podemos deixar por aqui hoje, se voce quiser."
 
+    if context["positive"]:
+        remember_question_intent(session, "closing")
+        return "Pode deixar esse dia mais tranquilo ser so um respiro por aqui."
+
     if context["asks_for_options"] and (
         count_meaningful_user_messages(session) >= 3
         or not (context["financial_pressure"] or context["caregiving"] or context["study_test_context"])
@@ -2525,6 +2560,8 @@ def build_contextual_question(
         return "Pelo que voce trouxe, isso ja vem de outros dias e esta atrapalhando sua rotina. Voce gostaria de seguir para uma triagem com um profissional?"
 
     if context["study_test_context"] and (context["learning_attention_context"] or context["concentracao"]):
+        if not contains_any(context["latest_text"], ["prova", "estudo", "estudar", "faculdade"]):
+            return None
         remember_question_intent(session, "distress_context")
         return first_fresh_question(
             session,
@@ -2543,6 +2580,15 @@ def build_contextual_question(
 
     if topic == "main_focus":
         remember_question_intent(session, "main_focus")
+        if context["palpitacao"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Quando isso acontece, vem junto com falta de ar, aperto no peito ou medo de acontecer de novo?",
+                    "Nesses momentos, o que chama mais sua atencao: o coracao acelerado, a respiracao ou o medo que vem junto?",
+                    "Isso costuma passar em alguns minutos ou fica te acompanhando por mais tempo?",
+                ],
+            )
         if context["persistent_distress"] and count_meaningful_user_messages(session) >= 3:
             return "Pelo que voce trouxe, isso ja vem aparecendo ha alguns dias e merece cuidado. Voce gostaria que eu te ajudasse a seguir para uma triagem com um profissional?"
         if context["asks_for_options"]:
@@ -2710,9 +2756,7 @@ def build_contextual_question(
 
     if stage == "support":
         if context["positive"]:
-            if context["quick_pass"]:
-                return "Podemos deixar por aqui hoje, se voce quiser."
-            return "Quer so passar aqui rapidinho hoje ou tem algo que voce queira dividir mesmo assim?"
+            return "Podemos deixar por aqui hoje, se voce quiser."
         if context["mixed_feeling"]:
             return "O que mais te pegou hoje?"
         if context["unwell"]:
@@ -2725,7 +2769,9 @@ def build_contextual_question(
             return "O que mais machuca nessas ofensas no trabalho?"
         if context["figurative_distress"]:
             return "Se a gente for por partes, qual problema parece mais urgente agora?"
-        if context["study_test_context"] and context["concentracao"]:
+        if context["study_test_context"] and context["concentracao"] and contains_any(
+            context["latest_text"], ["prova", "estudo", "estudar", "faculdade"]
+        ):
             return "Quando voce tenta estudar, o que pesa mais: manter o foco, entender o conteudo ou pensar na prova?"
         if context["mentions_help"] or context["asks_to_talk"]:
             return "Quer me contar o que mais esta batendo forte ai agora?"
@@ -2740,6 +2786,15 @@ def build_contextual_question(
         return default_next_question("support", session.turn_count)
 
     if stage == "anxiety":
+        if context["palpitacao"] and session.turn_count <= 4:
+            return first_fresh_question(
+                session,
+                [
+                    "Quando isso acontece, vem junto com falta de ar, aperto no peito ou medo de acontecer de novo?",
+                    "Nesses momentos, o que chama mais sua atencao: o coracao acelerado, a respiracao ou o medo que vem junto?",
+                    "Isso costuma passar em alguns minutos ou fica te acompanhando por mais tempo?",
+                ],
+            )
         if context["mentions_help"] and session.turn_count == 1:
             return "O que esta mais dificil nisso agora?"
         if session.turn_count == 1 and context["ending"] and context["pressure"]:
@@ -2880,7 +2935,16 @@ def build_contextual_support(
                     "Da para ir por uma parte menor agora.",
                 ],
             )
-        if context["palpitacao"] or context["ansiedade"] or context["controlar"] or context["relaxar"] or context["short_both"]:
+        if context["palpitacao"]:
+            return first_fresh_phrase(
+                session,
+                [
+                    "Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar.",
+                    "Pode ficar so no que aconteceu no corpo agora.",
+                    "A gente pode olhar primeiro para essa sensacao fisica.",
+                ],
+            )
+        if context["ansiedade"] or context["controlar"] or context["relaxar"] or context["short_both"]:
             return first_fresh_phrase(
                 session,
                 [

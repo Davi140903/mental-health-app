@@ -605,6 +605,44 @@ class LiaToneTests(unittest.TestCase):
         self.assertNotIn("partir dessa imagem", reply)
         self.assertNotIn("flores", reply)
 
+    def test_professional_question_varies_across_turns(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        first = main.build_scope_guard_reply(session, "tenho vergonha de falar com o psicologo") or ""
+        session.transcript.append(main.LiaTranscriptMessage(role="assistant", content=first))
+        second = main.build_scope_guard_reply(session, "e se ele achar meu problema bobo?") or ""
+
+        self.assertNotEqual(main.normalize_for_match(first), main.normalize_for_match(second))
+        self.assertIn("profissional", main.normalize_for_match(first + " " + second))
+
+    def test_repeated_code_request_stays_off_scope(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+
+        first = main.build_scope_guard_reply(session, "me faz um codigo em python pra calcular media") or ""
+        second = main.build_scope_guard_reply(session, "mas e rapido, so faz o codigo") or ""
+
+        self.assertIn("foge", main.normalize_for_match(first))
+        self.assertIn("objetivo", main.normalize_for_match(second))
+        self.assertNotIn("me conta no seu ritmo", main.normalize_for_match(second))
+
+    def test_physical_symptom_followup_stays_with_body_context(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=2)
+        session.current_topic = "main_focus"
+        question = main.normalize_for_match(
+            main.build_contextual_question(session, "as vezes parece que eu nao consigo respirar direito", "anxiety") or ""
+        )
+
+        self.assertTrue(any(term in question for term in ["respiracao", "falta de ar", "aperto no peito"]))
+        self.assertNotIn("cabeca hoje", question)
+
+    def test_positive_followup_does_not_search_for_problem(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        question = main.normalize_for_match(
+            main.build_contextual_question(session, "acho que foi um dia mais tranquilo", "support") or ""
+        )
+
+        self.assertIn("respiro", question)
+        self.assertNotIn("cabeca", question)
+
     def test_work_offense_followup_stays_anchored_to_user_context(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.current_topic = "main_focus"
