@@ -829,42 +829,6 @@ def first_fresh_phrase(session: LiaSessionState, options: list[str]) -> str:
     return options[0]
 
 
-def recent_assistant_starts_with(session: LiaSessionState, prefix: str, *, limit: int = 3) -> bool:
-    normalized_prefix = normalize_for_match(prefix)
-    recent_assistant_messages = [
-        normalize_for_match(message) for message in get_recent_transcript_by_role(session, "assistant", limit=limit)
-    ]
-    return any(message.startswith(normalized_prefix) for message in recent_assistant_messages)
-
-
-def soften_repeated_entendi(session: LiaSessionState, reflection: str) -> str:
-    if not reflection.startswith("Entendi.") or not recent_assistant_starts_with(session, "Entendi."):
-        return reflection
-
-    without_prefix = reflection.replace("Entendi. ", "", 1)
-    if without_prefix == reflection:
-        return first_fresh_phrase(
-            session,
-            [
-                "Vou ficar com essa parte com cuidado.",
-                "Faz sentido olhar para isso com calma.",
-                "Da para ir por esse ponto sem pressa.",
-            ],
-        )
-
-    if without_prefix.startswith(("Parece", "Isso", "Essa", "Esse", "Quando", "Levar", "Estar", "Sentir")):
-        return without_prefix
-
-    return first_fresh_phrase(
-        session,
-        [
-            without_prefix,
-            "Vou ficar com essa parte com cuidado.",
-            "Faz sentido olhar para isso com calma.",
-        ],
-    )
-
-
 def remember_question_intent(session: LiaSessionState, intent: str) -> None:
     session.recent_question_intents = [*session.recent_question_intents[-4:], intent]
 
@@ -2284,14 +2248,7 @@ def build_contextual_reflection(
         return "Tudo certo."
 
     if context["wants_to_stop"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Tudo bem.",
-                "Pode deixar.",
-                "Sem problema.",
-            ],
-        )
+        return "Entendi."
 
     if session.turn_count == 1 and context["positive"]:
         return "Que bom ler isso."
@@ -2300,7 +2257,7 @@ def build_contextual_reflection(
         return "Que bom ler isso."
 
     if session.turn_count == 1 and context["mixed_feeling"]:
-        return "Parece um daqueles dias em que voce nao esta mal de um jeito claro, mas tambem nao esta leve."
+        return "Entendi. Parece um daqueles dias em que voce nao esta mal de um jeito claro, mas tambem nao esta leve."
 
     if context["unsure"]:
         return "Tudo bem. Nem sempre isso vem claro na hora."
@@ -2315,40 +2272,33 @@ def build_contextual_reflection(
         return "Tudo bem falar disso aqui. A gente pode ir por partes."
 
     if session.turn_count == 1 and context["figurative_distress"]:
-        return "Quando voce fala que sua cabeca esta cheia desse jeito, parece que tem muita coisa passando do limite."
+        return "Entendi. Quando voce fala que sua cabeca esta cheia desse jeito, parece que tem muita coisa passando do limite."
 
     if session.turn_count == 1 and context["financial_pressure"] and context["caregiving"]:
         if context["alone_burden"]:
-            return "Contas para pagar, cuidado com filho e essa sensacao de estar sozinha nisso tudo e muita coisa para carregar."
-        return "Lidar com contas e cuidado com filho ao mesmo tempo pode pesar muito."
+            return "Entendi. Contas para pagar, cuidado com filho e essa sensacao de estar sozinha nisso tudo e muita coisa para carregar."
+        return "Entendi. Lidar com contas e cuidado com filho ao mesmo tempo pode pesar muito."
 
     if session.turn_count == 1 and context["ending"] and context["pressure"]:
-        return "Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
+        return "Entendi. Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
 
     if session.turn_count == 1 and context["ending"]:
-        return "Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir."
+        return "Entendi. Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir."
 
     if session.turn_count == 1 and context["pressure"] and context["worn_out"]:
-        return "Parece que voce ja vem segurando isso ha tempo e chegou cansado."
+        return "Entendi. Parece que voce ja vem segurando isso ha tempo e chegou cansado."
 
     if session.turn_count == 1 and context["pressure"]:
-        return "Parece que voce vem lidando com muita pressao ultimamente."
+        return "Entendi. Parece que voce vem lidando com muita pressao ultimamente."
 
     if session.turn_count == 1 and context["worn_out"]:
-        return "Parece que voce chegou bem no limite nesses ultimos dias."
+        return "Entendi. Parece que voce chegou bem no limite nesses ultimos dias."
 
     if session.turn_count == 1 and context["ansiedade"]:
-        return first_fresh_phrase(
-            session,
-            [
-                "Quando voce fala em ansiedade, eu prefiro ir com calma antes de concluir qualquer coisa.",
-                "Vamos olhar para essa ansiedade com cuidado, sem colocar rotulo antes da hora.",
-                "Pode ser ansiedade mesmo, mas eu quero entender como isso aparece para voce.",
-            ],
-        )
+        return "Entendi. Quando voce fala em ansiedade, eu prefiro ir com calma antes de concluir qualquer coisa."
 
     if session.turn_count == 1 and context["tristeza"]:
-        return "Tem um peso ai que nao parece pequeno."
+        return "Entendi. Tem um peso ai que nao parece pequeno."
 
     if session.turn_count == 1 and not session.memory.is_first_contact and session.memory.recent_summary:
         return "Obrigada por retomar isso comigo. A gente pode seguir daqui com calma."
@@ -2369,37 +2319,37 @@ def build_contextual_reflection(
         return "Entendi. Sentir o coracao acelerar desse jeito deve ser bem desconfortavel."
 
     if session.stage == "anxiety" and context["pressure"] and context["worn_out"]:
-        return "Parece que essa pressao toda ja esta te deixando bem esgotado."
+        return "Entendi. Parece que essa pressao toda ja esta te deixando bem esgotado."
 
     if session.stage == "anxiety" and context["pressure"]:
         return first_fresh_phrase(
             session,
             [
-                "Essa pressao parece estar cobrando um preco ai.",
-                "Isso soa como algo que foi pesando aos poucos.",
-                "Quando isso vai acumulando, uma hora aparece de algum jeito.",
+                "Entendi. Essa pressao parece estar cobrando um preco ai.",
+                "Entendi. Isso soa como algo que foi pesando aos poucos.",
+                "Entendi. Quando isso vai acumulando, uma hora aparece de algum jeito.",
             ],
         )
 
     if session.stage == "anxiety" and context["worn_out"]:
-        return "Isso soa como um desgaste de quem ja vem segurando muita coisa."
+        return "Entendi. Isso soa como um desgaste de quem ja vem segurando muita coisa."
 
     if session.stage == "anxiety" and (context["controlar"] or context["relaxar"]):
-        return "Parece que, quando isso aparece, nao e simples recuperar o ritmo."
+        return "Entendi. Parece que, quando isso aparece, nao e simples recuperar o ritmo."
 
     if session.stage == "anxiety" and context["medo"]:
-        return "Parece que tem um medo aparecendo ai, mas quero confirmar com calma como isso chega para voce."
+        return "Entendi. Parece que tem um medo aparecendo ai, mas quero confirmar com calma como isso chega para voce."
 
     if context["work_offense"] and context["work_study"]:
-        return "Ofensas no trabalho podem mexer bastante com a forma como voce passa pelo dia."
+        return "Entendi. Ofensas no trabalho podem mexer bastante com a forma como voce passa pelo dia."
 
     if session.stage == "mood" and context["sono"] and context["energia"]:
         return first_fresh_phrase(
             session,
             [
                 "Obrigada por explicar melhor. Quando sono e energia sentem, o dia todo costuma pesar.",
-                "Quando sono e energia saem do lugar, o resto do dia costuma sentir junto.",
-                "Sono ruim e energia baixa acabam mexendo com tudo ao redor.",
+                "Entendi. Quando sono e energia saem do lugar, o resto do dia costuma sentir junto.",
+                "Entendi. Sono ruim e energia baixa acabam mexendo com tudo ao redor.",
             ],
         )
 
@@ -2407,9 +2357,9 @@ def build_contextual_reflection(
         return first_fresh_phrase(
             session,
             [
-                "Isso parece estar alcancando tambem seu humor e sua disposicao.",
-                "Isso nao ficou so no cansaco; parece que bateu tambem no jeito de levar o dia.",
-                "Isso parece estar mexendo tambem com seu animo.",
+                "Entendi. Isso parece estar alcancando tambem seu humor e sua disposicao.",
+                "Entendi. Isso nao ficou so no cansaco; parece que bateu tambem no jeito de levar o dia.",
+                "Entendi. Isso parece estar mexendo tambem com seu animo.",
             ],
         )
 
@@ -2417,9 +2367,9 @@ def build_contextual_reflection(
         return first_fresh_phrase(
             session,
             [
-                "Quando vai acumulando assim, o dia inteiro acaba sentindo junto.",
-                "Quando isso aperta por muito tempo, o corpo e o humor acabam entrando no meio.",
-                "Isso parece estar transbordando para o resto do dia.",
+                "Entendi. Quando vai acumulando assim, o dia inteiro acaba sentindo junto.",
+                "Entendi. Quando isso aperta por muito tempo, o corpo e o humor acabam entrando no meio.",
+                "Entendi. Isso parece estar transbordando para o resto do dia.",
             ],
         )
 
@@ -2427,7 +2377,7 @@ def build_contextual_reflection(
         return "Que bom saber disso."
 
     if session.stage == "support" and context["mixed_feeling"]:
-        return "Parece que o dia ficou num meio termo cansativo."
+        return "Entendi. Parece que o dia ficou num meio termo cansativo."
 
     if session.stage == "support" and context["light_topic"]:
         return "Pode me contar por onde voce quer comecar nesse assunto."
@@ -2439,19 +2389,19 @@ def build_contextual_reflection(
         return first_fresh_phrase(
             session,
             [
-                f"Levar isso {duration} realmente desgasta.",
-                f"Estar com isso {duration} ja pesa de outro jeito.",
-                f"Quando isso vem acontecendo {duration}, uma parte do dia comeca a sentir junto.",
+                f"Entendi. Levar isso {duration} realmente desgasta.",
+                f"Entendi. Estar com isso {duration} ja pesa de outro jeito.",
+                f"Entendi. Quando isso vem acontecendo {duration}, e natural que va cansando.",
             ],
         )
 
     if session.turn_count == 1:
         topic = capitalize_first(build_opening_topic(context))
         if context["positive"] or context["creative"]:
-            return f"{topic} parece importante para voce agora."
-        return f"{topic} parece estar pesando em voce."
+            return f"Entendi. {topic} parece importante para voce agora."
+        return f"Entendi. {topic} parece estar pesando em voce."
 
-    return first_fresh_phrase(session, ["Certo.", "Estou acompanhando.", "Vamos por essa parte."])
+    return "Entendi."
 
 
 def build_contextual_question(
@@ -2805,38 +2755,12 @@ def build_contextual_support(
         return None
 
     if stage == "anxiety":
-        if context["duration"] or context["latest_duration"] or context["asks_for_options"]:
-            return None
-        if context["study_test_context"] and session.turn_count > 1:
-            return None
         if context["pressure"] and context["work_study"]:
-            return first_fresh_phrase(
-                session,
-                [
-                    "Vamos so pegar a parte que mais apertou hoje.",
-                    "A gente pode olhar para esse pedaco sem correr.",
-                    "Nao precisa deixar tudo organizado para falar disso.",
-                ],
-            )
+            return "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje."
         if context["pressure"] or context["worn_out"]:
-            return first_fresh_phrase(
-                session,
-                [
-                    "Pode falar disso sem precisar deixar tudo bem explicado.",
-                    "A gente pode ir por uma parte de cada vez.",
-                    "Vamos ficar so no pedaco mais claro por enquanto.",
-                ],
-            )
+            return "Pode me contar isso sem precisar deixar tudo bem explicado."
         if context["palpitacao"] or context["ansiedade"] or context["controlar"] or context["relaxar"] or context["short_both"]:
-            return first_fresh_phrase(
-                session,
-                [
-                    "A gente pode ir por uma parte de cada vez.",
-                    "Nao precisa fechar uma explicacao inteira agora.",
-                    "Vamos ficar so no pedaco mais claro por enquanto.",
-                    "Pode falar do jeito que vier, sem tentar acertar.",
-                ],
-            )
+            return "Se quiser, me conta no seu ritmo. Nao precisa correr pra explicar."
         if context["medo"]:
             return "Vamos so ficar no que esta acontecendo agora, sem tentar resolver tudo de uma vez."
 
@@ -3348,9 +3272,7 @@ Regras:
 - se stage for mood, priorize sono, energia, interesse, humor e concentracao;
 - cite pelo menos um detalhe concreto da fala mais recente do usuario ou do contexto imediatamente anterior;
 - evite frases genericas repetidas como "obrigada por me contar isso";
-- nao comece respostas em sequencia com "Entendi"; use isso raramente e so quando soar natural;
-- nao repita frases de suporte como "me conta no seu ritmo", "nao precisa correr pra explicar" ou "vamos por partes";
-- se a pergunta ja conduz bem a conversa, prefira uma resposta mais curta, sem adicionar uma frase de apoio extra;
+- nao comece toda resposta com "entendi";
 - varie o tom de abertura entre acolhimento, observacao gentil, validacao ou curiosidade;
 - se o usuario responder algo curto como "sim" ou "nao", use a pergunta anterior e o contexto recente para formular a resposta;
 - quando fizer sentido, inclua no maximo uma orientacao pratica bem curta, mas so depois de acolher de verdade;
@@ -3878,7 +3800,6 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
     else:
         reflection = build_contextual_reflection(session, user_message, risk_level)
 
-    reflection = soften_repeated_entendi(session, reflection)
     support = build_contextual_support(session, user_message, recommended_stage)
     assistant_reply = join_reply_parts(reflection, support, next_question if recommended_stage != "closing" else None)
     analysis = LiaAnalysis(

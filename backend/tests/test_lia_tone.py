@@ -925,49 +925,6 @@ class LiaToneTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "misread a clear user message"):
             main.refine_lia_analysis(session, analysis, "estou cansado")
 
-    def test_fallback_sequence_does_not_repeat_support_crutches(self) -> None:
-        session = self.build_session(stage="anxiety", turn_count=0)
-        messages = [
-            "Oi Lia, estou ansioso por causa de uma prova que tenho essa semana.",
-            "Isso vem de outros dias, eu tento estudar mas perco o foco e fico relendo a mesma coisa.",
-            "Eu nao sei o que fazer, queria ajuda.",
-            "Acho que isso esta atrapalhando meu sono tambem.",
-        ]
-        assistant_replies: list[str] = []
-
-        for message in messages:
-            session.turn_count += 1
-            session.transcript.append(main.LiaTranscriptMessage(role="user", content=message))
-            main.infer_topic_states(session, message)
-            session.current_topic = main.next_lia_topic(session)
-            analysis = main.fallback_lia_analysis(session, message)
-            reply = analysis.assistant_reply or ""
-            assistant_replies.append(reply)
-            session.stage = analysis.recommended_stage
-            session.transcript.append(main.LiaTranscriptMessage(role="assistant", content=reply))
-
-        joined = main.normalize_for_match(" ".join(assistant_replies))
-        entendi_starts = sum(1 for reply in assistant_replies if main.normalize_for_match(reply).startswith("entendi"))
-
-        self.assertLessEqual(joined.count("me conta no seu ritmo"), 1)
-        self.assertLessEqual(joined.count("nao precisa correr pra explicar"), 1)
-        self.assertLessEqual(entendi_starts, 1)
-
-    def test_anxiety_support_uses_fresh_natural_phrase(self) -> None:
-        session = self.build_session(stage="anxiety", turn_count=2)
-        session.transcript = [
-            main.LiaTranscriptMessage(
-                role="assistant",
-                content="A gente pode ir por uma parte de cada vez. Quando voce fala ansiedade, isso aparece mais como preocupacao?",
-            )
-        ]
-
-        support = main.build_contextual_support(session, "estou ansioso e tentando controlar isso", "anxiety") or ""
-        lowered = main.normalize_for_match(support)
-
-        self.assertNotEqual(lowered, "a gente pode ir por uma parte de cada vez")
-        self.assertNotIn("me conta no seu ritmo", lowered)
-
 
 if __name__ == "__main__":
     unittest.main()
