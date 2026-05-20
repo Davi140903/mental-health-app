@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
@@ -1199,6 +1199,59 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             "noticia de hoje",
         ],
     )
+    study_test_context = contains_any(
+        combined_text,
+        [
+            "prova",
+            "vestibular",
+            "concurso",
+            "faculdade",
+            "estudo",
+            "estudar",
+            "atividade",
+            "tarefa",
+            "trabalho da escola",
+        ],
+    )
+    learning_attention_context = contains_any(
+        combined_text,
+        [
+            "atencao",
+
+            "distra",
+            "foco",
+            "concentr",
+            "ler",
+            "leitura",
+            "escrever",
+            "escrita",
+            "entender o que eu leio",
+            "organizar",
+            "organizacao",
+
+            "barulho",
+            "ouvir",
+            "escutar",
+        ],
+    )
+    asks_for_options = contains_any(
+        latest_text,
+        [
+            "o que eu faco",
+
+            "nao sei o que fazer",
+
+            "como lidar",
+            "como posso lidar",
+            "me ajuda",
+            "preciso de ajuda",
+            "queria ajuda",
+        ],
+    )
+    persistent_distress = bool(extract_duration_phrase(combined_text)) and (
+        contains_any(combined_text, ["dias", "semanas", "mes", "meses", "ha ", "faz "])
+        or contains_any(combined_text, ["sono", "dorm", "rotina", "trabalho", "estudo", "fome", "energia", "sem vontade"])
+    )
 
     return {
         "latest_text": latest_text,
@@ -1288,6 +1341,10 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "tristeza": contains_any(combined_text, ["triste", "pra baixo", "sem esperanca", "vazio"]),
         "interesse": contains_any(combined_text, ["sem vontade", "desanim", "prazer", "nao tenho vontade"]),
         "concentracao": contains_any(combined_text, ["concentr", "foco", "estudar", "trabalho"]),
+        "study_test_context": study_test_context,
+        "learning_attention_context": learning_attention_context,
+        "asks_for_options": asks_for_options,
+        "persistent_distress": persistent_distress,
         "irritabilidade": contains_any(combined_text, ["irrit", "raiva", "estress"]),
         "positive": positive,
         "no_issue": no_issue,
@@ -2133,6 +2190,30 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     ):
         return False
 
+    if context["ansiedade"] and contains_any(
+        normalized,
+        [
+            "voce esta ansioso ultimamente",
+            "voce tem ansiedade ultimamente",
+            "sua ansiedade ultimamente",
+            "essa ansiedade ultimamente",
+        ],
+    ):
+        return False
+
+    if context["study_test_context"] and contains_any(
+        normalized,
+        [
+            "voce tem tdah",
+            "voce pode ter tdah",
+            "voce tem dislexia",
+            "voce pode ter dislexia",
+            "voce tem tpac",
+            "voce pode ter tpac",
+        ],
+    ):
+        return False
+
     if (is_support_related_message(context) or context["figurative_distress"] or context["work_offense"]) and question_count == 0:
         if not contains_any(
             normalized,
@@ -2214,7 +2295,7 @@ def build_contextual_reflection(
         return "Entendi. Parece que voce chegou bem no limite nesses ultimos dias."
 
     if session.turn_count == 1 and context["ansiedade"]:
-        return "Entendi. Parece que sua cabeca nao tem dado muito descanso ultimamente."
+        return "Entendi. Quando voce fala em ansiedade, eu prefiro ir com calma antes de concluir qualquer coisa."
 
     if session.turn_count == 1 and context["tristeza"]:
         return "Entendi. Tem um peso ai que nao parece pequeno."
@@ -2257,7 +2338,7 @@ def build_contextual_reflection(
         return "Entendi. Parece que, quando isso aparece, nao e simples recuperar o ritmo."
 
     if session.stage == "anxiety" and context["medo"]:
-        return "Entendi. Isso parece te deixar em um modo de alerta bem desconfortavel."
+        return "Entendi. Parece que tem um medo aparecendo ai, mas quero confirmar com calma como isso chega para voce."
 
     if context["work_offense"] and context["work_study"]:
         return "Entendi. Ofensas no trabalho podem mexer bastante com a forma como voce passa pelo dia."
@@ -2339,6 +2420,28 @@ def build_contextual_question(
         remember_question_intent(session, "closing")
         return "Podemos deixar por aqui hoje, se voce quiser."
 
+    if context["asks_for_options"] and (
+        count_meaningful_user_messages(session) >= 3
+        or not (context["financial_pressure"] or context["caregiving"] or context["study_test_context"])
+    ):
+        remember_question_intent(session, "main_focus")
+        return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou seguir para atendimento com um profissional?"
+
+    if context["study_test_context"] and (context["learning_attention_context"] or context["concentracao"]):
+        remember_question_intent(session, "distress_context")
+        return first_fresh_question(
+            session,
+            [
+                "Isso acontece so nessa prova ou voce tambem percebe dificuldade de atencao, leitura ou organizacao em outros momentos?",
+                "Quando voce tenta estudar, o que pesa mais: a ansiedade da prova, manter o foco ou entender o conteudo?",
+                "Essa tensao aparece mais pelo resultado da prova ou por alguma dificuldade para se concentrar, ler ou organizar os estudos?",
+            ],
+        )
+
+    if context["persistent_distress"] and count_meaningful_user_messages(session) >= 3:
+        remember_question_intent(session, "closing")
+        return "Pelo que voce trouxe, isso ja vem de outros dias e esta atrapalhando sua rotina. Voce gostaria de seguir para uma triagem com um profissional?"
+
     if topic == "closing":
         remember_question_intent(session, "closing")
         if context["quick_pass"] or context["positive"]:
@@ -2347,6 +2450,10 @@ def build_contextual_question(
 
     if topic == "main_focus":
         remember_question_intent(session, "main_focus")
+        if context["persistent_distress"] and count_meaningful_user_messages(session) >= 3:
+            return "Pelo que voce trouxe, isso ja vem aparecendo ha alguns dias e merece cuidado. Voce gostaria que eu te ajudasse a seguir para uma triagem com um profissional?"
+        if context["asks_for_options"]:
+            return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou seguir para atendimento com um profissional?"
         if context["work_offense"] and context["work_study"]:
             return first_fresh_question(
                 session,
@@ -2376,6 +2483,15 @@ def build_contextual_question(
 
     if topic == "distress_nature":
         remember_question_intent(session, "distress_nature")
+        if context["ansiedade"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Quando voce fala ansiedade, isso aparece mais como preocupacao, tensao no corpo ou dificuldade de se concentrar?",
+                    "Para eu nao assumir errado: essa ansiedade vem mais nos pensamentos, no corpo ou na hora de tentar focar?",
+                    "Essa ansiedade parece mais ligada a preocupacao, pressao ou medo de algo dar errado?",
+                ],
+            )
         return first_fresh_question(
             session,
             [
@@ -2387,6 +2503,15 @@ def build_contextual_question(
 
     if topic == "distress_context":
         remember_question_intent(session, "distress_context")
+        if context["study_test_context"] and (context["ansiedade"] or context["pressure"] or context["concentracao"]):
+            return first_fresh_question(
+                session,
+                [
+                    "Isso acontece so nessa prova ou voce tambem percebe dificuldade de atencao, leitura ou organizacao em outros momentos?",
+                    "Quando voce tenta estudar, o que pesa mais: a ansiedade da prova, manter o foco ou entender o conteudo?",
+                    "Essa tensao aparece mais pelo resultado da prova ou por alguma dificuldade para se concentrar, ler ou organizar os estudos?",
+                ],
+            )
         if context["financial_pressure"] and context["caregiving"]:
             return first_fresh_question(
                 session,
@@ -2453,7 +2578,9 @@ def build_contextual_question(
     if topic == "frequency_duration":
         remember_question_intent(session, "frequency_duration")
         if context["duration"] or context["latest_duration"] or session.topic_states["frequency_duration"].filled:
-            return "Entendi. Isso ja vem te acompanhando ha algum tempo. Acho que por hoje a gente pode parar por aqui com calma, se voce quiser."
+            if context["persistent_distress"]:
+                return "Entendi. Como isso ja vem de outros dias, voce gostaria de continuar entendendo isso comigo ou prefere seguir para uma triagem com um profissional?"
+            return "Entendi. Como isso ja vem de outros dias, o que mudou mais desde que comecou?"
         return first_fresh_question(
             session,
             [
@@ -2533,7 +2660,9 @@ def build_contextual_question(
         if session.turn_count == 1 and context["worn_out"]:
             return "Esse cansaco tem mais cara de esgotamento, preocupacao ou um pouco dos dois?"
         if session.turn_count == 1 and context["ansiedade"]:
-            return "Quando isso vem, o que voce percebe primeiro?"
+            if context["study_test_context"]:
+                return "Essa ansiedade aparece mais na hora de estudar, na hora da prova ou quando voce pensa no resultado?"
+            return "Quando voce fala ansiedade, isso aparece mais como preocupacao, tensao no corpo ou dificuldade de se concentrar?"
         if session.turn_count == 1 and context["tristeza"]:
             return "O que mais tem vindo junto com isso?"
         if session.turn_count == 1 and not session.memory.is_first_contact:
@@ -3115,6 +3244,11 @@ Regras:
 - se o usuario disser que esta bem e quiser so passar rapidinho, valide isso com leveza e deixe a porta aberta, sem investigar sintomas;
 - se a fala for simbolica, como chuva, silencio, flores ou mar, responda com curiosidade gentil e sem assumir dor;
 - se a fala for simbolica, fale da imagem ou do significado dela; nao reescreva isso como sofrimento escondido;
+- se o usuario disser que esta ansioso, confirme com calma como isso aparece antes de afirmar intensidade, duracao ou padrao;
+- nao diga que o usuario "tem ansiedade ultimamente" se ele so mencionou estar ansioso agora;
+- se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
+- quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
+- se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;
 - se o usuario disser que nao esta bem, pedir ajuda, falar de cansaco, pressao, vazio, pouca vontade, sono ruim ou pouca energia, nao responda de forma passiva;
 - nesses casos, assistant_reply deve obrigatoriamente trazer 3 coisas na mesma mensagem: reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e uma pergunta curta que conduza a conversa;
 - o apoio vem antes de qualquer orientacao; nao pule direto para dica, tarefa ou solucao;

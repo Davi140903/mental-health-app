@@ -756,6 +756,55 @@ class LiaToneTests(unittest.TestCase):
         self.assertTrue(using_ollama)
         self.assertEqual(analysis.assistant_reply, expected.assistant_reply)
 
+
+    def test_anxiety_reply_confirms_instead_of_asserting_pattern(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=1)
+        analysis = main.fallback_lia_analysis(session, "estou ansioso por causa da prova")
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+
+        self.assertIn("quando voce fala em ansiedade", lowered)
+        self.assertIn("hora da prova", lowered)
+        self.assertNotIn("ansiedade ultimamente", lowered)
+
+    def test_study_context_checks_attention_reading_or_organization_without_diagnosis(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.current_topic = "distress_context"
+        question = main.normalize_for_match(
+            main.build_contextual_question(session, "fico tenso para prova e nao consigo focar", "anxiety") or ""
+        )
+
+        self.assertIn("prova", question)
+        self.assertTrue(any(term in question for term in ["atencao", "leitura", "organizacao", "foco"]))
+        self.assertNotIn("tdah", question)
+        self.assertNotIn("dislexia", question)
+        self.assertNotIn("tpac", question)
+
+    def test_help_request_offers_paths_instead_of_single_forced_question(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        session.current_topic = "main_focus"
+        question = main.normalize_for_match(
+            main.build_contextual_question(session, "nao sei o que fazer, me ajuda", "support") or ""
+        )
+
+        self.assertIn("organizar", question)
+        self.assertIn("proximo passo", question)
+        self.assertIn("atendimento", question)
+
+    def test_persistent_distress_invites_triage_with_professional(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=4)
+        session.current_topic = "frequency_duration"
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="estou ansioso por causa da prova"),
+            main.LiaTranscriptMessage(role="user", content="nao consigo focar e durmo mal"),
+            main.LiaTranscriptMessage(role="user", content="isso vem de outros dias"),
+        ]
+        question = main.normalize_for_match(
+            main.build_contextual_question(session, "isso vem de outros dias", "anxiety") or ""
+        )
+
+        self.assertIn("triagem", question)
+        self.assertIn("profissional", question)
+
     def test_rejects_reply_that_misreads_clear_cansado_message(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]
