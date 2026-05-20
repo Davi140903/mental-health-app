@@ -793,6 +793,27 @@ class LiaToneTests(unittest.TestCase):
             )
         )
 
+    def test_common_opening_messages_stay_specific_without_overasserting(self) -> None:
+        cases = [
+            ("estou preocupado com umas coisas", ["preocupacao"], ["quando voce fala ansiedade", "ultimamente"]),
+            ("estou me sentindo pressionado no trabalho", ["pressao", "trabalho"], ["ultimamente"]),
+            ("tenho prova e nao consigo focar", ["prova", "foc"], ["trabalho"]),
+            ("minha cabeca esta cheia e parece que vai explodir", ["cabeca"], ["isso tudo"]),
+            ("tenho dormido mal", ["sono"], ["isso tudo"]),
+            ("estou sem animo", ["desanimo"], []),
+        ]
+
+        for message, expected_fragments, forbidden_fragments in cases:
+            with self.subTest(message=message):
+                session = self.build_session(stage="support", turn_count=1)
+                analysis = main.fallback_lia_analysis(session, message)
+                lowered = main.normalize_for_match(analysis.assistant_reply or "")
+
+                for fragment in expected_fragments:
+                    self.assertIn(fragment, lowered)
+                for fragment in forbidden_fragments:
+                    self.assertNotIn(fragment, lowered)
+
     def test_study_context_checks_attention_reading_or_organization_without_diagnosis(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.current_topic = "distress_context"
