@@ -1058,6 +1058,29 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("historias", lowered)
         self.assertNotIn("nao consegui entender", lowered)
 
+    def test_lia_uses_relevant_previous_context_when_user_says_they_already_said_it(self) -> None:
+        session = self.build_session(stage="support", turn_count=4)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="Lia, estava com uma historia em mente, que eu criei"),
+            main.LiaTranscriptMessage(role="assistant", content="Qual e o momento mais importante dessa historia?"),
+            main.LiaTranscriptMessage(role="user", content="pego alguns momentos da minha vida, e modelo eles"),
+            main.LiaTranscriptMessage(role="assistant", content="Hoje, o que voce sentiu ao lembrar desses momentos?"),
+            main.LiaTranscriptMessage(role="user", content="acho que senti saudades de alguns momentos da minha vida"),
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Pode me contar um pouco sobre o que esta fazendo e sentindo desde que comecou a sentir saudades?",
+            ),
+            main.LiaTranscriptMessage(role="user", content="mas eu ja falei o que estou fazendo"),
+        ]
+
+        reply = main.build_scope_guard_reply(session, "mas eu ja falei o que estou fazendo")
+        lowered = main.normalize_for_match(reply or "")
+
+        self.assertIn("pega momentos da sua vida", lowered)
+        self.assertIn("transforma isso na sua historia", lowered)
+        self.assertIn("saudade", lowered)
+        self.assertNotIn("medo de ficar sozinho", lowered)
+
     def test_rejects_reply_that_misreads_clear_cansado_message(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         session.transcript = [main.LiaTranscriptMessage(role="assistant", content="Oi.")]

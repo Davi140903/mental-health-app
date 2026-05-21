@@ -727,17 +727,47 @@ def user_is_pointing_to_previous_message(user_message: str) -> bool:
 
 
 def build_previous_message_ack_reply(session: LiaSessionState) -> str:
-    previous_user_message = normalize_optional_text(latest_previous_user_message(session))
-    if previous_user_message:
+    previous_user_messages = [
+        normalize_optional_text(item.content)
+        for item in session.transcript[:-1]
+        if item.role == "user" and normalize_optional_text(item.content)
+    ]
+    recent_user_context = " ".join(previous_user_messages[-3:])
+    relevant_message = choose_relevant_previous_user_message(session, previous_user_messages)
+    relevant_context = build_lia_context(session, relevant_message or recent_user_context)
+
+    if relevant_context["light_topic"] or contains_any(
+        normalize_for_match(relevant_message or recent_user_context),
+        ["modelo", "modelar", "historia", "historias", "criei", "pego alguns momentos"],
+    ):
+        if contains_any(normalize_for_match(recent_user_context), ["saudade", "saudades"]):
+            return (
+                "Voce tem razao, voce ja explicou: voce pega momentos da sua vida e transforma isso na sua historia. "
+                "A parte nova parece ser a saudade que veio junto. Essa saudade te deixou mais perto dessas lembrancas ou mais distante delas?"
+            )
+        return (
+            "Voce tem razao, voce ja explicou essa parte. "
+            f"Eu vou seguir a partir disso: \"{(relevant_message or recent_user_context)[:140]}\". "
+            "O que voce queria que essa historia conseguisse mostrar de voce ou desses momentos?"
+        )
+
+    if relevant_context["social_withdrawal"] or relevant_context["alone_burden"]:
         return (
             "Voce tem razao, voce ja trouxe isso. Eu vou considerar essa parte: "
-            f"\"{previous_user_message[:140]}\". "
+            f"\"{(relevant_message or recent_user_context)[:140]}\". "
             "O que mais pesa nisso para voce: a vontade de se aproximar de alguem, o medo de ficar sozinho ou a dificuldade de comecar a falar?"
+        )
+
+    if relevant_message:
+        return (
+            "Voce tem razao, voce ja trouxe isso. Eu vou considerar essa parte: "
+            f"\"{relevant_message[:140]}\". "
+            "O que parece mais importante olhar agora dentro disso?"
         )
 
     return (
         "Voce tem razao em me chamar nisso. Vou tentar acompanhar melhor: "
-        "o que mais pesa agora, a vontade de conversar com alguem ou a dificuldade de saber por onde comecar?"
+        "qual parte do que voce ja trouxe voce quer que eu considere primeiro?"
     )
 
 
@@ -844,6 +874,22 @@ def latest_previous_user_message(session: LiaSessionState) -> str | None:
         if item.role == "user":
             return item.content
     return None
+
+
+def choose_relevant_previous_user_message(session: LiaSessionState, messages: list[str]) -> str | None:
+    latest_assistant = normalize_for_match(latest_assistant_message(session) or "")
+    normalized_messages = [(message, normalize_for_match(message)) for message in reversed(messages)]
+
+    if contains_any(latest_assistant, ["o que esta fazendo", "o que voce esta fazendo"]):
+        for message, normalized in normalized_messages:
+            if contains_any(normalized, ["modelo", "modelar", "criei", "historia", "historias", "pego alguns momentos"]):
+                return message
+
+    for message, normalized in normalized_messages:
+        if contains_any(normalized, ["modelo", "modelar", "criei", "historia", "historias", "pego alguns momentos"]):
+            return message
+
+    return messages[-1] if messages else None
 
 
 def question_was_recently_used(session: LiaSessionState, question: str) -> bool:
