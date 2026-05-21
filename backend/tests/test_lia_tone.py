@@ -842,9 +842,13 @@ class LiaToneTests(unittest.TestCase):
         lowered = main.normalize_for_match(analysis.assistant_reply or "")
 
         self.assertIn("historia", lowered)
+        self.assertIn("pode ser do seu jeito", lowered)
+        self.assertIn("parte pequena", lowered)
         self.assertIn("conto", lowered)
         self.assertIn("lembranca", lowered)
         self.assertIn("mistura", lowered)
+        self.assertNotIn("entendi", lowered)
+        self.assertNotIn("compreendi", lowered)
         self.assertNotIn("incomodando", lowered)
         self.assertNotIn("estressante", lowered)
         self.assertNotIn("peso grande", lowered)

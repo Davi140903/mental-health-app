@@ -2603,7 +2603,7 @@ def build_contextual_reflection(
         return "Tudo bem. Nem sempre isso vem claro na hora."
 
     if session.turn_count == 1 and context["story_topic"]:
-        return "Entendi. Tem uma historia ai que voce quer compartilhar, mas ainda esta procurando por onde comecar."
+        return "Pode ser do seu jeito. A gente comeca por uma parte pequena."
 
     if session.turn_count == 1 and context["light_topic"]:
         return "Claro. A gente pode falar disso sim."
@@ -3134,6 +3134,8 @@ def build_contextual_support(
             return "Tudo bem passar por aqui so pra dar um respiro."
         if context["mixed_feeling"]:
             return "Nao precisa definir o dia inteiro agora. A gente pode olhar so a parte que mais ficou com voce."
+        if context["story_topic"]:
+            return None
         if context["light_topic"]:
             return "Pode ir por onde ficar mais natural."
         if context["creative"]:
