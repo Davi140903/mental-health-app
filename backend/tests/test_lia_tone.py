@@ -1076,9 +1076,11 @@ class LiaToneTests(unittest.TestCase):
         reply = main.build_scope_guard_reply(session, "mas eu ja falei o que estou fazendo")
         lowered = main.normalize_for_match(reply or "")
 
-        self.assertIn("pega momentos da sua vida", lowered)
-        self.assertIn("transforma isso na sua historia", lowered)
+        self.assertIn("saudade apareceu justamente", lowered)
+        self.assertIn("transformando isso em historia", lowered)
+        self.assertIn("lembrancas na historia", lowered)
         self.assertIn("saudade", lowered)
+        self.assertNotIn("o que esta fazendo", lowered)
         self.assertNotIn("medo de ficar sozinho", lowered)
 
     def test_rejects_reply_that_misreads_clear_cansado_message(self) -> None:

@@ -742,8 +742,8 @@ def build_previous_message_ack_reply(session: LiaSessionState) -> str:
     ):
         if contains_any(normalize_for_match(recent_user_context), ["saudade", "saudades"]):
             return (
-                "Voce tem razao, voce ja explicou: voce pega momentos da sua vida e transforma isso na sua historia. "
-                "A parte nova parece ser a saudade que veio junto. Essa saudade te deixou mais perto dessas lembrancas ou mais distante delas?"
+                "Voce tem razao, a saudade apareceu justamente porque voce esta pegando momentos da sua vida e transformando isso em historia. "
+                "Faz sentido seguir por ai: quando voce coloca essas lembrancas na historia, elas ficam mais leves, mais doloridas ou mais vivas pra voce?"
             )
         return (
             "Voce tem razao, voce ja explicou essa parte. "
