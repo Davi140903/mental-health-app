@@ -1026,7 +1026,9 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertIn("organizar", question)
         self.assertIn("proximo passo", question)
-        self.assertIn("atendimento", question)
+        self.assertIn("separar melhor", question)
+        self.assertIn("recomendar", question)
+        self.assertIn("profissional", question)
 
     def test_persistent_distress_invites_triage_with_professional(self) -> None:
         session = self.build_session(stage="anxiety", turn_count=4)

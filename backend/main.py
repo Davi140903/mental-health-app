@@ -2787,7 +2787,7 @@ def build_contextual_question(
         or not (context["financial_pressure"] or context["caregiving"] or context["study_test_context"])
     ):
         remember_question_intent(session, "main_focus")
-        return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou seguir para atendimento com um profissional?"
+        return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou so separar melhor essa pressao? Se fizer sentido, tambem posso te recomendar para um profissional. O que acha?"
 
     if context["persistent_distress"] and count_meaningful_user_messages(session) >= 3:
         remember_question_intent(session, "closing")
@@ -2826,7 +2826,7 @@ def build_contextual_question(
         if context["persistent_distress"] and count_meaningful_user_messages(session) >= 3:
             return "Pelo que voce trouxe, isso ja vem aparecendo ha alguns dias e merece cuidado. Voce gostaria que eu te ajudasse a seguir para uma triagem com um profissional?"
         if context["asks_for_options"]:
-            return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou seguir para atendimento com um profissional?"
+            return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou so separar melhor essa pressao? Se fizer sentido, tambem posso te recomendar para um profissional. O que acha?"
         if context["work_offense"] and context["work_study"]:
             return first_fresh_question(
                 session,
