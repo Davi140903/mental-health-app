@@ -46,8 +46,12 @@ ALGORITHM = "HS256"
 DATA_ENCRYPTION_KEY = os.getenv("DATA_ENCRYPTION_KEY", "").strip()
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 FRONTEND_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
 ]
 ADMIN_EMAILS = [
     email.strip().lower()

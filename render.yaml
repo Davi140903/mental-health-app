@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: lia-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: OLLAMA_ENABLED
+        value: false
+      - key: EMAIL_VERIFICATION_DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_ORIGINS
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: RESEND_FROM_NAME
+        value: Lia
