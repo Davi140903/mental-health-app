@@ -4,7 +4,7 @@ Este guia deixa o app acessivel para a orientadora testar fora do computador loc
 
 ## Arquitetura recomendada
 
-- Frontend: Vercel Hobby
+- Frontend: Render Free Static Site ou Vercel Hobby
 - Backend: Render Free Web Service
 - Banco: Supabase Free PostgreSQL
 - Email de codigos: Resend Free
@@ -56,7 +56,28 @@ cd C:\mental-health-app\backend
 
 O `SECRET_KEY` pode ser gerado automaticamente pelo Render se voce usar o Blueprint. Se criar manualmente, gere uma chave forte e longa.
 
-## 3. Frontend no Vercel
+## 3. Frontend no Render ou Vercel
+
+### Opcao A: Render Static Site
+
+1. Crie um Static Site no Render usando este repositorio.
+2. Configure:
+
+```text
+Root Directory: frontend
+Build Command: npm install && npm run build
+Publish Directory: dist
+```
+
+3. Configure a variavel:
+
+```text
+VITE_API_URL=https://SEU-BACKEND.onrender.com
+```
+
+4. Depois de publicar, volte ao Render do backend e atualize `FRONTEND_ORIGINS` com a URL final do frontend.
+
+### Opcao B: Vercel
 
 1. Importe o repositorio no Vercel.
 2. Configure:
@@ -74,6 +95,26 @@ VITE_API_URL=https://SEU-BACKEND.onrender.com
 ```
 
 4. Depois de publicar, volte ao Render e atualize `FRONTEND_ORIGINS` com a URL final do Vercel.
+
+## 3.1. Chave de teste para codigos de email
+
+Use a variavel `EMAIL_VERIFICATION_DEBUG` para ligar ou desligar o envio real de email:
+
+```text
+EMAIL_VERIFICATION_DEBUG=false
+```
+
+Modo normal. O backend envia o codigo pelo Resend.
+
+```text
+EMAIL_VERIFICATION_DEBUG=true
+```
+
+Modo teste. O backend nao envia email real e devolve o codigo na resposta da API. O frontend preenche/mostra o codigo automaticamente nas telas de cadastro, login e recuperacao.
+
+Depois de mudar essa chave no Render, salve as variaveis e rode um novo deploy do backend.
+
+Para apresentar para orientadora ou usuarios reais de teste, deixe `EMAIL_VERIFICATION_DEBUG=false`. Para criar contas rapidamente em demonstracao controlada, pode ligar `true` temporariamente.
 
 ## 4. Primeiro login ADM
 
@@ -98,7 +139,6 @@ Fluxo recomendado:
 - `SECRET_KEY` forte e fora do Git
 - `DATA_ENCRYPTION_KEY` gerada e fora do Git
 - `EMAIL_VERIFICATION_DEBUG=false`
-- `FRONTEND_ORIGINS` com apenas a URL do Vercel
+- `FRONTEND_ORIGINS` com apenas a URL publica do frontend
 - `DATABASE_URL` apontando para PostgreSQL, nao SQLite
 - Nao subir `.env`, `.db`, logs ou pacientes reais para o Git
-
