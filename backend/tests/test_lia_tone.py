@@ -820,6 +820,21 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("claro", lowered)
         self.assertIn("o que voce mais curte nisso", lowered)
 
+    def test_story_topic_stays_inside_support_scope(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        context = main.build_lia_context(
+            session,
+            "estava pensando em historias que gostaria de compartilhar, mas nao sei por onde comecar",
+        )
+
+        self.assertTrue(context["light_topic"])
+        self.assertFalse(
+            main.is_off_scope_message(
+                context,
+                "estava pensando em historias que gostaria de compartilhar, mas nao sei por onde comecar",
+            )
+        )
+
     def test_analyze_lia_turn_prefers_llm_when_enabled(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         expected = main.LiaAnalysis(
@@ -969,6 +984,64 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertIn("triagem", question)
         self.assertIn("profissional", question)
+
+    def test_accepting_triage_offer_finishes_conversation_for_handoff(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=5)
+        session.current_topic = "closing"
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Voce gostaria de seguir para uma triagem com um profissional?",
+            )
+        ]
+        data = main.LiaTurnInput(session=session, message="gostaria sim")
+        user = main.User(nome="Davi", email="davi@example.com", hashed_password="x")
+
+        with patch.object(main, "save_lia_session_results", return_value=True) as result_mock:
+            response = main.lia_message(data, current_user=user, db=None)
+
+        self.assertTrue(response.session.completed)
+        self.assertIn("horario", main.normalize_for_match(response.session.transcript[-1].content))
+        self.assertIn("profissional", main.normalize_for_match(response.session.transcript[-1].content))
+        result_mock.assert_called_once()
+
+    def test_triage_next_step_question_after_offer_finishes_conversation(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=5)
+        session.current_topic = "closing"
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="assistant",
+                content="Voce gostaria de seguir para uma triagem com um profissional?",
+            )
+        ]
+        data = main.LiaTurnInput(session=session, message="acho que sim, como funcionaria?")
+        user = main.User(nome="Davi", email="davi@example.com", hashed_password="x")
+
+        with patch.object(main, "save_lia_session_results", return_value=True):
+            response = main.lia_message(data, current_user=user, db=None)
+
+        lowered = main.normalize_for_match(response.session.transcript[-1].content)
+        self.assertTrue(response.session.completed)
+        self.assertIn("funciona assim", lowered)
+        self.assertIn("horarios", lowered)
+
+    def test_lia_acknowledges_when_user_says_they_already_said_it(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        session.transcript = [
+            main.LiaTranscriptMessage(
+                role="user",
+                content="estava pensando em historias, mas nao sei por onde comecar e me sinto sozinho",
+            ),
+            main.LiaTranscriptMessage(role="assistant", content="O que mais ficou na sua cabeca hoje?"),
+            main.LiaTranscriptMessage(role="user", content="mas eu ja falei"),
+        ]
+
+        reply = main.build_scope_guard_reply(session, "mas eu ja falei")
+        lowered = main.normalize_for_match(reply or "")
+
+        self.assertIn("voce tem razao", lowered)
+        self.assertIn("historias", lowered)
+        self.assertNotIn("nao consegui entender", lowered)
 
     def test_rejects_reply_that_misreads_clear_cansado_message(self) -> None:
         session = self.build_session(stage="support", turn_count=1)

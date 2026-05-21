@@ -711,6 +711,36 @@ def build_clarification_reply(session: LiaSessionState) -> str:
     return stage_replies[reply_index]
 
 
+def user_is_pointing_to_previous_message(user_message: str) -> bool:
+    normalized = normalize_for_match(user_message)
+    compact = re.sub(r"[^a-z ]", " ", normalized)
+    return ("falei" in compact and ("ja" in compact.split() or "j" in compact.split())) or contains_any(
+        normalized,
+        [
+            "mas eu ja falei",
+            "eu ja falei",
+            "ja falei",
+            "acabei de falar",
+            "foi isso que eu falei",
+        ],
+    )
+
+
+def build_previous_message_ack_reply(session: LiaSessionState) -> str:
+    previous_user_message = normalize_optional_text(latest_previous_user_message(session))
+    if previous_user_message:
+        return (
+            "Voce tem razao, voce ja trouxe isso. Eu vou considerar essa parte: "
+            f"\"{previous_user_message[:140]}\". "
+            "O que mais pesa nisso para voce: a vontade de se aproximar de alguem, o medo de ficar sozinho ou a dificuldade de comecar a falar?"
+        )
+
+    return (
+        "Voce tem razao em me chamar nisso. Vou tentar acompanhar melhor: "
+        "o que mais pesa agora, a vontade de conversar com alguem ou a dificuldade de saber por onde comecar?"
+    )
+
+
 def build_unsure_reply(session: LiaSessionState) -> str:
     stage_replies = {
         "support": [
@@ -805,6 +835,13 @@ def get_recent_transcript_by_role(
 def latest_assistant_message(session: LiaSessionState) -> str | None:
     for item in reversed(session.transcript):
         if item.role == "assistant":
+            return item.content
+    return None
+
+
+def latest_previous_user_message(session: LiaSessionState) -> str | None:
+    for item in reversed(session.transcript[:-1]):
+        if item.role == "user":
             return item.content
     return None
 
@@ -1425,8 +1462,28 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "recipe_request": recipe_request,
         "external_task_request": external_task_request,
         "light_topic": contains_any(
-            latest_text,
-            ["musica", "filme", "filmes", "serie", "series", "esporte", "comida", "livro", "livros"],
+            f"{latest_text} {combined_text}",
+            [
+                "musica",
+                "filme",
+                "filmes",
+                "serie",
+                "series",
+                "esporte",
+                "comida",
+                "livro",
+                "livros",
+                "historia",
+                "historias",
+                "personagem",
+                "personagens",
+                "mundo ficticio",
+                "mundos ficticios",
+                "aventura",
+                "aventuras",
+                "anime",
+                "animes",
+            ],
         ),
         "quick_pass": contains_any(latest_text, ["rapidinho", "so quis passar", "so passei", "so passar por aqui", "so vim passar", "so vim aqui"]),
         "wants_to_stop": contains_any(
@@ -1574,6 +1631,59 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
     )
 
 
+def latest_assistant_offered_triage(session: LiaSessionState) -> bool:
+    latest_reply = normalize_for_match(latest_assistant_message(session) or "")
+    return contains_any(latest_reply, ["triagem", "profissional", "atendimento", "consulta"]) and contains_any(
+        latest_reply,
+        ["voce gostaria", "gostaria de seguir", "seguir para", "conversar com um profissional", "ter um profissional"],
+    )
+
+
+def user_accepts_or_asks_triage_next_step(context: dict[str, Any]) -> bool:
+    latest_text = context["latest_text"]
+    latest_compact = re.sub(r"[^a-z0-9 ]", " ", latest_text).strip()
+    return contains_any(
+        latest_text,
+        [
+            "gostaria sim",
+            "quero atendimento",
+            "quero um atendimento",
+            "quero falar com um profissional",
+            "quero conversar com um profissional",
+            "quero seguir para triagem",
+            "quero a triagem",
+            "pode ser a triagem",
+            "aceito a triagem",
+            "como funcionaria",
+            "como funciona",
+            "e agora",
+            "qual o proximo passo",
+            "proximo passo",
+        ],
+    ) or latest_compact in {"sim", "acho que sim", "quero", "pode ser", "pode"}
+
+
+def should_finish_for_triage_handoff(session: LiaSessionState, context: dict[str, Any]) -> bool:
+    if not latest_assistant_offered_triage(session):
+        return False
+    return user_accepts_or_asks_triage_next_step(context)
+
+
+def build_triage_handoff_reply(context: dict[str, Any]) -> str:
+    if contains_any(context["latest_text"], ["como funciona", "como funcionaria", "e agora", "proximo passo"]):
+        return (
+            "Funciona assim: eu encerro esta parte da conversa e te mostro os horarios disponiveis com um profissional. "
+            "Voce escolhe um horario, e o que apareceu aqui fica organizado para ajudar na primeira triagem. "
+            "Voce nao precisa explicar tudo de novo nem chegar com as palavras perfeitas."
+        )
+
+    return (
+        "Certo. Entao o melhor proximo passo e seguir para uma triagem com um profissional. "
+        "Eu vou deixar o essencial desta conversa organizado para facilitar esse primeiro atendimento. "
+        "Voce escolhe um horario e pode chegar sem precisar ter tudo pronto para explicar."
+    )
+
+
 def is_probably_question_or_request(text_value: str) -> bool:
     normalized = normalize_for_match(text_value)
     if "?" in text_value:
@@ -1702,6 +1812,10 @@ def build_specific_off_scope_reply(session: LiaSessionState, context: dict[str, 
 
 
 def build_scope_guard_reply(session: LiaSessionState, user_message: str) -> str | None:
+    if user_is_pointing_to_previous_message(user_message):
+        session.clarification_streak = 0
+        return build_previous_message_ack_reply(session)
+
     if is_noise_or_mocking_message(user_message):
         session.clarification_streak = min(int(session.clarification_streak or 0) + 1, 3)
         return build_clarification_reply(session)
@@ -5836,6 +5950,18 @@ def lia_message(
     session.clarification_streak = 0
     session.turn_count += 1
     using_ollama = False
+    context = build_lia_context(session, message_text)
+
+    if should_finish_for_triage_handoff(session, context):
+        infer_topic_states(session, message_text)
+        session.current_topic = "closing"
+        session.stage = "closing"
+        session.focus_kind = "phq9"
+        session.completed = True
+        assistant_text = build_triage_handoff_reply(context)
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        refresh_dashboard = save_lia_session_results(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     scope_guard_reply = build_scope_guard_reply(session, message_text)
     if scope_guard_reply:
@@ -5845,8 +5971,6 @@ def lia_message(
 
     infer_topic_states(session, message_text)
     session.current_topic = next_lia_topic(session)
-
-    context = build_lia_context(session, message_text)
 
     if session.followup_mode:
         remaining_turns = max(int(session.followup_turns_left or 0) - 1, 0)
