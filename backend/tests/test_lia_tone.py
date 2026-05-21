@@ -82,6 +82,7 @@ class LiaToneTests(unittest.TestCase):
             usuario_id="user-1",
             summary="Conversa registrada.",
             report="Relatorio breve.",
+            triage_form={"motivo_procura": {"label": "Motivo", "value": "sobrecarga", "status": "informado"}},
             transcript=[
                 {"role": "assistant", "content": "Oi, eu sou a Lia."},
                 {"role": "user", "content": "Estou sobrecarregado."},
@@ -94,6 +95,27 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertEqual([item.role for item in recent.transcript], ["assistant", "user"])
         self.assertEqual(recent.transcript[1].content, "Estou sobrecarregado.")
+        self.assertEqual(recent.triage_form["motivo_procura"]["value"], "sobrecarga")
+
+    def test_lia_triage_form_organizes_conversation_for_psychologist(self) -> None:
+        session = self.build_session(stage="support", turn_count=3)
+        messages = [
+            "estou sobrecarregado com a faculdade e dormindo mal",
+            "isso ja faz umas duas semanas",
+            "tenho evitado meus amigos e nao sei o que fazer",
+        ]
+        for message in messages:
+            session.transcript.append(main.LiaTranscriptMessage(role="user", content=message))
+            main.infer_topic_states(session, message)
+
+        topics = main.derive_memory_topics(session)
+        form = main.build_lia_triage_form(session, topics)
+
+        self.assertIn("faculdade", main.normalize_for_match(form["motivo_procura"]["value"]))
+        self.assertEqual(form["inicio_sintomas"]["value"], "ha algumas semanas")
+        self.assertIn("sono", main.normalize_for_match(", ".join(form["sintomas_atuais"]["value"])))
+        self.assertIn("isolamento", main.normalize_for_match(form["contexto_social"]["value"]))
+        self.assertEqual(form["medicacao"]["status"], "pendente")
 
     def test_fallback_reply_avoids_therapeutic_old_style(self) -> None:
         session = self.build_session()

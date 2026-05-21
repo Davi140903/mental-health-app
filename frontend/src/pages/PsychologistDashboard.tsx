@@ -100,6 +100,48 @@ function getCleanTranscript(interaction: LiaRecentInteraction) {
   return cleaned;
 }
 
+type LiaTriageFormItem = {
+  label: string;
+  value: unknown;
+  status?: string;
+};
+
+function isTriageFormItem(value: unknown): value is LiaTriageFormItem {
+  return Boolean(value && typeof value === 'object' && 'label' in value && 'value' in value);
+}
+
+function getTriageFormItems(interaction?: LiaRecentInteraction | null) {
+  const form = interaction?.triage_form;
+  if (!form || typeof form !== 'object') {
+    return [];
+  }
+
+  return Object.entries(form)
+    .filter(([key, value]) => key !== 'indicadores' && isTriageFormItem(value))
+    .map(([key, value]) => {
+      const item = value as LiaTriageFormItem;
+      return { key, ...item };
+    });
+}
+
+function formatTriageFormValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.length ? value.join(', ') : 'Ainda não informado';
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, item]) => `${key.replace(/_/g, ' ')}: ${String(item)}`)
+      .join(' | ');
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    return value;
+  }
+
+  return 'Ainda não informado';
+}
+
 function questionnaireLabel(result: QuestionnaireResult) {
   return result.tipo === 'phq9' ? 'PHQ-9' : 'GAD-7';
 }
@@ -227,6 +269,9 @@ export default function PsychologistDashboard() {
             p { margin: 6px 0; }
             .meta { color: #5f7480; font-size: 13px; }
             .box { border: 1px solid #d8e3e8; padding: 12px; margin: 10px 0; border-radius: 6px; }
+            .triage-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+            .triage-form-item { border: 1px solid #d8e3e8; border-radius: 8px; padding: 10px; background: #f8fbfc; }
+            .triage-form-item strong { display: block; color: #315d74; font: 700 12px Arial, sans-serif; text-transform: uppercase; margin-bottom: 4px; }
             .chat-session { border: 1px solid #d8e3e8; padding: 14px; margin: 12px 0; border-radius: 12px; background: #f8fbfc; }
             .chat-message { max-width: 78%; padding: 9px 11px; margin: 8px 0; border-radius: 12px; border: 1px solid #d8e3e8; }
             .chat-message.lia { background: #ffffff; border-bottom-left-radius: 4px; }
@@ -282,6 +327,28 @@ export default function PsychologistDashboard() {
     `;
   };
 
+  const buildTriageFormPrintHtml = (interaction?: LiaRecentInteraction | null) => {
+    const items = getTriageFormItems(interaction);
+    if (!items.length) {
+      return '<div class="box"><p>Ficha estruturada ainda indisponÃ­vel para este registro.</p></div>';
+    }
+
+    return `
+      <div class="triage-form">
+        ${items
+          .map(
+            (item) => `
+              <div class="triage-form-item">
+                <strong>${escapeHtml(item.label)}</strong>
+                <p>${escapeHtml(formatTriageFormValue(item.value))}</p>
+              </div>
+            `,
+          )
+          .join('')}
+      </div>
+    `;
+  };
+
   const buildPatientReportHtml = (detail: PsychologistPatientDetail) => {
     const note = noteDraft.trim() || detail.psychologist_note?.content || 'Sem anotações registradas.';
     const questionnaires = detail.questionnaires.length
@@ -308,6 +375,8 @@ export default function PsychologistDashboard() {
         <p class="meta">Paciente: ${escapeHtml(detail.user.nome)} | ${escapeHtml(detail.user.email)}</p>
         <p class="meta">Gerado em ${formatDateTime(new Date().toISOString())}</p>
       </header>
+      <h2>Ficha de triagem da Lia</h2>
+      ${buildTriageFormPrintHtml(detail.current_request.interaction)}
       <h2>Resumo da Lia</h2>
       <div class="box"><p>${escapeHtml(
         detail.current_request.interaction?.report ??
@@ -529,6 +598,26 @@ export default function PsychologistDashboard() {
                         </div>
 
                         <div className="patient-detail-grid">
+                          <section className="patient-detail-card wide">
+                            <span className="field-label">Ficha de triagem da Lia</span>
+                            <p className="triage-form-intro">
+                              Campos organizados a partir da conversa, para apoiar a primeira consulta sem substituir a
+                              escuta profissional.
+                            </p>
+                            {getTriageFormItems(patientDetail.current_request.interaction).length ? (
+                              <div className="lia-triage-form-grid">
+                                {getTriageFormItems(patientDetail.current_request.interaction).map((item) => (
+                                  <div key={item.key} className={`lia-triage-form-item ${item.status === 'pendente' ? 'pending' : ''}`}>
+                                    <span>{item.label}</span>
+                                    <p>{formatTriageFormValue(item.value)}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p>A ficha estruturada será preenchida nas próximas conversas finalizadas com a Lia.</p>
+                            )}
+                          </section>
+
                           <section className="patient-detail-card wide">
                             <span className="field-label">Relatório da Lia</span>
                             <p>

@@ -219,6 +219,7 @@ def build_lia_recent_interaction(interaction: LiaInteraction) -> LiaRecentIntera
         opening_value=normalize_optional_text(interaction.opening_value),
         summary=normalize_optional_text(interaction.summary) or "Voce deixou um registro breve dessa conversa.",
         report=normalize_optional_text(interaction.report),
+        triage_form=interaction.triage_form if isinstance(getattr(interaction, "triage_form", None), dict) else None,
         transcript=parse_lia_transcript(getattr(interaction, "transcript", None)),
         topics=[str(item) for item in (interaction.topics or []) if str(item).strip()],
         status=(interaction.status or "final").strip() or "final",
@@ -4323,6 +4324,146 @@ def build_interaction_summary(session: LiaSessionState, topics: list[str]) -> st
     return build_user_facing_topic_summary(session, topics)
 
 
+def get_topic_state_value(session: LiaSessionState, key: str) -> str | None:
+    state = session.topic_states.get(key)
+    if not state or not state.filled:
+        return None
+    return normalize_optional_text(state.value)
+
+
+def triage_status(value: str | None) -> str:
+    return "informado" if normalize_optional_text(value) else "pendente"
+
+
+def build_lia_triage_form(session: LiaSessionState, topics: list[str]) -> dict[str, Any]:
+    text_value = build_memory_source_text(session)
+    user_messages = get_meaningful_user_messages(session.transcript)
+    gad_score = sum(score or 0 for score in session.gad7_scores)
+    phq_score = sum(score or 0 for score in session.phq9_scores)
+
+    symptoms: list[str] = []
+    symptom_rules = [
+        ("ansiedade, preocupacao ou tensao", ["ansios", "preocup", "nervos", "tenso"]),
+        ("corpo em alerta ou sintomas fisicos", ["palpit", "coracao", "acelerado", "peito", "respirar", "falta de ar"]),
+        ("sono prejudicado ou exaustao", ["sono", "dorm", "inson", "exaust"]),
+        ("queda de energia ou cansaco", ["energia", "cansad", "cansaco", "fadiga"]),
+        ("desanimo, tristeza ou apatia", ["triste", "desanim", "sem vontade", "apatia", "vazio"]),
+        ("irritabilidade ou raiva", ["irrit", "raiva", "sem paciencia"]),
+        ("isolamento ou afastamento social", ["isol", "afastad", "evitado meus amigos", "ficar sozinho"]),
+        ("procrastinacao, tarefas travadas ou dificuldade de foco", ["procrast", "trav", "nao consigo focar", "foco", "tarefas"]),
+        ("sentimento de culpa ou fracasso", ["culpa", "fracasso", "bobo", "insuficiente"]),
+    ]
+    for label, fragments in symptom_rules:
+        if contains_any(text_value, fragments):
+            symptoms.append(label)
+
+    risk_items: list[str] = []
+    if contains_any(text_value, ["morrer", "me matar", "suicid", "nao queria estar aqui", "sumir", "me machucar"]):
+        risk_items.append("fala que exige checagem de seguranca")
+    if contains_any(text_value, ["automutil", "autoles", "me corto", "me machuco"]):
+        risk_items.append("possivel autolesao mencionada")
+    if contains_any(text_value, ["agredir", "bater em alguem", "machucar alguem", "violencia"]):
+        risk_items.append("agressividade contra terceiros mencionada")
+    if contains_any(text_value, ["alcool", "bebida", "maconha", "cigarro", "droga", "tarja preta"]):
+        risk_items.append("uso de substancia mencionado")
+    if contains_any(text_value, ["alucin", "delirio", "ouvindo vozes", "vozes"]):
+        risk_items.append("possivel episodio psicotico mencionado")
+
+    previous_help = None
+    if contains_any(text_value, ["psicolog", "terapia", "terapeuta", "consulta", "triagem", "psiquiatr"]):
+        previous_help = "mencionou contato, duvida ou encaminhamento para atendimento profissional"
+
+    medication = None
+    if contains_any(text_value, ["remedio", "medicacao", "medicamento", "psiquiatrica", "tarja preta"]):
+        medication = "mencao a medicacao; confirmar detalhes em triagem profissional"
+
+    support_network = None
+    if contains_any(text_value, ["amigos", "familia", "filho", "mae", "pai", "sozinh", "sozinha", "apoio"]):
+        support_network = "houve mencao a pessoas proximas ou sensacao de apoio/isolamento; confirmar rede de apoio"
+
+    routine_items: list[str] = []
+    if contains_any(text_value, ["sono", "dorm", "inson", "acordo"]):
+        routine_items.append("sono")
+    if contains_any(text_value, ["trabalho", "emprego", "faculdade", "estudo", "prova", "tarefas"]):
+        routine_items.append("trabalho/estudo")
+    if contains_any(text_value, ["amigos", "sair", "isol", "afastad", "ficar sozinho"]):
+        routine_items.append("interacoes sociais")
+    if contains_any(text_value, ["fome", "apetite", "comer"]):
+        routine_items.append("apetite")
+
+    expectation = None
+    if contains_any(text_value, ["quero ajuda", "preciso de ajuda", "nao sei o que fazer", "me ajuda"]):
+        expectation = "busca ajuda para organizar o que esta sentindo e pensar em proximos passos"
+    elif contains_any(text_value, ["psicolog", "consulta", "triagem"]):
+        expectation = "apresenta duvidas ou expectativa em relacao ao atendimento profissional"
+
+    form = {
+        "motivo_procura": {
+            "label": "Motivo da procura",
+            "value": get_topic_state_value(session, "main_focus") or (user_messages[0] if user_messages else None),
+        },
+        "inicio_sintomas": {
+            "label": "Inicio ou duracao",
+            "value": get_topic_state_value(session, "frequency_duration"),
+        },
+        "sintomas_atuais": {
+            "label": "Sintomas atuais relatados/observados",
+            "value": symptoms or topics or None,
+        },
+        "impacto_rotina": {
+            "label": "Impacto na rotina",
+            "value": get_topic_state_value(session, "functional_impact") or (", ".join(routine_items) if routine_items else None),
+        },
+        "contexto_social": {
+            "label": "Interacoes sociais e rede de apoio",
+            "value": support_network,
+        },
+        "ajuda_anterior": {
+            "label": "Ajuda ou acompanhamento previo",
+            "value": previous_help,
+        },
+        "medicacao": {
+            "label": "Medicacao ou acompanhamento psiquiatrico",
+            "value": medication,
+        },
+        "risco": {
+            "label": "Risco e pontos de atencao",
+            "value": risk_items or ("sem sinal de risco registrado na conversa" if user_messages else None),
+        },
+        "expectativa": {
+            "label": "Expectativa com atendimento",
+            "value": expectation,
+        },
+        "disponibilidade": {
+            "label": "Disponibilidade para atendimento",
+            "value": "definida no agendamento da triagem" if session.completed else None,
+        },
+    }
+
+    for item in form.values():
+        value = item["value"]
+        if isinstance(value, list):
+            item["status"] = "informado" if value else "pendente"
+        else:
+            item["status"] = triage_status(value)
+
+    form["observacoes_lia"] = {
+        "label": "Observacoes da Lia",
+        "value": build_user_facing_topic_summary(session, topics),
+        "status": "informado",
+    }
+    form["indicadores"] = {
+        "label": "Indicadores internos",
+        "value": {
+            "gad7_parcial": gad_score,
+            "phq9_parcial": phq_score,
+            "humor_inferido": infer_mood_value(session),
+        },
+        "status": "apoio",
+    }
+    return form
+
+
 def build_psychologist_report(session: LiaSessionState, topics: list[str]) -> str:
     user_messages = get_meaningful_user_messages(session.transcript)
     first_message = normalize_optional_text(user_messages[0]) if user_messages else None
@@ -4385,6 +4526,7 @@ def save_lia_interaction(
     interaction.opening_value = normalize_optional_text(session.memory.light_prompt_value)
     interaction.summary = build_interaction_summary(session, topics)
     interaction.report = build_psychologist_report(session, topics)
+    interaction.triage_form = build_lia_triage_form(session, topics)
     interaction.transcript = serialize_lia_transcript(session.transcript)
     interaction.topics = topics
     interaction.mood_value = infer_mood_value(session)
@@ -4613,6 +4755,8 @@ def ensure_database_shape() -> None:
             statements.append("ALTER TABLE lia_interactions ADD COLUMN finalized BOOLEAN NOT NULL DEFAULT 1")
         if "transcript" not in lia_columns:
             statements.append("ALTER TABLE lia_interactions ADD COLUMN transcript JSON NOT NULL DEFAULT '[]'")
+        if "triage_form" not in lia_columns:
+            statements.append("ALTER TABLE lia_interactions ADD COLUMN triage_form JSON")
 
     if statements:
         with engine.begin() as connection:
