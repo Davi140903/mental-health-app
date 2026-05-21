@@ -78,6 +78,7 @@ export default function DashboardChat() {
   const [triageSlots, setTriageSlots] = useState<TriageSlot[]>([]);
   const [triageBusy, setTriageBusy] = useState(false);
   const [triageIntroShown, setTriageIntroShown] = useState(false);
+  const [visibleTranscriptLength, setVisibleTranscriptLength] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const sessionStorageKey = user?.id ? getSessionStorageKey(user.id) : null;
@@ -108,6 +109,13 @@ export default function DashboardChat() {
             sessionStorage.removeItem(lightPromptStorageKey);
           }
         }
+      }
+      if (
+        nextSession.turn_count === 0 &&
+        nextSession.transcript.length > 1 &&
+        nextSession.transcript.every((message) => message.role === 'assistant')
+      ) {
+        setVisibleTranscriptLength(0);
       }
       setLiaSession(nextSession);
       setTriageRequest(currentTriage);
@@ -169,7 +177,46 @@ export default function DashboardChat() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [liaSession?.transcript.length, busy]);
+  }, [liaSession?.transcript.length, visibleTranscriptLength, busy]);
+
+  useEffect(() => {
+    if (!liaSession || startingLia) {
+      return;
+    }
+
+    const shouldAnimateOpening =
+      liaSession.turn_count === 0 &&
+      liaSession.transcript.length > 1 &&
+      liaSession.transcript.every((message) => message.role === 'assistant');
+
+    if (!shouldAnimateOpening) {
+      setVisibleTranscriptLength(null);
+      return;
+    }
+
+    let currentIndex = 0;
+    const timeoutIds: number[] = [];
+    timeoutIds.push(window.setTimeout(() => {
+      currentIndex = 1;
+      setVisibleTranscriptLength(currentIndex);
+    }, 160));
+
+    const revealNextMessage = () => {
+      currentIndex += 1;
+      setVisibleTranscriptLength(currentIndex);
+
+      if (currentIndex >= liaSession.transcript.length) {
+        timeoutIds.push(window.setTimeout(() => setVisibleTranscriptLength(null), 160));
+        return;
+      }
+
+      timeoutIds.push(window.setTimeout(revealNextMessage, 620));
+    };
+
+    timeoutIds.push(window.setTimeout(revealNextMessage, 780));
+
+    return () => timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+  }, [liaSession, startingLia]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -260,6 +307,9 @@ export default function DashboardChat() {
   }
 
   const transcript = liaSession?.transcript ?? [];
+  const visibleTranscript =
+    visibleTranscriptLength === null ? transcript : transcript.slice(0, Math.min(visibleTranscriptLength, transcript.length));
+  const openingAnimationActive = visibleTranscriptLength !== null && visibleTranscriptLength < transcript.length;
   const memory = liaSession?.memory;
   const isReturning = Boolean(memory && !memory.is_first_contact);
   const memorySummary = memory?.recent_summary ?? memory?.summary ?? null;
@@ -311,13 +361,13 @@ export default function DashboardChat() {
           ) : null}
 
           <div className="chat-thread chat-thread-immersive" aria-live="polite">
-            {transcript.map((message, index) => (
+            {visibleTranscript.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`chat-message ${message.role}`}>
                 <div className="chat-bubble">{message.content}</div>
               </div>
             ))}
 
-            {busy ? (
+            {busy || openingAnimationActive ? (
               <div className="chat-message assistant">
                 <div className="chat-bubble chat-typing" aria-label="Lia esta respondendo">
                   <span />
@@ -327,7 +377,7 @@ export default function DashboardChat() {
               </div>
             ) : null}
 
-            {!startingLia && transcript.length === 0 ? (
+            {!startingLia && visibleTranscript.length === 0 ? (
               <div className="empty-state">A conversa vai aparecer aqui.</div>
             ) : null}
 
@@ -347,9 +397,9 @@ export default function DashboardChat() {
                     value={draftMessage}
                     onChange={(event) => setDraftMessage(event.target.value)}
                     placeholder="Ex.: ando muito pressionado e minha mente não desliga"
-                    disabled={busy}
+                    disabled={busy || openingAnimationActive}
                   />
-                  <button type="submit" className="chat-submit" disabled={busy || !draftMessage.trim()}>
+                  <button type="submit" className="chat-submit" disabled={busy || openingAnimationActive || !draftMessage.trim()}>
                     {busy ? 'Enviando...' : 'Enviar'}
                   </button>
                 </div>
