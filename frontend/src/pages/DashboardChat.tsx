@@ -67,6 +67,28 @@ function CompanionAvatar({ returning }: { returning: boolean }) {
   );
 }
 
+function LiaChatAvatar() {
+  return (
+    <div className="chat-avatar lia-avatar" aria-hidden="true">
+      <div className="chat-avatar-face">
+        <span className="chat-avatar-eye left" />
+        <span className="chat-avatar-eye right" />
+        <span className="chat-avatar-mouth" />
+      </div>
+    </div>
+  );
+}
+
+function UserChatAvatar({ name }: { name?: string }) {
+  const initial = name?.trim().charAt(0).toUpperCase() || 'U';
+
+  return (
+    <div className="chat-avatar user-avatar" aria-hidden="true">
+      {initial}
+    </div>
+  );
+}
+
 export default function DashboardChat() {
   const { user } = useAuth();
   const [liaSession, setLiaSession] = useState<LiaSession | null>(null);
@@ -314,6 +336,7 @@ export default function DashboardChat() {
   const isReturning = Boolean(memory && !memory.is_first_contact);
   const memorySummary = memory?.recent_summary ?? memory?.summary ?? null;
   const recentConversations = memory?.recent_conversations ?? [];
+  const userName = user?.nome ?? user?.email;
 
   return (
     <Layout immersive>
@@ -363,12 +386,15 @@ export default function DashboardChat() {
           <div className="chat-thread chat-thread-immersive" aria-live="polite">
             {visibleTranscript.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`chat-message ${message.role}`}>
+                {message.role === 'assistant' ? <LiaChatAvatar /> : null}
                 <div className="chat-bubble">{message.content}</div>
+                {message.role === 'user' ? <UserChatAvatar name={userName} /> : null}
               </div>
             ))}
 
             {busy || openingAnimationActive ? (
               <div className="chat-message assistant">
+                <LiaChatAvatar />
                 <div className="chat-bubble chat-typing" aria-label="Lia esta respondendo">
                   <span />
                   <span />
