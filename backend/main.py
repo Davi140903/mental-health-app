@@ -1726,7 +1726,30 @@ def user_accepts_or_asks_triage_next_step(context: dict[str, Any]) -> bool:
     ) or latest_compact in {"sim", "acho que sim", "quero", "pode ser", "pode"}
 
 
+def user_explicitly_requests_professional_handoff(context: dict[str, Any]) -> bool:
+    latest_text = context["latest_text"]
+    return contains_any(
+        latest_text,
+        [
+            "gostaria de atendimento com um profissional",
+            "quero atendimento com um profissional",
+            "queria atendimento com um profissional",
+            "gostaria de falar com um profissional",
+            "quero falar com um profissional",
+            "queria falar com um profissional",
+            "preciso falar com um profissional",
+            "gostaria de conversar com um profissional",
+            "quero conversar com um profissional",
+            "queria conversar com um profissional",
+            "seguir para atendimento",
+            "seguir para triagem",
+        ],
+    )
+
+
 def should_finish_for_triage_handoff(session: LiaSessionState, context: dict[str, Any]) -> bool:
+    if user_explicitly_requests_professional_handoff(context):
+        return True
     if not latest_assistant_offered_triage(session):
         return False
     return user_accepts_or_asks_triage_next_step(context)

@@ -1085,6 +1085,27 @@ class LiaToneTests(unittest.TestCase):
         self.assertIn("funciona assim", lowered)
         self.assertIn("horarios", lowered)
 
+    def test_explicit_professional_request_finishes_with_single_handoff_reply(self) -> None:
+        session = self.build_session(stage="support", turn_count=4)
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="estou carregando muita coisa sozinha"),
+            main.LiaTranscriptMessage(role="assistant", content="O que esta apertando mais agora?"),
+        ]
+        data = main.LiaTurnInput(
+            session=session,
+            message="Acho que gostaria de atendimento com um profissional para nao continuar carregando tudo sozinha.",
+        )
+        user = main.User(nome="Renata", email="renata@example.com", hashed_password="x")
+
+        with patch.object(main, "save_lia_session_results", return_value=True) as result_mock:
+            response = main.lia_message(data, current_user=user, db=None)
+
+        self.assertTrue(response.session.completed)
+        self.assertEqual(response.session.transcript[-2].role, "user")
+        self.assertEqual(response.session.transcript[-1].role, "assistant")
+        self.assertIn("triagem", main.normalize_for_match(response.session.transcript[-1].content))
+        result_mock.assert_called_once()
+
     def test_lia_acknowledges_when_user_says_they_already_said_it(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         session.transcript = [
