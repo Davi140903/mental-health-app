@@ -835,6 +835,20 @@ class LiaToneTests(unittest.TestCase):
             )
         )
 
+    def test_story_opening_asks_what_kind_without_assuming_stress(self) -> None:
+        session = self.build_session(stage="support", turn_count=1)
+        message = "oi lia, estava com uma historia presa na minha mente, que queria compartilhar, mas nao sei por onde comecar"
+        analysis = main.fallback_lia_analysis(session, message)
+        lowered = main.normalize_for_match(analysis.assistant_reply or "")
+
+        self.assertIn("historia", lowered)
+        self.assertIn("conto", lowered)
+        self.assertIn("lembranca", lowered)
+        self.assertIn("mistura", lowered)
+        self.assertNotIn("incomodando", lowered)
+        self.assertNotIn("estressante", lowered)
+        self.assertNotIn("peso grande", lowered)
+
     def test_lia_does_not_speak_as_if_she_feels_user_memory(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
         user_message = "sinto que quando eu estava no ensino medio"

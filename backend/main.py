@@ -1531,6 +1531,23 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
                 "animes",
             ],
         ),
+        "story_topic": contains_any(
+            f"{latest_text} {combined_text}",
+            [
+                "historia",
+                "historias",
+                "conto",
+                "contos",
+                "personagem",
+                "personagens",
+                "mundo ficticio",
+                "mundos ficticios",
+                "lembranca",
+                "lembrancas",
+                "momento da minha vida",
+                "momentos da minha vida",
+            ],
+        ),
         "quick_pass": contains_any(latest_text, ["rapidinho", "so quis passar", "so passei", "so passar por aqui", "so vim passar", "so vim aqui"]),
         "wants_to_stop": contains_any(
             latest_text,
@@ -2370,11 +2387,27 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     if context["light_topic"]:
         if contains_any(normalized, DISTRESS_ASSUMPTION_FRAGMENTS + GUIDED_QUESTION_FRAGMENTS):
             return False
+        if context["story_topic"] and contains_any(normalized, ["incomod", "estress", "peso grande", "pesando"]):
+            return False
         if question_count > 1:
             return False
         return contains_any(
             normalized,
-            ["musica", "filme", "serie", "esporte", "comida", "livro", "curte", "gosta de ouvir"],
+            [
+                "musica",
+                "filme",
+                "serie",
+                "esporte",
+                "comida",
+                "livro",
+                "historia",
+                "historias",
+                "conto",
+                "lembranca",
+                "imagin",
+                "curte",
+                "gosta de ouvir",
+            ],
         )
 
     if context["no_issue"]:
@@ -2568,6 +2601,9 @@ def build_contextual_reflection(
 
     if context["unsure"]:
         return "Tudo bem. Nem sempre isso vem claro na hora."
+
+    if session.turn_count == 1 and context["story_topic"]:
+        return "Entendi. Tem uma historia ai que voce quer compartilhar, mas ainda esta procurando por onde comecar."
 
     if session.turn_count == 1 and context["light_topic"]:
         return "Claro. A gente pode falar disso sim."
@@ -2959,6 +2995,8 @@ def build_contextual_question(
             return "O que mais te pegou hoje?"
         if context["unwell"]:
             return "Se quiser, me conta o que mais te pegou hoje."
+        if context["story_topic"]:
+            return "Essa historia e mais um conto inventado, uma lembranca sua ou uma mistura das duas coisas?"
         if context["light_topic"]:
             return "O que voce mais curte nisso?"
         if context["creative"]:
