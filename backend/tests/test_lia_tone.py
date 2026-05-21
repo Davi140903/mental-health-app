@@ -264,6 +264,31 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertFalse(main.should_close_lia_session(session, analysis, "anxiety", enough_distress_data=True))
 
+    def test_help_or_options_request_does_not_close_conversation_automatically(self) -> None:
+        session = self.build_session(stage="anxiety", turn_count=5)
+        session.current_topic = "closing"
+        session.transcript = [
+            main.LiaTranscriptMessage(role="user", content="estou preocupada com a faculdade"),
+            main.LiaTranscriptMessage(role="user", content="tenho prova chegando e minha cabeca trava"),
+            main.LiaTranscriptMessage(role="user", content="tenho dormido mal e fico irritada"),
+            main.LiaTranscriptMessage(
+                role="user",
+                content="eu queria entender se isso e so pressao da prova ou se eu preciso de ajuda para organizar melhor minha rotina",
+            ),
+        ]
+        analysis = main.LiaAnalysis(
+            assistant_reply="Voce prefere organizar o que sente, pensar em um proximo passo ou seguir para atendimento?",
+            reflection="Vamos por essa parte.",
+            next_question="Voce prefere organizar o que sente, pensar em um proximo passo ou seguir para atendimento?",
+            risk_level="none",
+            mood_value=2,
+            gad7_scores=[2, 2, None, None, None, None, None],
+            phq9_scores=[None, None, 2, 2, None, None, None, None, None],
+            ready_to_close=True,
+            recommended_stage="anxiety",
+        )
+
+        self.assertFalse(main.should_close_lia_session(session, analysis, "anxiety", enough_distress_data=True))
     def test_energy_question_does_not_repeat_identically(self) -> None:
         session = self.build_session(stage="mood", turn_count=3)
         session.transcript = [

@@ -3239,6 +3239,9 @@ def should_close_lia_session(
     if latest_context["quick_pass"] or latest_context["no_issue"]:
         return count_meaningful_user_messages(session) >= 2
 
+    if latest_context["asks_for_options"] or latest_context["mentions_help"]:
+        return False
+
     if latest_context["wants_to_stop"] and count_meaningful_user_messages(session) >= 3:
         return True
 
