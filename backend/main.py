@@ -2046,6 +2046,31 @@ def reply_looks_like_model_leak(text_value: str) -> bool:
     return any(fragment in normalized for fragment in MODEL_LEAK_FRAGMENTS)
 
 
+def reply_speaks_as_if_lia_feels_user_experience(user_message: str, text_value: str) -> bool:
+    normalized = normalize_for_match(text_value)
+    normalized_user = normalize_for_match(user_message)
+    first_person_feeling_fragments = [
+        "eu sinto que",
+        "sinto que",
+        "eu estou sentindo",
+        "estou sentindo",
+        "eu estava no",
+        "eu estava na",
+        "estivesse revivendo",
+        "estou revivendo",
+        "minha vida",
+        "meu bem estar atual",
+        "meu bem-estar atual",
+    ]
+    if not contains_any(normalized, first_person_feeling_fragments):
+        return False
+
+    if normalized.startswith("sinto que") and normalized_user.startswith("sinto que"):
+        return True
+
+    return contains_any(normalized, ["como se eu", "eu sinto que isso", "eu estava", "minha vida", "meu bem"])
+
+
 def reply_misreads_clear_message(session: LiaSessionState, user_message: str, text_value: str) -> bool:
     context = build_lia_context(session, user_message)
     normalized_reply = normalize_for_match(text_value)
@@ -2068,6 +2093,8 @@ def reply_misreads_clear_message(session: LiaSessionState, user_message: str, te
     if "mais doente" in normalized_reply:
         return True
     if re.search(r"\beu tambem\b", normalized_reply):
+        return True
+    if reply_speaks_as_if_lia_feels_user_experience(user_message, text_value):
         return True
     if reply_looks_like_model_leak(text_value):
         return True
@@ -2266,6 +2293,9 @@ def reply_respects_support_context(session: LiaSessionState, user_message: str, 
     question_count = text_value.count("?")
 
     if reply_looks_like_model_leak(text_value):
+        return False
+
+    if reply_speaks_as_if_lia_feels_user_experience(user_message, text_value):
         return False
 
     if question_count > 1 and (is_support_related_message(context) or context["figurative_distress"] or context["work_offense"]):

@@ -835,6 +835,21 @@ class LiaToneTests(unittest.TestCase):
             )
         )
 
+    def test_lia_does_not_speak_as_if_she_feels_user_memory(self) -> None:
+        session = self.build_session(stage="support", turn_count=2)
+        user_message = "sinto que quando eu estava no ensino medio"
+        bad_reply = (
+            "Sinto que quando eu estava no ensino medio, e como se eu estivesse revivendo um momento dificil da minha vida. "
+            "Eu sinto que isso esta relacionado ao meu bem-estar atual. Pode me dizer mais sobre o que voce sentiu nessa epoca?"
+        )
+        good_reply = (
+            "Pelo que voce trouxe, o ensino medio parece ter voltado como uma lembranca importante. "
+            "Pode me dizer mais sobre o que voce sentiu nessa epoca e como isso aparece hoje?"
+        )
+
+        self.assertFalse(main.reply_respects_support_context(session, user_message, bad_reply))
+        self.assertTrue(main.reply_respects_support_context(session, user_message, good_reply))
+
     def test_analyze_lia_turn_prefers_llm_when_enabled(self) -> None:
         session = self.build_session(stage="support", turn_count=1)
         expected = main.LiaAnalysis(
