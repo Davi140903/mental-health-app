@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/useAuth';
 
 function buildCodeMessage(debugCode: string | null, fallback: string) {
@@ -100,12 +101,7 @@ export default function Login() {
 
           <label className="field">
             <span>Senha</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+            <PasswordInput value={password} onChange={setPassword} required />
           </label>
 
           <button

@@ -169,6 +169,46 @@ a {
   color: #41524b;
 }
 
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap input {
+  padding-right: 3.1rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: #587267;
+}
+
+.password-toggle:hover:enabled {
+  background: rgba(127, 155, 138, 0.14);
+  color: #3e5b50;
+  transform: translateY(-50%);
+}
+
+.password-toggle,
+.password-toggle:hover:enabled {
+  transform: translateY(-50%);
+}
+
+.password-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+}
+
 .compact-field {
   min-width: 220px;
 }

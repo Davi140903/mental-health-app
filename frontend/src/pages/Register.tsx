@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/useAuth';
 
 function buildCodeMessage(debugCode: string | null, fallback: string) {
@@ -141,22 +142,12 @@ export default function Register() {
           <div className="split-fields">
             <label className="field">
               <span>Senha</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
+              <PasswordInput value={password} onChange={setPassword} required />
             </label>
 
             <label className="field">
               <span>Confirmar senha</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-              />
+              <PasswordInput value={confirmPassword} onChange={setConfirmPassword} required />
             </label>
           </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../contexts/useAuth';
 
 function buildCodeMessage(debugCode: string | null, fallback: string) {
@@ -150,22 +151,12 @@ export default function RecoverLogin() {
               <div className="split-fields">
                 <label className="field">
                   <span>Nova senha</span>
-                  <input
-                    type="password"
-                    value={novaSenha}
-                    onChange={(event) => setNovaSenha(event.target.value)}
-                    required
-                  />
+                  <PasswordInput value={novaSenha} onChange={setNovaSenha} required />
                 </label>
 
                 <label className="field">
                   <span>Confirmar nova senha</span>
-                  <input
-                    type="password"
-                    value={confirmNovaSenha}
-                    onChange={(event) => setConfirmNovaSenha(event.target.value)}
-                    required
-                  />
+                  <PasswordInput value={confirmNovaSenha} onChange={setConfirmNovaSenha} required />
                 </label>
               </div>
             </>
