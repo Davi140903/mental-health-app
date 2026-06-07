@@ -3823,7 +3823,7 @@ def call_ollama_for_lia(
         "model": resolve_ollama_model(),
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.4, "num_predict": 360},
+        "options": {"temperature": 0.6, "num_predict": 420},
         "messages": [
             {"role": "system", "content": build_lia_system_prompt(prompt_stage, retry_hint)},
             {"role": "system", "content": build_lia_memory_prompt(session)},
@@ -4425,6 +4425,19 @@ def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAn
 
 def analyze_lia_turn_with_llm(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
     base_analysis = fallback_lia_analysis(session, user_message)
+    try:
+        llm_analysis = call_ollama_for_lia(session)
+        llm_analysis.gad7_scores = blend_signal_scores(llm_analysis.gad7_scores, base_analysis.gad7_scores)
+        llm_analysis.phq9_scores = blend_signal_scores(llm_analysis.phq9_scores, base_analysis.phq9_scores)
+        if llm_analysis.mood_value is None:
+            llm_analysis.mood_value = base_analysis.mood_value
+        llm_analysis.ready_to_close = bool(llm_analysis.ready_to_close and base_analysis.ready_to_close)
+        llm_analysis.recommended_stage = infer_effective_stage(session, llm_analysis, user_message)
+        refined = refine_lia_analysis(session, llm_analysis, user_message)
+        return refined, True
+    except Exception:
+        pass
+
     try:
         rewritten_reply = rewrite_lia_from_analysis(
             session,
