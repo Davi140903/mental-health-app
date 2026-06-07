@@ -34,7 +34,7 @@ class LiaToneTests(unittest.TestCase):
             "Eu estou aqui para te ouvir com calma, ajudar a organizar o que voce esta sentindo e, se fizer sentido, te orientar daqui para a frente.",
             contents,
         )
-        self.assertIn("Nao precisa ter as palavras certas agora. Pode comecar do seu jeito.", contents)
+        self.assertIn("O que voce quer conversar hoje?", contents)
         self.assertNotIn("Me conta, como voce ta hoje?", contents)
         self.assertNotIn("Esse pode ser nosso primeiro cuidado por aqui. Nao precisa acertar as palavras.", contents)
 
@@ -71,7 +71,7 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertEqual(len(messages), 3)
         self.assertIn("bom te ver por aqui", joined)
-        self.assertIn("retomar algo", joined)
+        self.assertIn("que tipo de ajuda", joined)
         self.assertNotIn("da ultima vez ficou comigo", joined)
         self.assertNotIn("ansiedade sono e trabalho", joined)
         self.assertNotIn("partimos de musica", joined)
@@ -163,7 +163,7 @@ class LiaToneTests(unittest.TestCase):
         session.pause_offer_pending = True
         yes_context = main.build_lia_context(session, "sim")
         self.assertTrue(main.is_affirmative_pause_reply(yes_context))
-        self.assertIn("ultima coisa pequena", main.normalize_for_match(main.build_pause_message(session)))
+        self.assertIn("algo pequeno hoje", main.normalize_for_match(main.build_pause_message(session)))
 
     def test_pause_can_use_light_prompt_topic(self) -> None:
         session = self.build_session(stage="support", turn_count=2)
@@ -195,7 +195,7 @@ class LiaToneTests(unittest.TestCase):
         analysis = main.fallback_lia_analysis(session, "gosto de assistir animes")
         lowered = main.normalize_for_match(analysis.assistant_reply or "")
         self.assertIn("anime", lowered)
-        self.assertIn("voltar para o que estava pesando", lowered)
+        self.assertIn("volta para o que estava pesando", lowered)
 
     def test_interaction_summary_and_report_keep_simple_context(self) -> None:
         session = self.build_session(stage="support", turn_count=4)
@@ -294,7 +294,7 @@ class LiaToneTests(unittest.TestCase):
         session.transcript = [
             main.LiaTranscriptMessage(
                 role="assistant",
-                content="Entendi. Quando o cansaco acumula, ate falar disso ja pode parecer muito. Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
+                content="A gente pode pegar so uma parte disso agora. Junto com esse cansaco, voce percebeu menos vontade de fazer as coisas?",
             )
         ]
 
@@ -455,8 +455,8 @@ class LiaToneTests(unittest.TestCase):
         reply = main.build_simple_closing_reply(session, "na maior parte dos dias")
         lowered = main.normalize_for_match(reply)
 
-        self.assertIn("podemos parar por aqui", lowered)
-        self.assertIn("colocado essa parte para fora", lowered)
+        self.assertIn("triagem", lowered)
+        self.assertIn("bom ponto de partida", lowered)
         self.assertNotIn("pode falar mais", lowered)
         self.assertNotIn("guardar o essencial", lowered)
 
@@ -470,7 +470,7 @@ class LiaToneTests(unittest.TestCase):
 
         self.assertIn("triagem", lowered)
         self.assertIn("baixar um pouco o ritmo", lowered)
-        self.assertIn("para por aqui", lowered)
+        self.assertIn("quando voltar", lowered)
         self.assertNotIn("organizar uma parte importante", lowered)
 
     def test_followup_mode_keeps_conversation_open_for_extra_turn(self) -> None:
@@ -654,7 +654,7 @@ class LiaToneTests(unittest.TestCase):
         reply = main.normalize_for_match(analysis.assistant_reply)
 
         self.assertIn("cabeca", reply)
-        self.assertIn("limite", reply)
+        self.assertIn("disputando espaco", reply)
         self.assertIn("qual problema parece mais urgente", reply)
         self.assertNotIn("nao precisa transformar isso em problema", reply)
         self.assertNotIn("partir dessa imagem", reply)
@@ -827,14 +827,14 @@ class LiaToneTests(unittest.TestCase):
         session.transcript = [
             main.LiaTranscriptMessage(
                 role="assistant",
-                content="Quando o cansaco acumula, ate falar disso ja pode parecer muito.",
+                content="A gente pode pegar so uma parte disso agora.",
             )
         ]
 
         support = main.build_contextual_support(session, "meu sono ta ruim e minha energia baixa", "mood")
 
         self.assertIsNotNone(support)
-        self.assertNotEqual(support, "Quando o cansaco acumula, ate falar disso ja pode parecer muito.")
+        self.assertNotEqual(support, "A gente pode pegar so uma parte disso agora.")
 
     def test_music_topic_does_not_sound_delicate_on_first_turn(self) -> None:
         session = self.build_session(stage="support", turn_count=1)

@@ -912,6 +912,25 @@ a {
   margin: 0;
 }
 
+.direct-triage-card {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(127, 155, 138, 0.18);
+  border-radius: 20px;
+  background: #f3faf6;
+}
+
+.direct-triage-card h3,
+.direct-triage-card p {
+  margin: 0;
+}
+
+.direct-triage-card .secondary-button {
+  justify-self: start;
+}
+
 .choice-cluster {
   display: flex;
   flex-wrap: wrap;

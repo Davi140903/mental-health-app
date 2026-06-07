@@ -384,7 +384,7 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
             ),
             LiaTranscriptMessage(
                 role="assistant",
-                content="Nao precisa ter as palavras certas agora. Pode comecar do seu jeito.",
+                content="O que voce quer conversar hoje?",
             ),
         ]
 
@@ -396,7 +396,7 @@ def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[Li
         ),
         LiaTranscriptMessage(
             role="assistant",
-            content="Hoje voce quer retomar algo que ficou da ultima conversa ou prefere comecar de outro ponto?",
+            content="Que tipo de ajuda faria sentido hoje?",
         ),
     ]
 
@@ -828,7 +828,7 @@ def build_pause_message(session: LiaSessionState) -> str:
         return (
             f"Voce tinha escolhido {light_value}. O que mais te prende nisso?"
         )
-    return "Entao me responde uma bem simples, sem pensar muito: qual foi a ultima coisa pequena que te deu um minimo de alivio hoje?"
+    return "Entao vamos por uma coisa simples: teve algo pequeno hoje que te deu um pouco de alivio?"
 
 
 def build_pause_decline_reply(session: LiaSessionState) -> str:
@@ -841,13 +841,13 @@ def build_post_pause_reply(session: LiaSessionState, user_message: str) -> str:
 
     if light_value and ("filme" in light_value or "serie" in light_value):
         if "anime" in normalized_message:
-            return "Boa. Anime costuma prender por bastante tempo mesmo. Se quiser, a gente pode voltar para o que estava pesando antes."
-        return "Entendi. Parece um assunto que te puxa com facilidade. Se quiser, a gente pode voltar para o que estava pesando antes."
+            return "Boa. Anime pode abrir um respiro mesmo. Se quiser, a gente volta para o que estava pesando antes."
+        return "Esse assunto parece te prender com facilidade. Se quiser, a gente volta para o que estava pesando antes."
 
     if light_value and "musica" in light_value:
-        return "Entendi. Musica costuma abrir um respiro rapido mesmo. Se quiser, a gente pode voltar para o que estava pesando antes."
+        return "Musica costuma abrir um respiro rapido mesmo. Se quiser, a gente volta para o que estava pesando antes."
 
-    return "Entendi. Bom ter um assunto mais leve no meio disso. Se quiser, a gente pode voltar para o que estava pesando antes."
+    return "Bom ter um assunto mais leve no meio disso. Se quiser, a gente volta para o que estava pesando antes."
 
 
 def is_affirmative_pause_reply(context: dict[str, Any]) -> bool:
@@ -1316,6 +1316,8 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             "quero uma receita",
             "me da uma receita",
             "me de uma receita",
+            "passa a receita",
+            "passa uma receita",
             "faz uma receita",
             "faca uma receita",
             "receita de",
@@ -1758,14 +1760,14 @@ def should_finish_for_triage_handoff(session: LiaSessionState, context: dict[str
 def build_triage_handoff_reply(context: dict[str, Any]) -> str:
     if contains_any(context["latest_text"], ["como funciona", "como funcionaria", "e agora", "proximo passo"]):
         return (
-            "Funciona assim: eu encerro esta parte da conversa e te mostro os horarios disponiveis com um profissional. "
-            "Voce escolhe um horario, e o que apareceu aqui fica organizado para ajudar na primeira triagem. "
+            "Funciona assim: eu organizo o que apareceu aqui e te mostro os horarios disponiveis com um profissional. "
+            "Voce escolhe um horario, e essa conversa vai como apoio inicial para a triagem. "
             "Voce nao precisa explicar tudo de novo nem chegar com as palavras perfeitas."
         )
 
     return (
-        "Certo. Entao o melhor proximo passo e seguir para uma triagem com um profissional. "
-        "Eu vou deixar o essencial desta conversa organizado para facilitar esse primeiro atendimento. "
+        "Certo. Entao faz sentido seguir para uma triagem com um profissional. "
+        "Eu vou deixar o que apareceu aqui organizado para facilitar esse primeiro contato. "
         "Voce escolhe um horario e pode chegar sem precisar ter tudo pronto para explicar."
     )
 
@@ -2638,12 +2640,12 @@ def build_contextual_reflection(
         return "Tudo bem falar disso aqui. A gente pode ir por partes."
 
     if session.turn_count == 1 and context["figurative_distress"]:
-        return "Entendi. Quando voce fala que sua cabeca esta cheia desse jeito, parece que tem muita coisa passando do limite."
+        return "Pelo que voce descreve, tem muita coisa disputando espaco na sua cabeca agora."
 
     if session.turn_count == 1 and context["financial_pressure"] and context["caregiving"]:
         if context["alone_burden"]:
-            return "Entendi. Contas para pagar, cuidado com filho e essa sensacao de estar sozinha nisso tudo e muita coisa para carregar."
-        return "Entendi. Lidar com contas e cuidado com filho ao mesmo tempo pode pesar muito."
+            return "Contas para pagar, cuidado com filho e essa sensacao de estar sozinha nisso tudo formam uma carga bem grande."
+        return "Lidar com contas e cuidado com filho ao mesmo tempo pode virar uma carga grande."
 
     if session.turn_count == 1 and context["ending"] and context["pressure"]:
         return "Entendi. Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
@@ -2663,10 +2665,10 @@ def build_contextual_reflection(
     if session.turn_count == 1 and context["ansiedade"] and "preocup" in context["latest_text"] and not contains_any(
         context["latest_text"], ["ansios", "nervos", "tenso", "panico"]
     ):
-        return "Entendi. Essa preocupacao parece estar ocupando espaco na sua cabeca."
+        return "Essa preocupacao esta ocupando espaco na sua fala agora."
 
     if session.turn_count == 1 and context["ansiedade"]:
-        return "Entendi. Ansiedade pode aparecer de jeitos diferentes."
+        return "Ansiedade pode aparecer de jeitos diferentes, entao eu prefiro entender como ela chega para voce."
 
     if session.turn_count == 1 and context["tristeza"]:
         return "Entendi. Tem um peso ai que nao parece pequeno."
@@ -2837,6 +2839,24 @@ def build_contextual_question(
 
     if topic == "main_focus":
         remember_question_intent(session, "main_focus")
+        if context["story_topic"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Do que e essa historia, pelo menos do jeito que ela aparece para voce agora?",
+                    "Essa historia e mais um conto inventado, uma lembranca sua ou uma mistura das duas coisas?",
+                    "Qual parte dessa historia veio mais forte na sua cabeca?",
+                ],
+            )
+        if context["creative"] or context["light_topic"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Por onde voce quer comecar nesse assunto?",
+                    "O que mais te prende nisso agora?",
+                    "Qual parte disso voce queria me contar primeiro?",
+                ],
+            )
         if context["palpitacao"]:
             return first_fresh_question(
                 session,
@@ -3231,9 +3251,9 @@ def build_contextual_support(
             return first_fresh_phrase(
                 session,
                 [
-                    "Quando o cansaco acumula, ate falar disso ja pode parecer muito.",
-                    "Quando isso vai pesando, ate colocar em palavras pode cansar.",
-                    "Quando o corpo ja vem gasto, ate explicar isso direito fica mais puxado.",
+                    "Pode ser muita coisa para organizar de uma vez.",
+                    "A gente pode pegar so uma parte disso agora.",
+                    "Nao precisa sair perfeito para fazer sentido aqui.",
                 ],
             )
         if context["tristeza"]:
@@ -3286,17 +3306,26 @@ def should_close_lia_session(
     if meaningful_messages < 3 or session.turn_count < 4:
         return False
 
-    if session.turn_count >= 6:
+    if session.turn_count >= 8:
         return True
 
     if session.current_topic in {"concrete_example", "user_summary"} and recent_intent_count(session, session.current_topic) >= 2:
+        return True
+
+    if enough_distress_data and meaningful_messages >= 4 and session.current_topic in {"frequency_duration", "functional_impact"}:
         return True
 
     topics = derive_memory_topics(session)
     if not topics and sum(score or 0 for score in session.gad7_scores + session.phq9_scores) < 4:
         return False
 
-    return bool(session.current_topic == "closing" or analysis.ready_to_close or session.turn_count >= 6)
+    if session.current_topic == "closing":
+        return True
+
+    if analysis.ready_to_close and meaningful_messages >= 5 and session.turn_count >= 7:
+        return True
+
+    return bool(session.turn_count >= 8)
 
 
 def ensure_lia_continuation(
@@ -3653,6 +3682,7 @@ Etapa atual da conversa: {stage}.
 Objetivo:
 - acolher o usuario em tom humano;
 - agir como uma assistente conversacional simples com foco em apoio emocional;
+- responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
 - nao presumir sofrimento quando a fala for positiva, neutra, cotidiana ou simbolica;
 - so aprofundar em ansiedade ou humor quando houver sinais disso ou quando o usuario pedir ajuda;
 - nunca mencionar GAD-7, PHQ-9, diagnostico ou formulario;
@@ -3703,14 +3733,18 @@ Regras:
 - se o usuario disser que esta ansioso, confirme com calma como isso aparece antes de afirmar intensidade, duracao ou padrao;
 - nao diga que o usuario "tem ansiedade ultimamente" se ele so mencionou estar ansioso agora;
 - se a fala for apenas "estou ansioso" ou parecida, responda com linguagem livre e natural, sem frase fixa, mas confirme como isso aparece; nao transforme em "voce tem ansiedade";
+- nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
+- nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
+- se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
+- quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
 - se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;
 - se o usuario disser que nao esta bem, pedir ajuda, falar de cansaco, pressao, vazio, pouca vontade, sono ruim ou pouca energia, nao responda de forma passiva;
-- nesses casos, assistant_reply deve obrigatoriamente trazer 3 coisas na mesma mensagem: reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e uma pergunta curta que conduza a conversa;
+- nesses casos, assistant_reply deve trazer reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e quando fizer sentido uma pergunta curta que conduza a conversa;
 - o apoio vem antes de qualquer orientacao; nao pule direto para dica, tarefa ou solucao;
 - nao use respostas vagas como "estou aqui para ouvir" ou "como posso te ajudar" sem tomar iniciativa;
-- se o usuario disser "nao estou me sentindo muito bem", uma boa direcao seria algo como: "Entendi. Parece que hoje ficou pesado pra voce. Pode me contar do jeito que vier: o que mais te pegou nisso?";
+- se o usuario disser "nao estou me sentindo muito bem", uma boa direcao seria algo como: "Hoje parece que nao esta simples para voce. Pode me contar do jeito que vier: o que mais te pegou nisso?";
 - se o usuario pedir ajuda, uma boa direcao seria algo como: "Tudo bem. Me fala qual parte disso esta mais dificil de carregar agora.";
 - nao minimize com frases como "e natural sentir-se assim de vez em quando" ou "todo mundo passa por isso";
 - evite tom de coach, autoajuda ou produtividade;
@@ -3719,6 +3753,7 @@ Regras:
 - nao faca perguntas de coaching futuro, como "o que voce pode fazer amanha?" ou "qual atividade te faria bem?". Prefira perguntas simples, concretas e humanas;
 - evite duas perguntas na mesma resposta;
 - evite perguntas amplas como "o que e mais importante hoje?" ou "o que voce faz para relaxar?" quando a conversa ainda precisa mapear sintomas;
+- evite frases que julgam a capacidade do usuario, como "ate falar disso ja pode parecer muito";
 - nas fases iniciais, priorize perguntas como: o que mais pegou, quando isso costuma apertar, o que mudou no dia, no sono, na energia ou na vontade;
 - use null com generosidade nos scores. So marque 0 quando houver negacao explicita. Nao preencha itens nao mencionados;
 - nas primeiras 2 ou 3 mensagens, nao preencha muitos itens de uma vez. Avance aos poucos;
@@ -3730,6 +3765,7 @@ Regras:
 - cite pelo menos um detalhe concreto da fala mais recente do usuario ou do contexto imediatamente anterior;
 - evite frases genericas repetidas como "obrigada por me contar isso";
 - nao comece toda resposta com "entendi";
+- tambem evite trocar "entendi" por sinonimos mecanicos em toda resposta; varie de verdade;
 - varie o tom de abertura entre acolhimento, observacao gentil, validacao ou curiosidade;
 - se o usuario responder algo curto como "sim" ou "nao", use a pergunta anterior e o contexto recente para formular a resposta;
 - quando fizer sentido, inclua no maximo uma orientacao pratica bem curta, mas so depois de acolher de verdade;
@@ -3743,12 +3779,12 @@ Regras:
 - assistant_reply deve soar como uma unica mensagem de chat, nao como dois blocos tecnicos;
 - prefira 1 ou 2 frases naturais; use 3 apenas quando realmente ajudar;
 - assistant_reply e o campo mais importante; reflection e next_question sao apoio interno;
-- se ready_to_close for true, assistant_reply deve soar como um fechamento natural, com acolhimento e um proximo passo simples;
-- se stage for closing, nao abra nova investigacao nem faca pergunta longa; feche com acolhimento e um passo pequeno;
+- se ready_to_close for true, assistant_reply deve oferecer uma transicao cuidadosa, sem cortar a liberdade do usuario de continuar;
+- se stage for closing, nao abra nova investigacao longa; acolha, indique a triagem quando fizer sentido e deixe claro que o usuario pode seguir pelo botao ou voltar depois;
 - se a mensagem for confusa ou pouco clara, assistant_reply deve pedir esclarecimento de forma humana, sem usar resposta pronta robotica;
 - se houver memoria acumulada, retome isso com delicadeza e so quando ajudar a conversa atual;
-- quando os sinais recentes ja tiverem passado por ansiedade/corpo e depois por sono, energia, interesse ou humor, prefira fechar com sintese curta em vez de seguir perguntando;
-- se ja houver dados suficientes, ready_to_close pode ser true.
+- quando os sinais recentes ja tiverem passado por ansiedade/corpo e depois por sono, energia, interesse ou humor, prefira oferecer triagem ou uma pausa em vez de continuar coletando;
+- so use ready_to_close true quando houver varias trocas ou pedido claro de triagem; nao finalize cedo so porque ja deu para preencher dados.
 """.strip()
 
 
@@ -4253,7 +4289,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
 
     recommended_stage = infer_recommended_stage(session, user_message, risk_level)
     next_question = build_contextual_question(session, user_message, recommended_stage)
-    ready_to_close = session.turn_count >= 6 and recommended_stage in {"anxiety", "mood"}
+    ready_to_close = session.turn_count >= 8 and recommended_stage in {"anxiety", "mood"}
 
     if risk_level == "urgent":
         reflection = build_contextual_reflection(session, user_message, risk_level)
@@ -4931,15 +4967,15 @@ def build_simple_closing_reply(session: LiaSessionState, user_message: str) -> s
 
     if session.followup_mode and (session.followup_turns_left or 0) <= 0:
         return (
-            "Obrigada por continuar comigo mais um pouco. Pelo que voce trouxe, acho importante que voce nao fique carregando isso sozinho. "
-            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais e conversar com alguem que possa te acompanhar com mais calma. "
-            "Por agora, tenta fazer algo simples para baixar um pouco o ritmo, como ouvir uma musica calma, tomar um banho ou ficar alguns minutos longe de demandas e telas. "
-            "A gente para por aqui hoje. Cuida de voce; quando voltar, eu continuo de onde isso ficou."
+            "Obrigada por continuar comigo mais um pouco. Pelo que voce trouxe, faz sentido nao deixar isso so com voce. "
+            "Um bom proximo passo pode ser seguir para a triagem com um dos nossos profissionais, levando essa conversa como ponto de partida. "
+            "Se for encerrar agora, tenta escolher uma coisa simples para baixar um pouco o ritmo, como ouvir algo calmo ou se afastar por alguns minutos das demandas. "
+            "Cuida de voce; quando voltar, eu continuo de onde isso ficou."
         )
 
     return (
-        "Obrigada por me contar isso. Por hoje, talvez ja seja suficiente ter colocado essa parte para fora. "
-        "Se quiser, podemos parar por aqui sem pressa; e, se ainda tiver algo importante, voce pode continuar comigo um pouco mais."
+        "Obrigada por me contar isso. Ja temos um bom ponto de partida para organizar essa conversa. "
+        "Se fizer sentido, voce pode seguir para a triagem; se ainda tiver algo importante, tambem pode continuar comigo um pouco mais."
     )
 
 
@@ -4957,12 +4993,12 @@ def build_followup_continuation_reply(session: LiaSessionState, user_message: st
             "Nao precisa chegar la com tudo pronto; falar exatamente essa duvida ja e um bom comeco."
         )
     if context["sono"] or context["energia"]:
-        return "Entendi. Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
+        return "Isso ajuda a completar melhor o que voce estava dizendo. Quando isso aparece em casa, o que costuma te dar algum alivio, mesmo que pequeno?"
     if context["irritabilidade"]:
-        return "Entendi. Essa irritacao junto com o afastamento parece ser uma parte importante do que ficou. Quando voce percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciencia com as pessoas?"
+        return "Essa irritacao junto com o afastamento parece ser uma parte importante do que ficou. Quando voce percebe isso acontecendo, costuma ser mais vontade de ficar quieto ou falta de paciencia com as pessoas?"
     if context["controlar"] or context["ansiedade"]:
-        return "Entendi. Essa cabeca que nao desliga parece estar acompanhando voce depois do trabalho tambem. O que costuma ficar repetindo mais quando voce chega em casa?"
-    return "Entendi. Pode me contar so mais esse pedaco. O que voce acha importante a Lia guardar sobre isso?"
+        return "Essa cabeca que nao desliga parece estar acompanhando voce depois do trabalho tambem. O que costuma ficar repetindo mais quando voce chega em casa?"
+    return "Pode me contar so mais esse pedaco. O que voce acha importante a Lia guardar sobre isso?"
 
 
 def reply_sounds_like_closing(reply: str | None) -> bool:
