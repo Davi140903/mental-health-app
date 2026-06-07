@@ -1344,7 +1344,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             "noticia de hoje",
         ],
     )
-    study_test_context = contains_any(
+    study_test_context = contains_exact_phrase(
         combined_text,
         [
             "prova",
@@ -1489,7 +1489,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "energia": contains_any(combined_text, ["energia", "cansad", "cansaco", "exaust", "sem energia", "fadiga"]),
         "tristeza": contains_any(combined_text, ["triste", "pra baixo", "sem esperanca", "vazio"]),
         "interesse": contains_any(combined_text, ["sem vontade", "sem animo", "desanim", "prazer", "nao tenho vontade"]),
-        "concentracao": contains_any(combined_text, ["concentr", "foco", "focar", "estudar", "trabalho"]),
+        "concentracao": contains_any(combined_text, ["concentr", "foco", "focar", "estudar"]),
         "study_test_context": study_test_context,
         "learning_attention_context": learning_attention_context,
         "asks_for_options": asks_for_options,
