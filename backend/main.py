@@ -3590,16 +3590,43 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             "preciso conversar com alguem",
             "conversar com alguem",
             "motivo suficiente",
+            "levar para um profissional",
+            "levar pra um profissional",
+            "deveria levar",
         ],
     ):
         if contains_any(latest_text, ["nao sei se", "não sei se", "queria entender", "entender melhor"]):
             return (
-                "Tudo bem. A gente pode entender melhor antes de decidir qualquer coisa sobre atendimento. "
-                "O que voce mais queria entender sobre isso agora?"
+                "Pelo que voce contou, faz sentido levar isso para uma conversa com um profissional, sem precisar chegar com tudo resolvido. "
+                "Quer que eu te encaminhe para a triagem agora?"
             )
         return (
             "Acho um bom caminho. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
             "Quer que eu te encaminhe para a triagem agora?"
+        )
+
+    if context["sono"] and contains_any(latest_text, ["cabeca fica pensando", "pensando em tudo", "tenho que resolver", "dificuldade de dormir"]):
+        return (
+            "Voce chegou falando do sono e dessa cabeca que continua ligada quando tenta descansar. "
+            "Quando voce deita, o que costuma voltar primeiro: tarefas, cobrancas ou medo de esquecer algo?"
+        )
+
+    if contains_any(latest_text, ["coisas que ficaram pendentes", "vou decepcionar", "decepcionar as pessoas", "pendentes"]):
+        return (
+            "Obrigado por explicar. Entao o trabalho fica voltando pela cobranca das pendencias e pelo medo de decepcionar as pessoas. "
+            "Qual dessas duas partes tem ocupado mais espaco quando voce tenta dormir?"
+        )
+
+    if contains_any(latest_text, ["duas semanas", "2 semanas", "funcionar no automatico", "funcionar no automático", "acordo cansado"]):
+        return (
+            "Duas semanas acordando cansado e tentando funcionar no automatico ja e uma informacao importante. "
+            "Isso tem atrapalhado mais seu trabalho, sua rotina em casa ou sua vontade de falar com as pessoas?"
+        )
+
+    if contains_any(latest_text, ["nao quero preocupar", "não quero preocupar", "evitar falar com minha familia", "evitar falar com minha família"]):
+        return (
+            "Voce contou que tem evitado falar com sua familia para nao preocupar ninguem. "
+            "Se pudesse falar so uma parte, qual seria a mais importante para eles entenderem?"
         )
 
     if contains_any(latest_text, ["conversas antigas", "mensagens antigas", "olhando as conversas", "olhar as conversas"]):
@@ -3659,7 +3686,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["nao consigo descansar", "nao consigo relaxar", "mesmo parado", "cabeca continua ligada", "mente continua ligada"]):
         return (
-            "Entendi. O corpo para, mas a cabeca continua trabalhando. "
+            "Voce contou que o corpo para, mas a cabeca continua trabalhando. "
             "Nessa hora, o que fica rodando mais: tarefas, cobrancas ou medo de esquecer algo?"
         )
 
@@ -3750,7 +3777,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Voce trouxe esse afastamento como uma parte importante da conversa. "
+            "Obrigado por falar disso tambem. Voce trouxe esse afastamento como uma parte importante da conversa. "
             f"{question}"
         )
 
@@ -3819,7 +3846,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Voce trouxe esse cansaco como a primeira coisa de hoje. "
+                "Obrigado por colocar isso aqui. Voce trouxe esse cansaco como a primeira coisa de hoje. "
                 f"{capitalize_first(question)}"
             )
         if context["interesse"] and not context["unwell"]:
@@ -3845,7 +3872,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Obrigado por colocar isso aqui. "
+            "Obrigado por colocar isso aqui. Vamos pegar uma parte de cada vez. "
             f"{question}"
         )
 
@@ -3863,7 +3890,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Trabalho e casa juntos podem virar muita coisa para carregar no mesmo dia. "
+                "Obrigado por explicar melhor. Trabalho e casa juntos deixam muita coisa no mesmo dia. "
                 f"{capitalize_first(question)}"
             )
         if context["figurative_distress"]:
@@ -3888,7 +3915,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Parece que tem coisa demais disputando espaco ao mesmo tempo. "
+            "Voce trouxe varias coisas disputando espaco ao mesmo tempo. "
             f"Vamos separar sem pressa: {question}"
         )
 
@@ -4815,6 +4842,29 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
             phq9_scores=phq9_scores,
             ready_to_close=False,
             recommended_stage="support",
+        )
+
+    if (
+        "quer que eu te encaminhe para a triagem agora" in recent_assistant
+        and contains_any(
+            normalize_for_match(user_message),
+            ["sim", "quero", "pode", "pode sim", "seguir", "triagem", "encaminhar"],
+        )
+    ):
+        reflection = (
+            "Certo. Vou te encaminhar para a triagem agora. "
+            "Voce nao precisa chegar com tudo perfeitamente explicado; essa conversa ja ajuda a mostrar por onde comecar."
+        )
+        return LiaAnalysis(
+            assistant_reply=reflection,
+            reflection=reflection,
+            next_question=None,
+            risk_level="none",
+            mood_value=session.mood_value,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=True,
+            recommended_stage="closing",
         )
 
     risk_level: Literal["none", "attention", "urgent"] = "none"
