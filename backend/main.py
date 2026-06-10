@@ -3578,6 +3578,15 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
 def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str | None:
     context = build_lia_context(session, user_message)
 
+    if context["asks_about_professional"] or contains_any(
+        context["latest_text"],
+        ["quero atendimento", "queria atendimento", "gostaria de atendimento", "seguir para atendimento", "seguir para triagem"],
+    ):
+        return (
+            "Pode fazer sentido, sim. Um profissional pode te ajudar a olhar para isso com mais calma e organizar proximos passos "
+            "sem voce precisar chegar com tudo resolvido. Quer que eu te encaminhe para a triagem agora?"
+        )
+
     if context["decision_doubt"]:
         question = first_fresh_question(
             session,
