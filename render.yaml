@@ -11,6 +11,12 @@ services:
         value: production
       - key: OLLAMA_ENABLED
         value: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openrouter/free
+      - key: OPENROUTER_APP_NAME
+        value: Lia TCC
       - key: EMAIL_VERIFICATION_DEBUG
         value: false
       - key: SECRET_KEY

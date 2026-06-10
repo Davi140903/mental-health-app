@@ -33,6 +33,11 @@ from app.config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_SECONDS,
+    OPENROUTER_API_KEY,
+    OPENROUTER_API_URL,
+    OPENROUTER_APP_NAME,
+    OPENROUTER_MODEL,
+    OPENROUTER_SITE_URL,
     QUESTIONNAIRE_CONFIG,
     RESEND_API_KEY,
     RESEND_API_URL,
@@ -106,6 +111,7 @@ def normalize_optional_text(value: str | None) -> str | None:
 
 
 OLLAMA_ENABLED = env_flag("OLLAMA_ENABLED", True)
+LIA_LLM_ENABLED = bool(OPENROUTER_API_KEY) or OLLAMA_ENABLED
 _OLLAMA_RESOLVED_MODEL: str | None = None
 LIA_KNOWLEDGE_DIR = Path(__file__).resolve().parent / "app" / "lia_knowledge"
 LIA_KNOWLEDGE_FILES = (
@@ -3901,6 +3907,83 @@ def call_ollama_for_lia(
     )
 
 
+def parse_lia_analysis_from_content(content: str) -> LiaAnalysis:
+    parsed = parse_json_object(content)
+    assistant_reply = normalize_optional_text(parsed.get("assistant_reply"))
+    reflection = str(parsed.get("reflection") or assistant_reply or "Estou aqui com voce.")
+    next_question = parsed.get("next_question")
+
+    if not assistant_reply:
+        raise ValueError("LLM returned no assistant reply")
+
+    return LiaAnalysis(
+        assistant_reply=str(assistant_reply),
+        reflection=reflection,
+        next_question=next_question,
+        risk_level=parsed.get("risk_level") or "none",
+        mood_value=parsed.get("mood_value"),
+        gad7_scores=normalize_score_list(parsed.get("gad7_scores") or [], 7),
+        phq9_scores=normalize_score_list(parsed.get("phq9_scores") or [], 9),
+        ready_to_close=bool(parsed.get("ready_to_close")),
+        recommended_stage=parsed.get("recommended_stage") or default_stage_for_turn(0),
+    )
+
+
+def call_openrouter_for_lia(
+    session: LiaSessionState,
+    retry_hint: str | None = None,
+    forced_stage: Literal["support", "anxiety", "mood", "closing"] | None = None,
+) -> LiaAnalysis:
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OpenRouter disabled")
+
+    latest_user_message = next((item.content for item in reversed(session.transcript) if item.role == "user"), "")
+    prompt_stage = forced_stage or (infer_prompt_stage(session, latest_user_message) if latest_user_message else session.stage)
+
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "temperature": 0.6,
+        "max_tokens": 420,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": build_lia_system_prompt(prompt_stage, retry_hint)},
+            {"role": "system", "content": build_lia_memory_prompt(session)},
+            *[{"role": item.role, "content": item.content} for item in session.transcript],
+        ],
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "X-Title": OPENROUTER_APP_NAME,
+    }
+    if OPENROUTER_SITE_URL:
+        headers["HTTP-Referer"] = OPENROUTER_SITE_URL
+
+    request = urllib_request.Request(
+        OPENROUTER_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+
+    with urllib_request.urlopen(request, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
+        raw_payload = json.loads(response.read().decode("utf-8"))
+
+    content = raw_payload.get("choices", [{}])[0].get("message", {}).get("content", "")
+    return parse_lia_analysis_from_content(content)
+
+
+def call_cloud_or_local_lia(
+    session: LiaSessionState,
+    retry_hint: str | None = None,
+    forced_stage: Literal["support", "anxiety", "mood", "closing"] | None = None,
+) -> LiaAnalysis:
+    if OPENROUTER_API_KEY:
+        return call_openrouter_for_lia(session, retry_hint=retry_hint, forced_stage=forced_stage)
+    return call_ollama_for_lia(session, retry_hint=retry_hint, forced_stage=forced_stage)
+
+
 def infer_risk_level_from_message(user_message: str) -> Literal["none", "attention", "urgent"]:
     text_value = normalize_for_match(user_message)
     if contains_any(text_value, ["me matar", "suicid", "me machucar", "nao quero viver", "nao queria estar aqui"]):
@@ -4458,7 +4541,7 @@ def context_requires_strict_active_guidance(session: LiaSessionState, user_messa
 
 
 def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
-    if OLLAMA_ENABLED:
+    if LIA_LLM_ENABLED:
         return analyze_lia_turn_with_llm(session, user_message)
     return fallback_lia_analysis(session, user_message), False
 
@@ -4466,7 +4549,7 @@ def analyze_lia_turn(session: LiaSessionState, user_message: str) -> tuple[LiaAn
 def analyze_lia_turn_with_llm(session: LiaSessionState, user_message: str) -> tuple[LiaAnalysis, bool]:
     base_analysis = fallback_lia_analysis(session, user_message)
     try:
-        llm_analysis = call_ollama_for_lia(session)
+        llm_analysis = call_cloud_or_local_lia(session)
         llm_analysis.gad7_scores = blend_signal_scores(llm_analysis.gad7_scores, base_analysis.gad7_scores)
         llm_analysis.phq9_scores = blend_signal_scores(llm_analysis.phq9_scores, base_analysis.phq9_scores)
         if llm_analysis.mood_value is None:
@@ -6157,7 +6240,7 @@ def start_lia_conversation(
     memory = get_lia_memory_snapshot(db, current_user)
     session = build_lia_session(memory)
     session.transcript = build_lia_welcome_messages(current_user, memory)
-    return LiaTurnOut(session=session, using_ollama=OLLAMA_ENABLED)
+    return LiaTurnOut(session=session, using_ollama=LIA_LLM_ENABLED)
 
 
 @app.post("/lia/message", response_model=LiaTurnOut)
