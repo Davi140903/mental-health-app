@@ -3583,11 +3583,19 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         ["quero atendimento", "queria atendimento", "gostaria de atendimento", "seguir para atendimento", "seguir para triagem"],
     ):
         return (
-            "Pode fazer sentido, sim. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
+            "Acho um bom caminho. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
             "Quer que eu te encaminhe para a triagem agora?"
         )
 
     if context["decision_doubt"]:
+        lead = first_fresh_phrase(
+            session,
+            [
+                "Da para entender essa confusao.",
+                "Quando a cabeca embaralha, comecar por qualquer pedaco ja ajuda.",
+                "Nao precisa achar a resposta inteira agora.",
+            ],
+        )
         question = first_fresh_question(
             session,
             [
@@ -3596,7 +3604,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 "Tem alguma situacao puxando essa sensacao de duvida, ou ela vem mais geral?",
             ],
         )
-        return f"Dificil decidir quando tudo fica meio embaralhado por dentro. {capitalize_first(question)}"
+        return f"{lead} {capitalize_first(question)}"
 
     if context["financial_pressure"] and context["caregiving"]:
         question = first_fresh_question(
@@ -4032,6 +4040,7 @@ Etapa atual da conversa: {stage}.
 
 Objetivo:
 - acolher o usuario em tom humano;
+- ser simpatica, presente e gentil, sem exagerar;
 - agir como uma assistente conversacional simples com foco em apoio emocional;
 - responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
 - escutar sem julgar, sem interpretar demais e sem transformar a fala do usuario em avaliacao;
@@ -4121,6 +4130,8 @@ Regras:
 - evite tom de coach, autoajuda ou produtividade;
 - nao use frases como "vou sugerir", "vou dar um conselho", "pense em uma tarefa", "tome um cafe", "tome um cha", "faca uma caminhada", "veja um video engracado";
 - nao elogie nem celebre de forma exagerada; prefira calma, presenca e delicadeza;
+- simpatia aqui significa calor humano simples: "estou aqui", "obrigada por me contar", "a gente pode ir com calma", "isso ja ajuda a comecar";
+- use pequenas frases simpaticas quando combinarem com a fala, mas nao transforme toda resposta em acolhimento repetido;
 - nao faca perguntas de coaching futuro, como "o que voce pode fazer amanha?" ou "qual atividade te faria bem?". Prefira perguntas simples, concretas e humanas;
 - evite duas perguntas na mesma resposta;
 - evite perguntas amplas como "o que e mais importante hoje?" ou "o que voce faz para relaxar?" quando a conversa ainda precisa mapear sintomas;
