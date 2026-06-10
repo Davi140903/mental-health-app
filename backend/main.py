@@ -3592,6 +3592,11 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             "motivo suficiente",
         ],
     ):
+        if contains_any(latest_text, ["nao sei se", "não sei se", "queria entender", "entender melhor"]):
+            return (
+                "Tudo bem. A gente pode entender melhor antes de decidir qualquer coisa sobre atendimento. "
+                "O que voce mais queria entender sobre isso agora?"
+            )
         return (
             "Acho um bom caminho. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
             "Quer que eu te encaminhe para a triagem agora?"
@@ -3599,13 +3604,13 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["culpa", "culpado", "culpada", "descontar nas pessoas", "desconto nas pessoas"]):
         return (
-            "Essa culpa depois da irritacao pode deixar tudo mais pesado. "
+            "Essa culpa depois da irritacao tambem entra na historia. "
             "O que costuma acontecer antes de voce acabar descontando nas pessoas?"
         )
 
     if contains_any(latest_text, ["nao consigo descansar", "nao consigo relaxar", "mesmo parado", "cabeca continua ligada", "mente continua ligada"]):
         return (
-            "Isso de parar e a cabeca continuar ligada cansa bastante. "
+            "Entendi. O corpo para, mas a cabeca continua trabalhando. "
             "Nessa hora, o que fica rodando mais: tarefas, cobrancas ou medo de esquecer algo?"
         )
 
@@ -3613,6 +3618,44 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         return (
             "Da para entender esse medo de acabar machucando ou afastando quem importa. "
             "Isso aparece mais quando voce esta irritado, cansado ou tentando se isolar?"
+        )
+
+    if context["financial_pressure"] and context["caregiving"]:
+        question = first_fresh_question(
+            session,
+            [
+                "o que esta apertando mais agora: as contas, o cuidado com seu filho ou a sensacao de estar sozinha?",
+                "qual parte precisa de mais cuidado primeiro: dinheiro, rotina com seu filho ou falta de apoio?",
+                "quando voce pensa nisso tudo, onde a pressao fica mais forte?",
+            ],
+        )
+        return (
+            "Tem responsabilidade, conta e cuidado com seu filho tudo junto ai. "
+            f"Vamos separar isso em pedacos menores: {question}"
+        )
+
+    if contains_any(latest_text, ["sozinho", "sozinha", "solidao", "solidão", "mesmo falando com algumas pessoas"]):
+        return (
+            "Estar perto de pessoas e ainda se sentir sozinho pode confundir mesmo. "
+            "O que mais te faz sentir essa distancia?"
+        )
+
+    if contains_any(latest_text, ["medo de incomodar", "parecer estranho"]):
+        return (
+            "Esse medo de incomodar ja diz bastante sobre o cuidado que voce tem com os outros. "
+            "O que voce gostaria que alguem entendesse, se voce conseguisse falar?"
+        )
+
+    if contains_any(latest_text, ["medo de incomodar", "parecer estranho", "responder meus amigos", "responder minhas amigas", "travo"]):
+        return (
+            "Faz sentido isso travar na hora de responder. "
+            "O que passa pela sua cabeca quando voce pensa em mandar a mensagem?"
+        )
+
+    if contains_any(latest_text, ["preso nos mesmos pensamentos", "presa nos mesmos pensamentos", "mesmos pensamentos", "nao falo com ninguem", "não falo com ninguem"]):
+        return (
+            "Quando voce fica sozinho com esses pensamentos, eles parecem voltar para o mesmo lugar. "
+            "Que tipo de pensamento costuma repetir mais?"
         )
 
     if context["decision_doubt"]:
@@ -3633,20 +3676,6 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return f"{lead} {capitalize_first(question)}"
-
-    if context["financial_pressure"] and context["caregiving"]:
-        question = first_fresh_question(
-            session,
-            [
-                "o que esta apertando mais agora: as contas, o cuidado com seu filho ou a sensacao de estar sozinha?",
-                "qual parte precisa de mais cuidado primeiro: dinheiro, rotina com seu filho ou falta de apoio?",
-                "quando voce pensa nisso tudo, onde a pressao fica mais forte?",
-            ],
-        )
-        return (
-            "Tem responsabilidade, conta e cuidado com seu filho tudo junto ai. "
-            f"Vamos separar isso em pedacos menores: {question}"
-        )
 
     if context["work_offense"] and context["work_study"]:
         question = first_fresh_question(
