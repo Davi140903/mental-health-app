@@ -557,6 +557,11 @@ MEANINGFUL_TOKEN_ROOTS = (
     "convers",
     "confus",
     "perdid",
+    "duvid",
+    "escolh",
+    "decis",
+    "decid",
+    "lidar",
     "quebrad",
     "terminad",
     "melhor",
@@ -1424,6 +1429,23 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         combined_text,
         ["me isolo", "me isolei", "isolado", "isolada", "isolamento", "me afasto", "afastando", "evitado meus amigos"],
     )
+    decision_doubt = contains_any(
+        combined_text,
+        [
+            "duvida",
+            "duvidas",
+            "escolha",
+            "escolhas",
+            "decisao",
+            "decisoes",
+            "decidir",
+            "nao consigo lidar",
+            "me sinto perdida",
+            "me sinto perdido",
+            "estou perdida",
+            "estou perdido",
+        ],
+    )
 
     return {
         "latest_text": latest_text,
@@ -1517,6 +1539,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
         "learning_attention_context": learning_attention_context,
         "asks_for_options": asks_for_options,
         "persistent_distress": persistent_distress,
+        "decision_doubt": decision_doubt,
         "irritabilidade": contains_any(combined_text, ["irrit", "raiva", "estress"]),
         "social_withdrawal": social_withdrawal,
         "positive": positive,
@@ -1684,6 +1707,7 @@ def is_support_related_message(context: dict[str, Any]) -> bool:
         "concentracao",
         "irritabilidade",
         "social_withdrawal",
+        "decision_doubt",
         "unwell",
         "mixed_feeling",
         "no_issue",
@@ -1697,6 +1721,8 @@ def is_support_related_message(context: dict[str, Any]) -> bool:
 
 def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
     latest_text = context["latest_text"]
+    if mentions_existing_professional_context(latest_text):
+        return False
     return contains_any(
         latest_text,
         [
@@ -1715,6 +1741,24 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
             "psicologo",
             "psicologa",
             "profissional",
+        ],
+    )
+
+
+def mentions_existing_professional_context(text_value: str) -> bool:
+    return contains_any(
+        text_value,
+        [
+            "meu psicologo",
+            "minha psicologa",
+            "meu terapeuta",
+            "minha terapeuta",
+            "conversei com meu psicologo",
+            "conversei com minha psicologa",
+            "falei com meu psicologo",
+            "falei com minha psicologa",
+            "meu psicologo me ajudou",
+            "minha psicologa me ajudou",
         ],
     )
 
@@ -1857,6 +1901,9 @@ def is_off_scope_message(context: dict[str, Any], user_message: str) -> bool:
 
 
 def build_related_question_reply(session: LiaSessionState, context: dict[str, Any]) -> str | None:
+    if mentions_existing_professional_context(context["latest_text"]):
+        return None
+
     if context["asks_about_professional"]:
         return first_fresh_phrase(
             session,
@@ -2802,6 +2849,16 @@ def build_contextual_reflection(
             ],
         )
 
+    if context["decision_doubt"]:
+        return first_fresh_phrase(
+            session,
+            [
+                "Essa duvida sobre as suas escolhas parece estar ocupando um lugar importante agora.",
+                "Quando a gente se sente perdido, ate escolher uma direcao pode parecer maior do que normalmente seria.",
+                "Faz sentido a conversa ficar nesse ponto das escolhas, porque e isso que voltou com mais forca.",
+            ],
+        )
+
     if session.stage == "support" and context["light_topic"]:
         return "Pode me contar por onde voce quer comecar nesse assunto."
 
@@ -2910,6 +2967,15 @@ def build_contextual_question(
             return "Pelo que voce trouxe, isso ja vem aparecendo ha alguns dias e merece cuidado. Voce gostaria que eu te ajudasse a seguir para uma triagem com um profissional?"
         if context["asks_for_options"]:
             return "Voce prefere que eu te ajude a organizar o que esta sentindo, pensar em um proximo passo simples ou so separar melhor essa pressao? Se fizer sentido, tambem posso te recomendar para um profissional. O que acha?"
+        if context["decision_doubt"]:
+            return first_fresh_question(
+                session,
+                [
+                    "Qual escolha esta ficando mais dificil de encarar agora?",
+                    "Essa duvida pesa mais pelo medo de escolher errado ou por nao confiar no que voce consegue fazer agora?",
+                    "Quando voce pensa nessas escolhas, qual parte te deixa mais perdida?",
+                ],
+            )
         if context["work_offense"] and context["work_study"]:
             return first_fresh_question(
                 session,
