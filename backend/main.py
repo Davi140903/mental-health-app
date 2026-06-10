@@ -2723,7 +2723,7 @@ def build_contextual_reflection(
         return "Entendi. Termino e pressao ao mesmo tempo costumam embaralhar bastante as coisas."
 
     if session.turn_count == 1 and context["ending"]:
-        return "Entendi. Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir."
+        return "Voce contou que terminou um relacionamento e esta meio perdido agora."
 
     if session.turn_count == 1 and context["pressure"] and context["worn_out"]:
         return phrase_from_text(
@@ -2773,10 +2773,10 @@ def build_contextual_reflection(
         return "Entendi. Entao o desconforto parece ficar mais no corpo do que em uma preocupacao continua."
 
     if context["palpitacao"] and duration:
-        return f"Entendi. Sentir o coracao acelerar assim {duration} deve ser bem cansativo."
+        return f"Voce contou que o coracao acelera assim {duration}."
 
     if context["palpitacao"]:
-        return "Entendi. Sentir o coracao acelerar desse jeito deve ser bem desconfortavel."
+        return "Voce trouxe esse coracao acelerado como uma parte importante do que esta acontecendo."
 
     if session.stage == "anxiety" and context["pressure"] and context["worn_out"]:
         return "Entendi. Parece que essa pressao toda ja esta te deixando bem esgotado."
@@ -3602,10 +3602,59 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             "Quer que eu te encaminhe para a triagem agora?"
         )
 
-    if contains_any(latest_text, ["culpa", "culpado", "culpada", "descontar nas pessoas", "desconto nas pessoas"]):
+    if contains_any(latest_text, ["conversas antigas", "mensagens antigas", "olhando as conversas", "olhar as conversas"]):
+        return (
+            "Voce contou que volta para as conversas antigas e depois fica pior. "
+            "O que voce procura ali quando abre essas mensagens?"
+        )
+
+    if contains_any(latest_text, ["vergonha de falar", "vergonha de contar", "vao dizer que eu devia superar", "vão dizer que eu devia superar"]):
+        return (
+            "Voce trouxe a vergonha de falar disso com seus amigos. "
+            "O que voce teria vontade de dizer para eles, se nao precisasse se explicar tanto?"
+        )
+
+    if contains_any(latest_text, ["por que isso ainda mexe", "porque isso ainda mexe", "ainda mexe comigo", "mexendo comigo"]):
+        return (
+            "Voce quer entender por que isso ainda mexe com voce. "
+            "Qual parte volta com mais forca: a saudade, a duvida ou a falta que ficou?"
+        )
+
+    if contains_any(latest_text, ["descontar nas pessoas", "desconto nas pessoas"]):
         return (
             "Essa culpa depois da irritacao tambem entra na historia. "
             "O que costuma acontecer antes de voce acabar descontando nas pessoas?"
+        )
+
+    if contains_any(latest_text, ["culpa", "culpado", "culpada"]) and contains_any(latest_text, ["descansar", "pausa", "parar"]):
+        return (
+            "Voce falou da culpa aparecendo ate quando pensa em descansar. "
+            "O que torna mais dificil se permitir uma pausa?"
+        )
+
+    if contains_any(latest_text, ["perdido a paciencia", "perco a paciencia", "perdi a paciencia", "me sinto mal"]):
+        return (
+            "Voce trouxe essa parte de perder a paciencia e depois se sentir mal. "
+            "O que costuma acontecer antes desse momento?"
+        )
+
+    if contains_any(latest_text, ["nao tenho pausa", "não tenho pausa", "sem pausa", "nao tenho descanso", "não tenho descanso"]):
+        return (
+            "Voce falou que nao tem pausa. "
+            "Qual parte do dia mais te deixa sem respiro?"
+        )
+
+    if (
+        contains_any(latest_text, ["deixar todo mundo na mao", "deixar todo mundo na mão"])
+        or (
+            contains_any(latest_text, ["por onde comecar", "por onde começar"])
+            and not context["story_topic"]
+            and (context["caregiving"] or context["financial_pressure"] or context["work_study"])
+        )
+    ):
+        return (
+            "Voce quer encontrar um primeiro passo sem deixar todo mundo na mao. "
+            "Qual responsabilidade seria mais urgente separar hoje: casa, trabalho ou cuidado com alguem?"
         )
 
     if contains_any(latest_text, ["nao consigo descansar", "nao consigo relaxar", "mesmo parado", "cabeca continua ligada", "mente continua ligada"]):
@@ -3616,7 +3665,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["afastando quem gosta", "afastar quem gosta", "afastar as pessoas", "afastando as pessoas"]):
         return (
-            "Da para entender esse medo de acabar machucando ou afastando quem importa. "
+            "Voce falou desse medo de acabar afastando pessoas importantes. "
             "Isso aparece mais quando voce esta irritado, cansado ou tentando se isolar?"
         )
 
@@ -3636,25 +3685,25 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["sozinho", "sozinha", "solidao", "solidão", "mesmo falando com algumas pessoas"]):
         return (
-            "Mesmo com gente por perto, ainda pode bater uma sensacao de estar sozinho. "
-            "O que mais te faz sentir essa distancia?"
+            "Voce falou de se sentir sozinho mesmo falando com algumas pessoas. "
+            "O que mais tem aparecido junto com isso?"
         )
 
     if contains_any(latest_text, ["medo de incomodar", "parecer estranho"]):
         return (
-            "Esse medo de incomodar ja diz bastante sobre o cuidado que voce tem com os outros. "
+            "Voce trouxe o medo de incomodar como uma parte importante disso. "
             "O que voce gostaria que alguem entendesse, se voce conseguisse falar?"
         )
 
     if contains_any(latest_text, ["medo de incomodar", "parecer estranho", "responder meus amigos", "responder minhas amigas", "travo"]):
         return (
-            "Responder pode travar quando parece que voce vai se expor demais ou incomodar alguem. "
-            "O que passa pela sua cabeca quando voce pensa em mandar a mensagem?"
+            "Voce contou que abre o celular, mas trava e deixa para depois. "
+            "O que passa pela sua cabeca nessa hora?"
         )
 
     if contains_any(latest_text, ["preso nos mesmos pensamentos", "presa nos mesmos pensamentos", "mesmos pensamentos", "nao falo com ninguem", "não falo com ninguem"]):
         return (
-            "Quando voce fica sozinho com esses pensamentos, eles parecem voltar para o mesmo lugar. "
+            "Voce contou que esses pensamentos voltam para o mesmo lugar. "
             "Que tipo de pensamento costuma repetir mais?"
         )
 
@@ -3687,7 +3736,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Ofensa no trabalho pode ficar ecoando mesmo depois que o momento passa. "
+            "Voce trouxe essas ofensas no trabalho como algo que ficou depois do momento. "
             f"Me ajuda a entender melhor: {question}"
         )
 
@@ -3701,7 +3750,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Quando a vontade e se afastar, da para olhar para isso com cuidado. "
+            "Voce trouxe esse afastamento como uma parte importante da conversa. "
             f"{question}"
         )
 
@@ -3715,7 +3764,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Pode ser do seu jeito, por uma parte pequena mesmo. "
+            "Pode ser do seu jeito, por uma parte pequena da historia. "
             f"{capitalize_first(question)}"
         )
 
@@ -3770,8 +3819,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Esse cansaco merece um pouco de espaco na conversa. "
-                f"{question}"
+                "Voce trouxe esse cansaco como a primeira coisa de hoje. "
+                f"{capitalize_first(question)}"
             )
         if context["interesse"] and not context["unwell"]:
             question = first_fresh_question(
@@ -4104,6 +4153,7 @@ Objetivo:
 - agir como uma assistente conversacional simples com foco em apoio emocional;
 - responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
 - escutar sem julgar, sem interpretar demais e sem transformar a fala do usuario em avaliacao;
+- nao diga ao usuario o que ele "pode estar sentindo" ou o que "pode estar acontecendo"; parta do que ele disse;
 - ajudar o usuario a encontrar o que ele quer dizer naquele momento;
 - sugerir caminhos de conversa, nao decisoes de vida;
 - oferecer uma frase simples de apoio antes da pergunta quando ajudar, sem soar poetico;
@@ -4161,6 +4211,8 @@ Regras:
 - nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
 - nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
 - evite comecar com interpretacoes como "isso parece", "essa duvida parece", "essa ansiedade parece", "isso soa como";
+- evite tambem "pode ser que", "pode bater", "pode travar", "quando parece que"; isso soa como interpretacao;
+- prefira devolver de forma simples: "voce contou que...", "voce falou de...", "voce trouxe...";
 - prefira falas ativas de apoio na conversa, como "vamos organizar isso", "a gente separa em pedacos menores", "me conta o que veio primeiro";
 - nao repita "posso te ajudar" em respostas seguidas; a Lia ja esta ali para ajudar;
 - evite frases com tom terapeutico de sessao, como "vamos ficar nesse momento", "ficar com essa ansiedade", "olhar para isso com cuidado";
