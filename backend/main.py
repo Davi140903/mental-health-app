@@ -3636,7 +3636,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["sozinho", "sozinha", "solidao", "solidão", "mesmo falando com algumas pessoas"]):
         return (
-            "Estar perto de pessoas e ainda se sentir sozinho pode confundir mesmo. "
+            "Mesmo com gente por perto, ainda pode bater uma sensacao de estar sozinho. "
             "O que mais te faz sentir essa distancia?"
         )
 
@@ -3648,7 +3648,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["medo de incomodar", "parecer estranho", "responder meus amigos", "responder minhas amigas", "travo"]):
         return (
-            "Faz sentido isso travar na hora de responder. "
+            "Responder pode travar quando parece que voce vai se expor demais ou incomodar alguem. "
             "O que passa pela sua cabeca quando voce pensa em mandar a mensagem?"
         )
 
