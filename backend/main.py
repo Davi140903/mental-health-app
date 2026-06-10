@@ -5408,10 +5408,15 @@ def send_verification_email_via_resend(email: str, code: str, purpose: str) -> N
                 )
     except urllib_error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="ignore")
-        if exc.code in {401, 403}:
+        if exc.code == 401:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Falha ao autenticar no Resend. Confira a chave da API e o remetente configurado.",
+                detail="Falha ao autenticar no Resend. Confira a chave da API configurada.",
+            ) from exc
+        if exc.code == 403:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"O Resend recusou por permissao/remetente. {body[:220]}".strip(),
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
