@@ -3591,12 +3591,12 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         question = first_fresh_question(
             session,
             [
-                "Por onde voce quer comecar: pela escolha em si ou pelo que ela mexe em voce?",
-                "Qual escolha esta mais presente para voce agora?",
-                "O que voce conseguir colocar em palavras ja serve. Qual pedaco dessa duvida vem primeiro?",
+                "Qual escolha esta mais presente agora?",
+                "O que nessa decisao esta mais dificil de colocar em palavras?",
+                "Se voce fosse comecar por um pedaco dessa duvida, qual seria?",
             ],
         )
-        return f"Posso te ajudar a organizar essa parte das escolhas. {capitalize_first(question)}"
+        return f"Vamos organizar essa parte das escolhas. {capitalize_first(question)}"
 
     if context["financial_pressure"] and context["caregiving"]:
         question = first_fresh_question(
@@ -3609,7 +3609,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         )
         return (
             "Tem responsabilidade, conta e cuidado com seu filho tudo junto ai. "
-            f"Posso te ajudar a separar isso em pedacos menores: {question}"
+            f"Vamos separar isso em pedacos menores: {question}"
         )
 
     if context["work_offense"] and context["work_study"]:
@@ -3664,8 +3664,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Posso te ajudar a organizar essa ansiedade com a prova. "
-            f"{capitalize_first(question)} Pode ser antes ou na hora da prova."
+            "Vamos organizar essa ansiedade com a prova. "
+            f"{capitalize_first(question)} Isso aparece antes ou na hora da prova?"
         )
 
     if context["ansiedade"]:
@@ -3681,21 +3681,18 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Posso te ajudar a organizar essa preocupacao sem transformar tudo em uma coisa so. "
+                "Vamos organizar essa preocupacao sem transformar tudo em uma coisa so. "
                 f"{capitalize_first(question)}"
             )
         question = first_fresh_question(
             session,
             [
-                "voce quer comecar pelo que aconteceu ou pelo que essa ansiedade mexe em voce?",
-                "o que vem primeiro quando voce tenta falar disso?",
-                "tem alguma coisa especifica puxando essa ansiedade hoje?",
+                "O que vem primeiro quando voce tenta falar disso?",
+                "O que aconteceu hoje que trouxe isso mais para perto?",
+                "Qual parte dessa ansiedade voce consegue explicar agora, mesmo que seja pouco?",
             ],
         )
-        return (
-            "Posso te acompanhar nisso. "
-            f"{capitalize_first(question)}"
-        )
+        return f"Estou aqui com voce. {capitalize_first(question)}"
 
     if context["unwell"] or context["tristeza"] or context["interesse"] or context["energia"]:
         if context["energia"] and not (context["unwell"] or context["tristeza"] or context["interesse"]):
@@ -4094,7 +4091,8 @@ Regras:
 - nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
 - nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
 - evite comecar com interpretacoes como "isso parece", "essa duvida parece", "essa ansiedade parece", "isso soa como";
-- prefira falas de apoio pratico na conversa, como "posso te ajudar a organizar isso", "podemos separar em pedacos menores", "voce pode comecar por onde der";
+- prefira falas ativas de apoio na conversa, como "vamos organizar isso", "a gente separa em pedacos menores", "me conta o que veio primeiro";
+- nao repita "posso te ajudar" em respostas seguidas; a Lia ja esta ali para ajudar;
 - evite frases com tom terapeutico de sessao, como "vamos ficar nesse momento", "ficar com essa ansiedade", "olhar para isso com cuidado";
 - se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
 - nao fale em foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente;
@@ -4105,7 +4103,7 @@ Regras:
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - se o usuario pedir conselho dizendo "o que devo fazer", nao decida por ele; ajude a organizar possibilidades e pergunte o que faria sentido para ele;
-- voce pode sugerir caminhos de conversa, por exemplo: "a gente pode comecar pelo que aconteceu ou pelo que isso mexeu em voce";
+- voce pode sugerir caminhos de conversa, mas varie a forma e evite repetir a mesma estrutura de duas opcoes;
 - nao sugira decisoes externas como terminar relacionamento, pedir demissao, confrontar alguem ou mudar rotina sem o usuario construir isso;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
 - se o usuario trouxer escolhas, duvidas ou decisao, nao julgue a escolha; convide ele a contar o que esta em jogo ou qual parte ele consegue dizer agora;
