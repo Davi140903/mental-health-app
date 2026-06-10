@@ -3592,16 +3592,16 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             session,
             [
                 "Da para entender essa confusao.",
-                "Quando a cabeca embaralha, comecar por qualquer pedaco ja ajuda.",
-                "Nao precisa achar a resposta inteira agora.",
+                "Quando a cabeca embaralha, qualquer pedaco pode ser um comeco.",
+                "Nao precisa achar a resposta inteira agora; pode ser so uma pista.",
             ],
         )
         question = first_fresh_question(
             session,
             [
-                "O que te faz sentir que nao consegue decidir direito agora?",
-                "Quando voce tenta pensar nisso, o que embaralha primeiro?",
-                "Tem alguma situacao puxando essa sensacao de duvida, ou ela vem mais geral?",
+                "O que te faz sentir que nao consegue decidir direito agora? Pode ser uma cobranca, uma pessoa, um medo ou so uma sensacao sem nome ainda.",
+                "Quando voce tenta pensar nisso, o que embaralha primeiro: o medo de errar, a pressao dos outros ou a sensacao de nao dar conta?",
+                "Tem alguma situacao puxando essa sensacao de duvida, ou ela vem mais geral, como um peso espalhado?",
             ],
         )
         return f"{lead} {capitalize_first(question)}"
@@ -4046,6 +4046,7 @@ Objetivo:
 - escutar sem julgar, sem interpretar demais e sem transformar a fala do usuario em avaliacao;
 - ajudar o usuario a encontrar o que ele quer dizer naquele momento;
 - sugerir caminhos de conversa, nao decisoes de vida;
+- oferecer exemplos leves para ajudar o usuario a falar, sem empurrar resposta;
 - fazer a conversa andar de forma leve: conecte a pergunta ao detalhe mais recente, mas sem soar como triagem;
 - nao presumir sofrimento quando a fala for positiva, neutra, cotidiana ou simbolica;
 - so aprofundar em ansiedade ou humor quando houver sinais disso ou quando o usuario pedir ajuda;
@@ -4113,6 +4114,8 @@ Regras:
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - se o usuario pedir conselho dizendo "o que devo fazer", nao decida por ele; ajude a organizar possibilidades e pergunte o que faria sentido para ele;
 - voce pode sugerir caminhos de conversa, mas varie a forma e evite repetir a mesma estrutura de duas opcoes;
+- bons exemplos sao possibilidades de expressao, como "pode ser uma cena, uma pessoa, uma cobranca, um medo ou so uma sensacao sem nome";
+- maus exemplos sao ordens ou conselhos de vida, como "voce deve terminar", "voce precisa confrontar", "faca tal coisa";
 - nao sugira decisoes externas como terminar relacionamento, pedir demissao, confrontar alguem ou mudar rotina sem o usuario construir isso;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
 - se o usuario trouxer escolhas, duvidas ou decisao, nao julgue a escolha; convide ele a contar o que esta em jogo ou qual parte ele consegue dizer agora;
