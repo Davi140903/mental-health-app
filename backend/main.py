@@ -3591,15 +3591,12 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         question = first_fresh_question(
             session,
             [
-                "Quando voce pensa nessas escolhas, qual parte mais te trava agora?",
-                "Essa duvida pesa mais por medo de escolher errado ou por sentir que nao consegue confiar em voce agora?",
-                "Qual escolha esta ocupando mais espaco na sua cabeca hoje?",
+                "Por onde voce quer comecar: pela escolha em si ou pelo que ela mexe em voce?",
+                "Qual escolha esta mais presente para voce agora?",
+                "O que voce conseguir colocar em palavras ja serve. Qual pedaco dessa duvida vem primeiro?",
             ],
         )
-        return (
-            "Essa duvida nas escolhas parece ter ficado bem no centro da conversa. "
-            f"{capitalize_first(question)}"
-        )
+        return f"Podemos ficar um pouco nessa parte das escolhas. {capitalize_first(question)}"
 
     if context["financial_pressure"] and context["caregiving"]:
         question = first_fresh_question(
@@ -3611,8 +3608,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Tem muita coisa misturada ai: responsabilidade, contas e cuidado com seu filho. "
-            f"Para nao virar um bloco impossivel, {question}"
+            "Tem responsabilidade, conta e cuidado com seu filho tudo junto ai. "
+            f"A gente pode ir com uma coisa de cada vez: {question}"
         )
 
     if context["work_offense"] and context["work_study"]:
@@ -3625,7 +3622,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Ofensa no trabalho nao e so uma frase ruim; ela pode acompanhar a pessoa depois. "
+            "Ofensa no trabalho pode ficar ecoando mesmo depois que o momento passa. "
             f"Me ajuda a entender melhor: {question}"
         )
 
@@ -3639,7 +3636,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Esse afastamento parece ser uma parte importante do que esta acontecendo, nao um detalhe qualquer. "
+            "Quando a vontade e se afastar, da para olhar para isso com cuidado. "
             f"{question}"
         )
 
@@ -3653,7 +3650,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Pode ser do seu jeito, por uma parte pequena mesmo. Essa historia pode ser um caminho para voce chegar no assunto sem precisar organizar tudo antes. "
+            "Pode ser do seu jeito, por uma parte pequena mesmo. "
             f"{capitalize_first(question)}"
         )
 
@@ -3667,8 +3664,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Essa ansiedade com a prova parece estar mexendo tanto com sua cabeca quanto com seu foco. "
-            f"{capitalize_first(question)} Quero entender tambem se isso aperta antes ou na hora da prova."
+            "Podemos olhar para essa ansiedade na prova sem pressa. "
+            f"{capitalize_first(question)} Pode ser antes ou na hora da prova."
         )
 
     if context["ansiedade"]:
@@ -3684,19 +3681,19 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Essa preocupacao parece estar tomando espaco agora. "
+                "Da para ficar um pouco com essa preocupacao e entender por onde ela vem. "
                 f"{capitalize_first(question)}"
             )
         question = first_fresh_question(
             session,
             [
-                "isso aparece mais no corpo, nos pensamentos ou nas escolhas que voce precisa fazer?",
-                "quando isso vem, o que voce percebe primeiro: tensao, preocupacao ou vontade de evitar tudo?",
-                "tem algum momento do dia em que isso costuma apertar mais?",
+                "voce quer comecar pelo que aconteceu ou pelo que essa ansiedade mexe em voce?",
+                "o que vem primeiro quando voce tenta falar disso?",
+                "tem alguma coisa especifica puxando essa ansiedade hoje?",
             ],
         )
         return (
-            "Essa ansiedade parece estar atravessando seu dia agora. "
+            "Vamos ficar um momento com essa ansiedade. "
             f"{capitalize_first(question)}"
         )
 
@@ -3711,7 +3708,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Esse cansaco parece importante de olhar com calma, porque ele pode mexer com o resto do dia. "
+                "Esse cansaco merece um pouco de espaco na conversa. "
                 f"{question}"
             )
         if context["interesse"] and not context["unwell"]:
@@ -3737,7 +3734,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Hoje nao parece ser so uma frase solta de 'nao estou bem'; tem algo ai pedindo mais cuidado. "
+            "Obrigado por colocar isso aqui. "
             f"{question}"
         )
 
@@ -3752,7 +3749,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Essa pressao no trabalho parece estar ocupando um espaco grande no seu dia. "
+                "Essa pressao no trabalho entrou forte no que voce trouxe. "
                 f"{question}"
             )
         if context["figurative_distress"]:
@@ -4040,8 +4037,9 @@ Objetivo:
 - acolher o usuario em tom humano;
 - agir como uma assistente conversacional simples com foco em apoio emocional;
 - responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
-- mostrar compreensao concreta antes da pergunta, sem repetir a fala inteira do usuario;
-- fazer a conversa andar: conecte a pergunta ao detalhe mais recente, nao a uma frase generica;
+- escutar sem julgar, sem interpretar demais e sem transformar a fala do usuario em avaliacao;
+- ajudar o usuario a encontrar o que ele quer dizer naquele momento;
+- fazer a conversa andar de forma leve: conecte a pergunta ao detalhe mais recente, mas sem soar como triagem;
 - nao presumir sofrimento quando a fala for positiva, neutra, cotidiana ou simbolica;
 - so aprofundar em ansiedade ou humor quando houver sinais disso ou quando o usuario pedir ajuda;
 - nunca mencionar GAD-7, PHQ-9, diagnostico ou formulario;
@@ -4089,11 +4087,13 @@ Regras:
 - se o usuario disser que esta bem e quiser so passar rapidinho, valide isso com leveza e deixe a porta aberta, sem investigar sintomas;
 - se a fala for simbolica, como chuva, silencio, flores ou mar, responda com curiosidade gentil e sem assumir dor;
 - se a fala for simbolica, fale da imagem ou do significado dela; nao reescreva isso como sofrimento escondido;
-- se o usuario disser que esta ansioso, confirme com calma como isso aparece antes de afirmar intensidade, duracao ou padrao;
+- se o usuario disser que esta ansioso, acolha e deixe ele escolher por onde comecar; nao transforme isso em interrogatorio;
 - nao diga que o usuario "tem ansiedade ultimamente" se ele so mencionou estar ansioso agora;
-- se a fala for apenas "estou ansioso" ou parecida, responda com linguagem livre e natural, sem frase fixa, mas confirme como isso aparece; nao transforme em "voce tem ansiedade";
+- se a fala for apenas "estou ansioso" ou parecida, responda com linguagem livre e natural, sem frase fixa, e convide o usuario a contar o que vier primeiro;
 - nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
 - nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
+- evite comecar com interpretacoes como "isso parece", "essa duvida parece", "essa ansiedade parece", "isso soa como";
+- prefira falas de presenca e permissao, como "podemos ir por essa parte", "voce pode comecar por onde der", "o que vier primeiro ja ajuda";
 - se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
 - nao fale em foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente;
 - evite aberturas artificiais como "entendo melhor agora"; responda como uma conversa normal;
@@ -4102,12 +4102,13 @@ Regras:
 - transforme esse cuidado em linguagem natural, por exemplo: fale do que apareceu e faca uma pergunta simples;
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
+- se o usuario pedir conselho dizendo "o que devo fazer", nao decida por ele; ajude a organizar possibilidades e pergunte o que faria sentido para ele;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
-- se o usuario trouxer escolhas, duvidas ou decisao, fale diretamente dessa dificuldade e pergunte o que trava ou assusta naquela escolha;
-- se o usuario trouxer contas, filho, trabalho, ofensas, estudo ou isolamento, use esse detalhe na resposta; nao volte para "o que mais ficou na sua cabeca";
+- se o usuario trouxer escolhas, duvidas ou decisao, nao julgue a escolha; convide ele a contar o que esta em jogo ou qual parte ele consegue dizer agora;
+- se o usuario trouxer contas, filho, trabalho, ofensas, estudo ou isolamento, use esse detalhe com naturalidade, sem transformar em checklist;
 - se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;
 - se o usuario disser que nao esta bem, pedir ajuda, falar de cansaco, pressao, vazio, pouca vontade, sono ruim ou pouca energia, nao responda de forma passiva;
-- nesses casos, assistant_reply deve trazer reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e quando fizer sentido uma pergunta curta que conduza a conversa;
+- nesses casos, assistant_reply deve trazer presenca, uma abertura para o usuario falar e, quando fizer sentido, uma pergunta curta;
 - o apoio vem antes de qualquer orientacao; nao pule direto para dica, tarefa ou solucao;
 - nao use respostas vagas como "estou aqui para ouvir" ou "como posso te ajudar" sem tomar iniciativa;
 - evite perguntas vagas quando ja existe contexto, como "o que mais ficou na sua cabeca hoje?", "o que mais pesou hoje?" ou "o que te pegou?";
@@ -4122,14 +4123,12 @@ Regras:
 - evite duas perguntas na mesma resposta;
 - evite perguntas amplas como "o que e mais importante hoje?" ou "o que voce faz para relaxar?" quando a conversa ainda precisa mapear sintomas;
 - evite frases que julgam a capacidade do usuario, como "ate falar disso ja pode parecer muito";
-- nas fases iniciais, priorize perguntas como: o que mais pegou, quando isso costuma apertar, o que mudou no dia, no sono, na energia ou na vontade;
+- nas fases iniciais, nao pareca estar preenchendo uma ficha; deixe o usuario escolher por onde comecar;
 - use null com generosidade nos scores. So marque 0 quando houver negacao explicita. Nao preencha itens nao mencionados;
 - nas primeiras 2 ou 3 mensagens, nao preencha muitos itens de uma vez. Avance aos poucos;
 - se o usuario negar autoagressao, nao trate isso como urgencia;
-- comece investigando ansiedade, preocupacao, tensao, relaxamento e impacto no corpo quando isso fizer sentido;
-- depois de algum contexto, avance naturalmente para sono, energia, interesse, humor e concentracao;
-- se stage for anxiety, priorize perguntas sobre preocupacao, tensao, relaxamento e medo;
-- se stage for mood, priorize sono, energia, interesse, humor e concentracao;
+- extraia sinais de ansiedade, humor, sono, energia, interesse e preocupacao por tras da conversa, sem listar esses temas para o usuario;
+- se precisar perguntar, faca isso como conversa natural, nao como triagem;
 - cite pelo menos um detalhe concreto da fala mais recente do usuario ou do contexto imediatamente anterior;
 - evite frases genericas repetidas como "obrigada por me contar isso";
 - nao comece toda resposta com "entendi";
