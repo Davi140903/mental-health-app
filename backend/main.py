@@ -1479,7 +1479,7 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             ],
         ),
         "palpitacao": contains_any(combined_text, ["palpit", "coracao", "acelerado", "taquic", "peito", "respirar", "respiracao", "falta de ar"]),
-        "ansiedade": contains_any(combined_text, ["ansios", "nervos", "tenso", "panico", "preocup", "alerta"]),
+        "ansiedade": contains_any(combined_text, ["ansiedade", "ansios", "nervos", "tenso", "panico", "preocup", "alerta"]),
         "pressure": contains_any(
             combined_text,
             [
@@ -3138,6 +3138,9 @@ def build_contextual_question(
         return None
 
     if stage == "support":
+        grounded_reply = build_grounded_lia_reply(session, user_message)
+        if grounded_reply:
+            return None
         if context["positive"]:
             return "Podemos deixar por aqui hoje, se voce quiser."
         if context["mixed_feeling"]:
@@ -3171,6 +3174,9 @@ def build_contextual_question(
         return default_next_question("support", session.turn_count)
 
     if stage == "anxiety":
+        grounded_reply = build_grounded_lia_reply(session, user_message)
+        if grounded_reply and session.turn_count > 1:
+            return None
         if context["palpitacao"] and session.turn_count <= 4:
             return first_fresh_question(
                 session,
@@ -3233,6 +3239,9 @@ def build_contextual_question(
         return default_next_question("anxiety", session.turn_count)
 
     if stage == "mood":
+        grounded_reply = build_grounded_lia_reply(session, user_message)
+        if grounded_reply and session.turn_count > 1:
+            return None
         if context["stuck_without_improvement"]:
             return "Nesses dias sem melhora, o que tem te derrubado mais: cansaco, sono ruim ou falta de vontade?"
         if context["pressure"] and context["worn_out"] and not context["sono"] and not context["energia"]:
@@ -3566,6 +3575,237 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
     return None
 
 
+def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str | None:
+    context = build_lia_context(session, user_message)
+
+    if context["decision_doubt"]:
+        question = first_fresh_question(
+            session,
+            [
+                "Quando voce pensa nessas escolhas, qual parte mais te trava agora?",
+                "Essa duvida pesa mais por medo de escolher errado ou por sentir que nao consegue confiar em voce agora?",
+                "Qual escolha esta ocupando mais espaco na sua cabeca hoje?",
+            ],
+        )
+        return (
+            "Essa duvida nas escolhas parece ter ficado bem no centro da conversa. "
+            f"Vamos pegar uma parte dela, sem precisar resolver tudo agora: {capitalize_first(question)}"
+        )
+
+    if context["financial_pressure"] and context["caregiving"]:
+        question = first_fresh_question(
+            session,
+            [
+                "o que esta apertando mais agora: as contas, o cuidado com seu filho ou a sensacao de estar sozinha?",
+                "qual parte precisa de mais cuidado primeiro: dinheiro, rotina com seu filho ou falta de apoio?",
+                "quando voce pensa nisso tudo, onde a pressao fica mais forte?",
+            ],
+        )
+        return (
+            "Tem muita coisa misturada ai: responsabilidade, contas e cuidado com seu filho. "
+            f"Para nao virar um bloco impossivel, {question}"
+        )
+
+    if context["work_offense"] and context["work_study"]:
+        question = first_fresh_question(
+            session,
+            [
+                "o que fica mais dificil depois dessas ofensas: continuar trabalhando, se defender ou nao levar aquilo para casa?",
+                "essas ofensas vem de uma pessoa especifica ou do ambiente como um todo?",
+                "quando isso acontece, o que fica mais forte em voce depois: tristeza, raiva ou medo de voltar para la?",
+            ],
+        )
+        return (
+            "Ofensa no trabalho nao e so uma frase ruim; ela pode acompanhar a pessoa depois. "
+            f"Me ajuda a entender melhor: {question}"
+        )
+
+    if context["social_withdrawal"]:
+        question = first_fresh_question(
+            session,
+            [
+                "esse afastamento vem mais por falta de energia, medo de incomodar ou vontade de sumir um pouco?",
+                "quando voce se afasta, isso te da alivio ou acaba deixando tudo mais pesado depois?",
+                "tem alguem de quem voce sente falta, mas nao tem conseguido se aproximar?",
+            ],
+        )
+        return (
+            "Esse afastamento parece ser uma parte importante do que esta acontecendo, nao um detalhe qualquer. "
+            f"{question}"
+        )
+
+    if context["story_topic"]:
+        question = first_fresh_question(
+            session,
+            [
+                "do que e essa historia, pelo menos do jeito que ela aparece para voce agora? Pode ser conto, lembranca ou uma mistura dos dois.",
+                "ela parece mais um conto inventado, uma lembranca sua ou uma mistura das duas coisas?",
+                "qual parte dessa historia veio mais forte na sua cabeca?",
+            ],
+        )
+        return (
+            "Pode ser do seu jeito, por uma parte pequena mesmo. Essa historia pode ser um caminho para voce chegar no assunto sem precisar organizar tudo antes. "
+            f"{capitalize_first(question)}"
+        )
+
+    if context["study_test_context"] and (context["ansiedade"] or context["concentracao"] or context["pressure"]):
+        question = first_fresh_question(
+            session,
+            [
+                "quando voce tenta estudar, o que trava primeiro: a preocupacao, o foco ou o medo do resultado?",
+                "isso aparece so nessa prova ou tambem em outras tarefas que exigem leitura e organizacao?",
+                "a prova te assusta mais pelo conteudo, pelo tempo ou pela chance de dar errado?",
+            ],
+        )
+        return (
+            "Essa ansiedade com a prova parece estar mexendo tanto com sua cabeca quanto com seu foco. "
+            f"{capitalize_first(question)} Quero entender tambem se isso aperta antes ou na hora da prova."
+        )
+
+    if context["ansiedade"]:
+        if "preocup" in context["latest_text"] and not contains_any(
+            context["latest_text"], ["ansios", "nervos", "tenso", "panico"]
+        ):
+            question = first_fresh_question(
+                session,
+                [
+                    "essa preocupacao aparece mais como pensamento repetindo, tensao no corpo ou dificuldade de desligar?",
+                    "quando essa preocupacao vem, ela fica mais na cabeca ou muda algo no corpo tambem?",
+                    "essa preocupacao esta ligada a alguma coisa especifica ou vem mais espalhada?",
+                ],
+            )
+            return (
+                "Essa preocupacao parece estar pedindo um pouco de espaco para ser entendida, sem eu transformar isso em rotulo. "
+                f"{capitalize_first(question)}"
+            )
+        question = first_fresh_question(
+            session,
+            [
+                "essa ansiedade aparece mais no corpo, nos pensamentos ou nas escolhas que voce precisa fazer?",
+                "quando ela vem, o que voce percebe primeiro: tensao, preocupacao ou vontade de evitar tudo?",
+                "tem algum momento do dia em que isso costuma apertar mais?",
+            ],
+        )
+        return (
+            "Quando voce chama isso de ansiedade, eu prefiro entender o jeito que ela aparece em voce, sem colocar rotulo em cima. "
+            f"{capitalize_first(question)}"
+        )
+
+    if context["unwell"] or context["tristeza"] or context["interesse"] or context["energia"]:
+        if context["energia"] and not (context["unwell"] or context["tristeza"] or context["interesse"]):
+            question = first_fresh_question(
+                session,
+                [
+                    "esse cansaco esta mais no corpo, na cabeca ou na vontade de fazer as coisas?",
+                    "quando esse cansaco aparece, o que fica mais dificil de manter no dia?",
+                    "esse cansaco veio mais de hoje ou ja vem acumulando?",
+                ],
+            )
+            return (
+                "Esse cansaco parece importante de olhar com calma, porque ele pode mexer com o resto do dia. "
+                f"{question}"
+            )
+        if context["interesse"] and not context["unwell"]:
+            question = first_fresh_question(
+                session,
+                [
+                    "esse desanimo aparece mais como falta de vontade, tristeza ou cansaco acumulado?",
+                    "quando o desanimo vem, o que voce mais deixa de fazer?",
+                    "esse desanimo esta mais forte hoje ou ja vem de outros dias?",
+                ],
+            )
+            return (
+                "Esse desanimo nao precisa ser explicado inteiro agora. "
+                f"{question}"
+            )
+        question = first_fresh_question(
+            session,
+            [
+                "o que mais te pegou nisso hoje?",
+                "o que mudou mais no seu dia: energia, vontade ou humor?",
+                "isso esta te puxando mais para cansaco, tristeza ou desanimo?",
+                "qual parte disso esta mais dificil de carregar agora?",
+            ],
+        )
+        return (
+            "Hoje nao parece ser so uma frase solta de 'nao estou bem'; tem algo ai pedindo mais cuidado. "
+            f"{question}"
+        )
+
+    if context["pressure"] or context["worn_out"] or context["figurative_distress"]:
+        if context["work_study"]:
+            question = first_fresh_question(
+                session,
+                [
+                    "no trabalho, qual parte dessa pressao esta mais dificil de ignorar agora?",
+                    "essa pressao no trabalho vem mais de cobranca, volume de coisa ou medo de nao dar conta?",
+                    "quando voce sai do trabalho, essa pressao continua com voce ou alivia um pouco?",
+                ],
+            )
+            return (
+                "Essa pressao no trabalho parece estar ocupando um espaco grande no seu dia. "
+                f"{question}"
+            )
+        if context["figurative_distress"]:
+            question = first_fresh_question(
+                session,
+                [
+                    "quando voce fala que a cabeca esta cheia, qual problema parece mais urgente agora?",
+                    "essa sensacao na cabeca vem mais da quantidade de coisas ou de uma situacao especifica?",
+                    "se a gente separar uma coisa primeiro, qual parte dessa cabeca cheia pede mais cuidado?",
+                ],
+            )
+            return (
+                "Essa imagem da cabeca cheia ajuda a mostrar que tem coisa demais disputando espaco ao mesmo tempo. "
+                f"Vamos separar sem pressa: {question}"
+            )
+        question = first_fresh_question(
+            session,
+            [
+                "qual parte dessa pressao esta mais impossivel de ignorar agora?",
+                "isso pesa mais pela quantidade de coisas ou pela sensacao de nao ter espaco para respirar?",
+                "se a gente separar uma coisa primeiro, qual parece mais urgente?",
+            ],
+        )
+        return (
+            "Parece que tem coisa demais disputando espaco ao mesmo tempo. "
+            f"Vamos separar sem pressa: {question}"
+        )
+
+    return None
+
+
+def reply_is_too_vague_for_context(session: LiaSessionState, user_message: str, reply: str) -> bool:
+    context = build_lia_context(session, user_message)
+    if not (
+        context["decision_doubt"]
+        or context["financial_pressure"]
+        or context["caregiving"]
+        or context["work_offense"]
+        or context["social_withdrawal"]
+        or context["story_topic"]
+        or context["study_test_context"]
+        or context["ansiedade"]
+        or context["unwell"]
+        or context["pressure"]
+        or context["worn_out"]
+    ):
+        return False
+
+    normalized_reply = normalize_for_match(reply)
+    vague_fragments = [
+        "o que mais ficou na sua cabeca hoje",
+        "o que mais pesou hoje",
+        "o que mais te pegou nesse dia",
+        "qual e o principal pensamento ou sensacao",
+        "como posso te ajudar",
+        "o que voce quer colocar primeiro hoje",
+        "o que esta mais dificil nisso agora",
+        "me conta no seu ritmo",
+    ]
+    return any(fragment in normalized_reply for fragment in vague_fragments)
+
+
 def count_positive_scores(scores: list[int | None]) -> int:
     return sum(1 for value in scores if (value or 0) > 0)
 
@@ -3791,6 +4031,8 @@ Objetivo:
 - acolher o usuario em tom humano;
 - agir como uma assistente conversacional simples com foco em apoio emocional;
 - responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
+- mostrar compreensao concreta antes da pergunta, sem repetir a fala inteira do usuario;
+- fazer a conversa andar: conecte a pergunta ao detalhe mais recente, nao a uma frase generica;
 - nao presumir sofrimento quando a fala for positiva, neutra, cotidiana ou simbolica;
 - so aprofundar em ansiedade ou humor quando houver sinais disso ou quando o usuario pedir ajuda;
 - nunca mencionar GAD-7, PHQ-9, diagnostico ou formulario;
@@ -3849,11 +4091,15 @@ Regras:
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
+- se o usuario trouxer escolhas, duvidas ou decisao, fale diretamente dessa dificuldade e pergunte o que trava ou assusta naquela escolha;
+- se o usuario trouxer contas, filho, trabalho, ofensas, estudo ou isolamento, use esse detalhe na resposta; nao volte para "o que mais ficou na sua cabeca";
 - se o sofrimento vier de outros dias ou semanas e impactar sono, rotina, trabalho ou estudo, convide com cuidado para triagem com profissional;
 - se o usuario disser que nao esta bem, pedir ajuda, falar de cansaco, pressao, vazio, pouca vontade, sono ruim ou pouca energia, nao responda de forma passiva;
 - nesses casos, assistant_reply deve trazer reconhecimento concreto do que a pessoa trouxe, uma frase curta de apoio ou presenca, e quando fizer sentido uma pergunta curta que conduza a conversa;
 - o apoio vem antes de qualquer orientacao; nao pule direto para dica, tarefa ou solucao;
 - nao use respostas vagas como "estou aqui para ouvir" ou "como posso te ajudar" sem tomar iniciativa;
+- evite perguntas vagas quando ja existe contexto, como "o que mais ficou na sua cabeca hoje?", "o que mais pesou hoje?" ou "o que te pegou?";
+- essas perguntas so servem quando o usuario ainda nao trouxe quase nada;
 - se o usuario disser "nao estou me sentindo muito bem", uma boa direcao seria algo como: "Hoje parece que nao esta simples para voce. Pode me contar do jeito que vier: o que mais te pegou nisso?";
 - se o usuario pedir ajuda, uma boa direcao seria algo como: "Tudo bem. Me fala qual parte disso esta mais dificil de carregar agora.";
 - nao minimize com frases como "e natural sentir-se assim de vez em quando" ou "todo mundo passa por isso";
@@ -4489,7 +4735,12 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
 
     reflection = reduce_repeated_opening(session, reflection)
     support = build_contextual_support(session, user_message, recommended_stage)
-    assistant_reply = join_reply_parts(reflection, support, next_question if recommended_stage != "closing" else None)
+    grounded_reply = None if recommended_stage == "closing" else build_grounded_lia_reply(session, user_message)
+    assistant_reply = grounded_reply or join_reply_parts(
+        reflection,
+        support,
+        next_question if recommended_stage != "closing" else None,
+    )
     assistant_reply = reduce_repeated_first_sentence(session, assistant_reply)
     analysis = LiaAnalysis(
         assistant_reply=assistant_reply,
@@ -4589,6 +4840,12 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
             analysis.reflection = rewritten_reply
         else:
             raise ValueError("Ollama returned a passive or unsupportive assistant reply")
+
+    if reply_is_too_vague_for_context(session, user_message, analysis.assistant_reply):
+        grounded_reply = build_grounded_lia_reply(session, user_message)
+        if grounded_reply and has_usable_assistant_reply(grounded_reply, recent_assistant_messages):
+            analysis.assistant_reply = grounded_reply
+            analysis.reflection = grounded_reply
 
     return analysis
 
