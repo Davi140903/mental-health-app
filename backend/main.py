@@ -3577,14 +3577,42 @@ def default_next_question(stage: Literal["support", "anxiety", "mood", "closing"
 
 def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str | None:
     context = build_lia_context(session, user_message)
+    latest_text = context["latest_text"]
 
     if context["asks_about_professional"] or contains_any(
-        context["latest_text"],
-        ["quero atendimento", "queria atendimento", "gostaria de atendimento", "seguir para atendimento", "seguir para triagem"],
+        latest_text,
+        [
+            "quero atendimento",
+            "queria atendimento",
+            "gostaria de atendimento",
+            "seguir para atendimento",
+            "seguir para triagem",
+            "preciso conversar com alguem",
+            "conversar com alguem",
+            "motivo suficiente",
+        ],
     ):
         return (
             "Acho um bom caminho. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
             "Quer que eu te encaminhe para a triagem agora?"
+        )
+
+    if contains_any(latest_text, ["culpa", "culpado", "culpada", "descontar nas pessoas", "desconto nas pessoas"]):
+        return (
+            "Essa culpa depois da irritacao pode deixar tudo mais pesado. "
+            "O que costuma acontecer antes de voce acabar descontando nas pessoas?"
+        )
+
+    if contains_any(latest_text, ["nao consigo descansar", "nao consigo relaxar", "mesmo parado", "cabeca continua ligada", "mente continua ligada"]):
+        return (
+            "Isso de parar e a cabeca continuar ligada cansa bastante. "
+            "Nessa hora, o que fica rodando mais: tarefas, cobrancas ou medo de esquecer algo?"
+        )
+
+    if contains_any(latest_text, ["afastando quem gosta", "afastar quem gosta", "afastar as pessoas", "afastando as pessoas"]):
+        return (
+            "Da para entender esse medo de acabar machucando ou afastando quem importa. "
+            "Isso aparece mais quando voce esta irritado, cansado ou tentando se isolar?"
         )
 
     if context["decision_doubt"]:
@@ -3744,7 +3772,10 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         )
 
     if context["pressure"] or context["worn_out"] or context["figurative_distress"]:
-        if context["work_study"]:
+        if context["work_study"] and contains_any(
+            latest_text,
+            ["trabalho", "emprego", "empresa", "chefe", "servico", "serviço", "cobranca", "cobrança", "pressao", "pressão"],
+        ):
             question = first_fresh_question(
                 session,
                 [
@@ -3754,8 +3785,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Essa pressao no trabalho entrou forte no que voce trouxe. "
-                f"{question}"
+                "Trabalho e casa juntos podem virar muita coisa para carregar no mesmo dia. "
+                f"{capitalize_first(question)}"
             )
         if context["figurative_distress"]:
             question = first_fresh_question(
