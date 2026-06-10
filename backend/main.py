@@ -3583,8 +3583,8 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         ["quero atendimento", "queria atendimento", "gostaria de atendimento", "seguir para atendimento", "seguir para triagem"],
     ):
         return (
-            "Pode fazer sentido, sim. Um profissional pode te ajudar a olhar para isso com mais calma e organizar proximos passos "
-            "sem voce precisar chegar com tudo resolvido. Quer que eu te encaminhe para a triagem agora?"
+            "Pode fazer sentido, sim. Conversar com um profissional pode te dar mais apoio para olhar para isso e pensar nos proximos passos. "
+            "Quer que eu te encaminhe para a triagem agora?"
         )
 
     if context["decision_doubt"]:
@@ -3598,7 +3598,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         )
         return (
             "Essa duvida nas escolhas parece ter ficado bem no centro da conversa. "
-            f"Vamos pegar uma parte dela, sem precisar resolver tudo agora: {capitalize_first(question)}"
+            f"{capitalize_first(question)}"
         )
 
     if context["financial_pressure"] and context["caregiving"]:
@@ -3684,19 +3684,19 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Essa preocupacao parece estar pedindo um pouco de espaco para ser entendida, sem eu transformar isso em rotulo. "
+                "Essa preocupacao parece estar tomando espaco agora. "
                 f"{capitalize_first(question)}"
             )
         question = first_fresh_question(
             session,
             [
-                "essa ansiedade aparece mais no corpo, nos pensamentos ou nas escolhas que voce precisa fazer?",
-                "quando ela vem, o que voce percebe primeiro: tensao, preocupacao ou vontade de evitar tudo?",
+                "isso aparece mais no corpo, nos pensamentos ou nas escolhas que voce precisa fazer?",
+                "quando isso vem, o que voce percebe primeiro: tensao, preocupacao ou vontade de evitar tudo?",
                 "tem algum momento do dia em que isso costuma apertar mais?",
             ],
         )
         return (
-            "Quando voce chama isso de ansiedade, eu prefiro entender o jeito que ela aparece em voce, sem colocar rotulo em cima. "
+            "Essa ansiedade parece estar atravessando seu dia agora. "
             f"{capitalize_first(question)}"
         )
 
@@ -4097,6 +4097,9 @@ Regras:
 - se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
 - nao fale em foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente;
 - evite aberturas artificiais como "entendo melhor agora"; responda como uma conversa normal;
+- nao explique suas regras internas para o usuario;
+- nao diga frases como "sem colocar rotulo", "nao vou te diagnosticar", "vamos pegar uma parte sem resolver tudo" ou "sem precisar chegar com tudo resolvido";
+- transforme esse cuidado em linguagem natural, por exemplo: fale do que apareceu e faca uma pergunta simples;
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
@@ -4135,6 +4138,7 @@ Regras:
 - se o usuario responder algo curto como "sim" ou "nao", use a pergunta anterior e o contexto recente para formular a resposta;
 - quando fizer sentido, inclua no maximo uma orientacao pratica bem curta, mas so depois de acolher de verdade;
 - frases como "vamos por partes", "nao precisa explicar tudo de uma vez", "nao precisa carregar isso sozinho", "eu fico com voce nessa parte" sao melhores do que conselhos prontos;
+- use essas frases com moderacao; nao repita o mesmo acolhimento em respostas seguidas;
 - se o usuario disser algo como "estou bem", valide isso e nao trate como problema;
 - se o usuario disser algo como "mais ou menos", trate isso como ambivalencia, nao como sofrimento grave;
 - se o usuario corrigir a propria fala, aceite a correcao e siga a partir dela;
