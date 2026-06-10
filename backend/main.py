@@ -2853,9 +2853,9 @@ def build_contextual_reflection(
         return first_fresh_phrase(
             session,
             [
-                "Essa duvida sobre as suas escolhas parece estar ocupando um lugar importante agora.",
-                "Quando a gente se sente perdido, ate escolher uma direcao pode parecer maior do que normalmente seria.",
-                "Faz sentido a conversa ficar nesse ponto das escolhas, porque e isso que voltou com mais forca.",
+                "Dificil decidir quando tudo fica meio embaralhado por dentro.",
+                "Quando a cabeca fica assim, ate explicar a duvida ja pode ser confuso.",
+                "Da para comecar sem saber exatamente qual e a escolha ainda.",
             ],
         )
 
@@ -2971,9 +2971,9 @@ def build_contextual_question(
             return first_fresh_question(
                 session,
                 [
-                    "Qual escolha esta ficando mais dificil de encarar agora?",
-                    "Essa duvida pesa mais pelo medo de escolher errado ou por nao confiar no que voce consegue fazer agora?",
-                    "Quando voce pensa nessas escolhas, qual parte te deixa mais perdida?",
+                    "O que te faz sentir que nao consegue decidir direito agora?",
+                    "Quando voce tenta pensar nisso, o que embaralha primeiro?",
+                    "Tem alguma situacao puxando essa sensacao de duvida, ou ela vem mais geral?",
                 ],
             )
         if context["work_offense"] and context["work_study"]:
@@ -3591,12 +3591,12 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         question = first_fresh_question(
             session,
             [
-                "Qual escolha esta mais presente agora?",
-                "O que nessa decisao esta mais dificil de colocar em palavras?",
-                "Se voce fosse comecar por um pedaco dessa duvida, qual seria?",
+                "O que te faz sentir que nao consegue decidir direito agora?",
+                "Quando voce tenta pensar nisso, o que embaralha primeiro?",
+                "Tem alguma situacao puxando essa sensacao de duvida, ou ela vem mais geral?",
             ],
         )
-        return f"Vamos organizar essa parte das escolhas. {capitalize_first(question)}"
+        return f"Dificil decidir quando tudo fica meio embaralhado por dentro. {capitalize_first(question)}"
 
     if context["financial_pressure"] and context["caregiving"]:
         question = first_fresh_question(
