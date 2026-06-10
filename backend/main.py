@@ -447,6 +447,15 @@ COMMON_PORTUGUESE_TOKENS = {
     "recentemente",
     "depois",
     "antes",
+    "casa",
+    "mente",
+    "cabeca",
+    "tarefa",
+    "tarefas",
+    "erro",
+    "erros",
+    "preso",
+    "presa",
     "porque",
     "por",
     "com",
@@ -914,6 +923,14 @@ def first_fresh_phrase(session: LiaSessionState, options: list[str]) -> str:
         if not any(normalized_option in message for message in recent_assistant_messages):
             return option
     return options[0]
+
+
+def phrase_from_text(text_value: str, options: list[str]) -> str:
+    normalized = normalize_for_match(text_value)
+    if not normalized:
+        return options[0]
+    index = sum(ord(char) for char in normalized) % len(options)
+    return options[index]
 
 
 def recent_assistant_starts_with(session: LiaSessionState, prefix: str, *, limit: int = 2) -> bool:
@@ -2178,6 +2195,8 @@ def reply_misreads_clear_message(session: LiaSessionState, user_message: str, te
         return True
     if "tem uma pergunta para mim" in normalized_reply:
         return True
+    if not context["concentracao"] and contains_any(normalized_reply, ["concentrar", "concentracao", "foco"]):
+        return True
     if "mais doente" in normalized_reply:
         return True
     if re.search(r"\beu tambem\b", normalized_reply):
@@ -2654,10 +2673,25 @@ def build_contextual_reflection(
         return "Entendi. Um termino mexe com muita coisa, mesmo quando a pessoa tenta seguir."
 
     if session.turn_count == 1 and context["pressure"] and context["worn_out"]:
-        return "Entendi. Parece que voce ja vem segurando isso ha tempo e chegou cansado."
+        return phrase_from_text(
+            user_message,
+            [
+                "Parece que voce ja vem segurando isso ha tempo e chegou cansado.",
+                "Essa cobranca veio junto com um desgaste que nao parece pequeno.",
+                "Da para sentir que essa pressao ja esta cobrando bastante de voce.",
+            ],
+        )
 
     if session.turn_count == 1 and context["pressure"]:
-        return "Entendi. Essa pressao parece estar ocupando bastante espaco no seu dia."
+        return phrase_from_text(
+            user_message,
+            [
+                "Essa pressao parece estar ocupando bastante espaco no seu dia.",
+                "Essa cobranca chegou forte no jeito como voce esta passando por esse momento.",
+                "Pelo que voce trouxe, esse comeco veio com uma carga grande em cima de voce.",
+                "Tem uma pressao importante aparecendo nessa mudanca que voce contou.",
+            ],
+        )
 
     if session.turn_count == 1 and context["worn_out"]:
         return "Entendi. Parece que voce chegou bem no limite nesses ultimos dias."
@@ -2985,7 +3019,7 @@ def build_contextual_question(
         return first_fresh_question(
             session,
             [
-                "Onde isso mais bate em voce: sono, energia, vontade ou foco?",
+                "Onde isso mais bate em voce: sono, energia ou vontade?",
                 "O que isso mais mexe no seu dia a dia agora?",
                 "No fim das contas, isso pesa mais no seu corpo, na sua energia ou na sua vontade de fazer as coisas?",
             ],
@@ -3199,12 +3233,14 @@ def build_contextual_support(
         if session.turn_count == 1 and context["ansiedade"]:
             return None
         if context["pressure"] and context["work_study"]:
-            return first_fresh_phrase(
-                session,
+            return phrase_from_text(
+                user_message,
                 [
                     "Nao precisa desenrolar tudo de uma vez. Vamos so pegar a parte que mais apertou hoje.",
                     "Vamos ficar primeiro no pedaco que mais apertou.",
                     "A gente pode separar uma parte disso antes de tentar entender tudo.",
+                    "A gente pode olhar para uma parte por vez, sem tentar resolver tudo nessa resposta.",
+                    "Vamos deixar isso um pouco mais organizado, com calma.",
                 ],
             )
         if context["pressure"] or context["worn_out"]:
@@ -3736,6 +3772,8 @@ Regras:
 - nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
 - nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
 - se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
+- nao fale em foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente;
+- evite aberturas artificiais como "entendo melhor agora"; responda como uma conversa normal;
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
@@ -3917,6 +3955,8 @@ def generate_lia_plain_reply(
         "Nao use a palavra 'doente' para reformular cansaco, tristeza, ansiedade ou inseguranca. "
         "Nao pergunte se o usuario tem uma pergunta para voce. "
         "Nao fale de experiencias, cansaco, memoria ou sentimentos proprios como 'eu tambem' ou 'ultimamente eu'. "
+        "Nao cite foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente. "
+        "Evite aberturas artificiais como 'entendo melhor agora'. "
         f"Etapa: {stage}. {question_rule} {extra_style_hint} "
     )
     if repair_reason:
@@ -4389,7 +4429,7 @@ def refine_lia_analysis(session: LiaSessionState, analysis: LiaAnalysis, user_me
             analysis.recommended_stage,
             retry_hint=(
                 "A resposta precisa tomar iniciativa sem coaching. Traga reconhecimento concreto, uma frase curta de apoio ou presenca "
-                "e uma pergunta curta sobre mente, corpo, sono, energia, vontade, humor ou frequencia."
+                "e uma pergunta curta sobre corpo, sono, energia, vontade, humor ou frequencia."
             ),
         )
         if rewritten_reply and reply_shows_active_guidance(rewritten_reply):
