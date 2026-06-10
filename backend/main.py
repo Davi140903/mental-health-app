@@ -3596,7 +3596,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 "O que voce conseguir colocar em palavras ja serve. Qual pedaco dessa duvida vem primeiro?",
             ],
         )
-        return f"Podemos ficar um pouco nessa parte das escolhas. {capitalize_first(question)}"
+        return f"Posso te ajudar a organizar essa parte das escolhas. {capitalize_first(question)}"
 
     if context["financial_pressure"] and context["caregiving"]:
         question = first_fresh_question(
@@ -3609,7 +3609,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
         )
         return (
             "Tem responsabilidade, conta e cuidado com seu filho tudo junto ai. "
-            f"A gente pode ir com uma coisa de cada vez: {question}"
+            f"Posso te ajudar a separar isso em pedacos menores: {question}"
         )
 
     if context["work_offense"] and context["work_study"]:
@@ -3664,7 +3664,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Podemos olhar para essa ansiedade na prova sem pressa. "
+            "Posso te ajudar a organizar essa ansiedade com a prova. "
             f"{capitalize_first(question)} Pode ser antes ou na hora da prova."
         )
 
@@ -3681,7 +3681,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
                 ],
             )
             return (
-                "Da para ficar um pouco com essa preocupacao e entender por onde ela vem. "
+                "Posso te ajudar a organizar essa preocupacao sem transformar tudo em uma coisa so. "
                 f"{capitalize_first(question)}"
             )
         question = first_fresh_question(
@@ -3693,7 +3693,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
             ],
         )
         return (
-            "Vamos ficar um momento com essa ansiedade. "
+            "Posso te acompanhar nisso. "
             f"{capitalize_first(question)}"
         )
 
@@ -4039,6 +4039,7 @@ Objetivo:
 - responder primeiro ao que o usuario trouxe, como um chat real, e so depois conduzir;
 - escutar sem julgar, sem interpretar demais e sem transformar a fala do usuario em avaliacao;
 - ajudar o usuario a encontrar o que ele quer dizer naquele momento;
+- sugerir caminhos de conversa, nao decisoes de vida;
 - fazer a conversa andar de forma leve: conecte a pergunta ao detalhe mais recente, mas sem soar como triagem;
 - nao presumir sofrimento quando a fala for positiva, neutra, cotidiana ou simbolica;
 - so aprofundar em ansiedade ou humor quando houver sinais disso ou quando o usuario pedir ajuda;
@@ -4093,7 +4094,8 @@ Regras:
 - nao transforme uma duvida, historia, lembranca ou assunto criativo em sintoma antes de entender o que aquilo significa para o usuario;
 - nao diga que algo "deve ser estressante", "parece estar incomodando" ou "esta pesando" se o usuario ainda nao indicou sofrimento nesse ponto;
 - evite comecar com interpretacoes como "isso parece", "essa duvida parece", "essa ansiedade parece", "isso soa como";
-- prefira falas de presenca e permissao, como "podemos ir por essa parte", "voce pode comecar por onde der", "o que vier primeiro ja ajuda";
+- prefira falas de apoio pratico na conversa, como "posso te ajudar a organizar isso", "podemos separar em pedacos menores", "voce pode comecar por onde der";
+- evite frases com tom terapeutico de sessao, como "vamos ficar nesse momento", "ficar com essa ansiedade", "olhar para isso com cuidado";
 - se o usuario trouxer uma historia, ideia ou lembranca, pergunte primeiro do que se trata, qual parte veio mais forte ou por onde ele quer comecar;
 - nao fale em foco, concentracao, estudo ou atencao se o usuario nao trouxe isso claramente;
 - evite aberturas artificiais como "entendo melhor agora"; responda como uma conversa normal;
@@ -4103,6 +4105,8 @@ Regras:
 - se o contexto envolver prova, estudo, leitura, foco ou organizacao, investigue de forma leve se a dificuldade aparece em outros momentos, sem sugerir diagnosticos como TDAH, dislexia ou TPAC;
 - quando o usuario pedir ajuda ou disser que nao sabe o que fazer, ofereca caminhos simples: organizar o que sente, pensar em um proximo passo ou seguir para triagem;
 - se o usuario pedir conselho dizendo "o que devo fazer", nao decida por ele; ajude a organizar possibilidades e pergunte o que faria sentido para ele;
+- voce pode sugerir caminhos de conversa, por exemplo: "a gente pode comecar pelo que aconteceu ou pelo que isso mexeu em voce";
+- nao sugira decisoes externas como terminar relacionamento, pedir demissao, confrontar alguem ou mudar rotina sem o usuario construir isso;
 - quando o usuario perguntar sobre profissional, consulta, triagem ou se alguem pode ajudar, responda a pergunta de forma clara antes de voltar ao roteiro;
 - se o usuario trouxer escolhas, duvidas ou decisao, nao julgue a escolha; convide ele a contar o que esta em jogo ou qual parte ele consegue dizer agora;
 - se o usuario trouxer contas, filho, trabalho, ofensas, estudo ou isolamento, use esse detalhe com naturalidade, sem transformar em checklist;
