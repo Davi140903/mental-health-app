@@ -848,7 +848,7 @@ def build_pause_message(session: LiaSessionState) -> str:
         return (
             f"Voce tinha escolhido {light_value}. O que mais te prende nisso?"
         )
-    return "Entao vamos por uma coisa simples: teve algo pequeno hoje que te deu um pouco de alivio?"
+    return "Então vamos por uma coisa simples: teve algo pequeno hoje que te deu um pouco de alivio?"
 
 
 def build_pause_decline_reply(session: LiaSessionState) -> str:
@@ -1850,15 +1850,15 @@ def should_finish_for_triage_handoff(session: LiaSessionState, context: dict[str
 def build_triage_handoff_reply(context: dict[str, Any]) -> str:
     if contains_any(context["latest_text"], ["como funciona", "como funcionaria", "como vai ser", "consulta", "doutor", "doutora", "e agora", "proximo passo"]):
         return (
-            "Funciona assim: eu organizo o que apareceu aqui e te mostro os horarios disponiveis com um profissional. "
-            "Voce escolhe um horario, e essa conversa vai como apoio inicial para a triagem. "
-            "Voce nao precisa explicar tudo de novo nem chegar com as palavras perfeitas."
+            "Funciona assim: eu organizo o que apareceu aqui e te mostro os horários disponíveis com um profissional. "
+            "Você escolhe um horário, e essa conversa vai como apoio inicial para a triagem. "
+            "Você não precisa explicar tudo de novo nem chegar com as palavras perfeitas."
         )
 
     return (
-        "Certo. Entao faz sentido seguir para uma triagem com um profissional. "
+        "Certo. Então faz sentido seguir para uma triagem com um profissional. "
         "Eu vou deixar o que apareceu aqui organizado para facilitar esse primeiro contato. "
-        "Voce escolhe um horario e pode chegar sem precisar ter tudo pronto para explicar."
+        "Você escolhe um horário e pode chegar sem precisar ter tudo pronto para explicar."
     )
 
 
@@ -1949,9 +1949,9 @@ def build_related_question_reply(session: LiaSessionState, context: dict[str, An
 
     if asks_about_lia_or_triage(context):
         return (
-            "A triagem funciona como um primeiro contato com o profissional. "
-            "A psicologa recebe um resumo do que voce trouxe aqui, e voce escolhe um horario disponivel para conversar com ela. "
-            "Voce nao precisa repetir tudo do zero nem chegar com tudo perfeitamente explicado."
+            "A consulta com a psicóloga é o momento para conversar com mais calma sobre o que você trouxe aqui. "
+            "Ela recebe um resumo inicial da conversa para entender melhor o contexto, mas você pode falar do seu jeito na consulta. "
+            "Você não precisa repetir tudo do zero nem chegar com tudo perfeitamente explicado."
         )
 
     return None
@@ -2788,13 +2788,13 @@ def build_contextual_reflection(
         return "Obrigada por retomar isso comigo. A gente pode seguir daqui com calma."
 
     if context["latest_duration"] == "por alguns minutos" and context["palpitacao"]:
-        return "Entendi. Entao, quando isso acontece, seu corpo leva alguns minutos para voltar ao ritmo normal."
+        return "Entendi. Então, quando isso acontece, seu corpo leva alguns minutos para voltar ao ritmo normal."
 
     if context["short_yes"] and context["palpitacao"] and (context["relaxar"] or context["controlar"]):
-        return "Entendi. Entao, quando isso vem, voce leva um tempo para conseguir desacelerar."
+        return "Entendi. Então, quando isso vem, voce leva um tempo para conseguir desacelerar."
 
     if context["short_no"] and context["palpitacao"]:
-        return "Entendi. Entao o desconforto parece ficar mais no corpo do que em uma preocupacao continua."
+        return "Entendi. Então o desconforto parece ficar mais no corpo do que em uma preocupacao continua."
 
     if context["palpitacao"] and duration:
         return f"Voce contou que o coracao acelera assim {duration}."
@@ -3637,7 +3637,7 @@ def build_grounded_lia_reply(session: LiaSessionState, user_message: str) -> str
 
     if contains_any(latest_text, ["coisas que ficaram pendentes", "vou decepcionar", "decepcionar as pessoas", "pendentes"]):
         return (
-            "Obrigado por explicar. Entao o trabalho fica voltando pela cobranca das pendencias e pelo medo de decepcionar as pessoas. "
+            "Obrigado por explicar. Então o trabalho fica voltando pela cobranca das pendencias e pelo medo de decepcionar as pessoas. "
             "Qual dessas duas partes tem ocupado mais espaco quando voce tenta dormir?"
         )
 
@@ -4889,8 +4889,22 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
     ):
         reflection = (
             "Certo. Vou te encaminhar para a triagem agora. "
-            "Voce nao precisa chegar com tudo perfeitamente explicado; essa conversa ja ajuda a mostrar por onde comecar."
+            "Você não precisa chegar com tudo perfeitamente explicado; essa conversa já ajuda a mostrar por onde começar."
         )
+        return LiaAnalysis(
+            assistant_reply=reflection,
+            reflection=reflection,
+            next_question=None,
+            risk_level="none",
+            mood_value=session.mood_value,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=True,
+            recommended_stage="closing",
+        )
+
+    if user_explicitly_requests_professional_handoff(context):
+        reflection = build_triage_handoff_reply(context)
         return LiaAnalysis(
             assistant_reply=reflection,
             reflection=reflection,
@@ -7366,5 +7380,4 @@ def update_psychologist_patient_note(
     db.commit()
     db.refresh(note)
     return build_psychologist_note_out(note, request.id, patient.id, current_user.id)
-
 
