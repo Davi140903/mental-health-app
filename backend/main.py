@@ -6712,6 +6712,18 @@ def delete_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
+    user_triage_requests = db.scalars(select(TriageRequest).where(TriageRequest.usuario_id == current_user.id)).all()
+    for triage_request in user_triage_requests:
+        if triage_request.slot_id:
+            slot = db.get(PsychologistSlot, triage_request.slot_id)
+            if slot:
+                slot.available = True
+
+    db.query(PsychologistPatientNote).filter(
+        (PsychologistPatientNote.patient_id == current_user.id)
+        | (PsychologistPatientNote.psychologist_id == current_user.id)
+    ).delete(synchronize_session=False)
+    db.query(TriageRequest).filter(TriageRequest.usuario_id == current_user.id).delete(synchronize_session=False)
     db.query(MoodEntry).filter(MoodEntry.usuario_id == current_user.id).delete()
     db.query(QuestionnaireResult).filter(QuestionnaireResult.usuario_id == current_user.id).delete()
     db.query(LiaInteraction).filter(LiaInteraction.usuario_id == current_user.id).delete()
@@ -7380,4 +7392,3 @@ def update_psychologist_patient_note(
     db.commit()
     db.refresh(note)
     return build_psychologist_note_out(note, request.id, patient.id, current_user.id)
-
