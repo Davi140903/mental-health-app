@@ -1784,8 +1784,20 @@ def user_accepts_or_asks_triage_next_step(context: dict[str, Any]) -> bool:
             "quero conversar com um profissional",
             "quero seguir para triagem",
             "quero a triagem",
+            "gostaria de triagem",
+            "quero ser encaminhado",
+            "quero ser encaminhada",
+            "quero ser encaminhado para triagem",
+            "quero ser encaminhada para triagem",
+            "pode me encaminhar",
+            "pode me encaminhar para triagem",
+            "me encaminha",
+            "me encaminha para triagem",
+            "me encaminhe para triagem",
             "pode ser a triagem",
             "aceito a triagem",
+            "por favor",
+            "sim por favor",
             "como funcionaria",
             "como funciona",
             "e agora",
@@ -1812,6 +1824,17 @@ def user_explicitly_requests_professional_handoff(context: dict[str, Any]) -> bo
             "queria conversar com um profissional",
             "seguir para atendimento",
             "seguir para triagem",
+            "gostaria de triagem",
+            "quero triagem",
+            "quero a triagem",
+            "quero ser encaminhado",
+            "quero ser encaminhada",
+            "quero ser encaminhado para triagem",
+            "quero ser encaminhada para triagem",
+            "pode me encaminhar",
+            "pode me encaminhar para triagem",
+            "me encaminha para triagem",
+            "me encaminhe para triagem",
         ],
     )
 
@@ -1825,7 +1848,7 @@ def should_finish_for_triage_handoff(session: LiaSessionState, context: dict[str
 
 
 def build_triage_handoff_reply(context: dict[str, Any]) -> str:
-    if contains_any(context["latest_text"], ["como funciona", "como funcionaria", "e agora", "proximo passo"]):
+    if contains_any(context["latest_text"], ["como funciona", "como funcionaria", "como vai ser", "consulta", "doutor", "doutora", "e agora", "proximo passo"]):
         return (
             "Funciona assim: eu organizo o que apareceu aqui e te mostro os horarios disponiveis com um profissional. "
             "Voce escolhe um horario, e essa conversa vai como apoio inicial para a triagem. "
@@ -1926,8 +1949,9 @@ def build_related_question_reply(session: LiaSessionState, context: dict[str, An
 
     if asks_about_lia_or_triage(context):
         return (
-            "Eu posso te ajudar a organizar o que voce esta sentindo e, quando fizer sentido, encaminhar isso para a triagem. "
-            "Nao substituo um profissional, mas posso deixar a conversa mais clara para voce chegar com menos peso."
+            "A triagem funciona como um primeiro contato com o profissional. "
+            "A psicologa recebe um resumo do que voce trouxe aqui, e voce escolhe um horario disponivel para conversar com ela. "
+            "Voce nao precisa repetir tudo do zero nem chegar com tudo perfeitamente explicado."
         )
 
     return None
