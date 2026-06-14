@@ -276,7 +276,7 @@ export default function DashboardChat() {
       ...liaSession,
       completed: false,
       followup_mode: true,
-      followup_turns_left: 2,
+      followup_turns_left: 4,
       followup_finished: false,
     });
   };
