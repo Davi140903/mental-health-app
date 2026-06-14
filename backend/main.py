@@ -3429,44 +3429,10 @@ def should_close_lia_session(
     if latest_context["wants_to_stop"] and count_meaningful_user_messages(session) >= 3:
         return True
 
-    if effective_stage not in {"anxiety", "mood", "closing"}:
-        if session.current_topic == "closing" and count_meaningful_user_messages(session) >= 2:
-            return True
-        return False
-
-    if not enough_distress_data:
-        if session.current_topic == "closing" and count_meaningful_user_messages(session) >= 3:
-            return True
-        return False
-
-    required_topics = ["main_focus", "distress_nature", "functional_impact", "frequency_duration"]
-    if any(not session.topic_states[key].filled for key in required_topics):
-        return False
-
-    meaningful_messages = count_meaningful_user_messages(session)
-    if meaningful_messages < 3 or session.turn_count < 4:
-        return False
-
-    if session.turn_count >= 8:
-        return True
-
-    if session.current_topic in {"concrete_example", "user_summary"} and recent_intent_count(session, session.current_topic) >= 2:
-        return True
-
-    if enough_distress_data and meaningful_messages >= 4 and session.current_topic in {"frequency_duration", "functional_impact"}:
-        return True
-
-    topics = derive_memory_topics(session)
-    if not topics and sum(score or 0 for score in session.gad7_scores + session.phq9_scores) < 4:
-        return False
-
-    if session.current_topic == "closing":
-        return True
-
-    if analysis.ready_to_close and meaningful_messages >= 5 and session.turn_count >= 7:
-        return True
-
-    return bool(session.turn_count >= 8)
+    # A Lia pode sugerir triagem, mas nao deve encerrar a conversa so porque
+    # coletou dados suficientes. O fechamento normal acontece por acao clara do
+    # usuario, como pedir para parar ou aceitar o encaminhamento de triagem.
+    return False
 
 
 def ensure_lia_continuation(

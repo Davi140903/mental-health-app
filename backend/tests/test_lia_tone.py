@@ -382,7 +382,7 @@ class LiaToneTests(unittest.TestCase):
         self.assertEqual(session.topic_states["frequency_duration"].value, "varia bastante")
         self.assertNotEqual(main.next_lia_topic(session), "frequency_duration")
 
-    def test_one_month_duration_closes_without_time_distortion_reply(self) -> None:
+    def test_one_month_duration_keeps_conversation_open_without_time_distortion_reply(self) -> None:
         session = self.build_session(stage="mood", turn_count=6)
         session.current_topic = "frequency_duration"
         main.update_topic_state(session, "main_focus", "mente cheia e muitas tarefas")
@@ -404,7 +404,7 @@ class LiaToneTests(unittest.TestCase):
         normalized = main.normalize_for_match(analysis.assistant_reply or "")
 
         self.assertTrue(session.topic_states["frequency_duration"].filled)
-        self.assertTrue(should_close)
+        self.assertFalse(should_close)
         self.assertFalse(main.reply_respects_support_context(session, "sinto que vai fazer um mês, ou talvez mais", "Entendi que voce esta sentindo um tempo diferente, como se o tempo estivesse passando mais rapido."))
         self.assertNotIn("tempo estivesse passando", normalized)
 

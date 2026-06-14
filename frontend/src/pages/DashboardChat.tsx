@@ -334,8 +334,6 @@ export default function DashboardChat() {
   const openingAnimationActive = visibleTranscriptLength !== null && visibleTranscriptLength < transcript.length;
   const memory = liaSession?.memory;
   const isReturning = Boolean(memory && !memory.is_first_contact);
-  const memorySummary = memory?.recent_summary ?? memory?.summary ?? null;
-  const recentConversations = memory?.recent_conversations ?? [];
   const userName = user?.nome ?? user?.email;
 
   return (
@@ -355,33 +353,6 @@ export default function DashboardChat() {
             </div>
           </div>
 
-          {memorySummary || memory?.topics.length ? (
-            <div className="lia-memory-strip">
-              {memorySummary ? <p>{memorySummary}</p> : null}
-              {memory?.topics.length ? (
-                <div className="lia-topic-list" aria-label="Temas que a Lia guarda com cuidado">
-                  {memory.topics.map((topic) => (
-                    <span key={topic} className="pill subtle">
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {recentConversations.length > 1 ? (
-            <div className="lia-memory-strip">
-              <p>Nas últimas conversas, a Lia guardou estes pontos para continuar com mais contexto:</p>
-              <div className="lia-topic-list" aria-label="Memória breve das últimas conversas">
-                {recentConversations.slice(0, 3).map((item) => (
-                  <span key={`${item.created_at}-${item.summary}`} className="pill subtle">
-                    {item.summary}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="chat-thread chat-thread-immersive" aria-live="polite">
             {visibleTranscript.map((message, index) => (
