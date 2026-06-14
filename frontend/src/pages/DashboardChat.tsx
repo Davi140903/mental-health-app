@@ -349,15 +349,40 @@ export default function DashboardChat() {
             </div>
           </div>
 
-          {!startingLia && liaSession && !triageRequest ? (
+          {!startingLia && liaSession ? (
             <div className="lia-triage-shortcut">
               <div>
-                <strong>Prefere ir direto para a triagem?</strong>
-                <span>Você pode escolher um horário com um profissional sem precisar continuar o chat agora.</span>
+                <strong>{triageRequest ? 'Triagem em andamento' : 'Prefere ir direto para a triagem?'}</strong>
+                <span>
+                  {triageRequest?.status === 'scheduled'
+                    ? `Você já tem uma triagem agendada com ${triageRequest.psychologist_name ?? 'um profissional'}.`
+                    : triageRequest
+                    ? 'Escolha um horário disponível para concluir seu encaminhamento.'
+                    : 'Você pode escolher um horário com um profissional sem precisar continuar o chat agora.'}
+                </span>
               </div>
-              <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
-                {triageBusy ? 'Abrindo triagem...' : 'Ir direto para triagem'}
-              </button>
+              {!triageRequest ? (
+                <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
+                  {triageBusy ? 'Abrindo triagem...' : 'Ir direto para triagem'}
+                </button>
+              ) : null}
+
+              {triageRequest?.status !== 'scheduled' && triageSlots.length ? (
+                <div className="option-grid compact">
+                  {triageSlots.slice(0, 3).map((slot) => (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      className="choice"
+                      onClick={() => void handleScheduleTriage(slot.id)}
+                      disabled={triageBusy}
+                    >
+                      <strong>{slot.psychologist_name}</strong>
+                      <span>{formatDateTime(slot.starts_at)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 

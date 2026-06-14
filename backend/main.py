@@ -1407,6 +1407,12 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
             "como posso lidar",
             "me ajuda",
             "preciso de ajuda",
+            "preciso de ajuda para organizar",
+            "ajuda para organizar",
+            "organizar isso",
+            "organizar melhor",
+            "organizar o que estou sentindo",
+            "organizar o que eu estou sentindo",
             "queria ajuda",
         ],
     )
@@ -6892,6 +6898,23 @@ def lia_message(
             assistant_text = build_pause_message(session)
         else:
             assistant_text = build_pause_decline_reply(session)
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        refresh_dashboard = save_lia_session_draft(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
+
+    if context["asks_for_options"]:
+        if context["work_study"]:
+            assistant_text = (
+                "Faz sentido pedir ajuda para organizar isso. A gente pode separar em duas partes: "
+                "o que está mais difícil nos estudos agora e qual próximo passo fica mais seguro. "
+                "Você prefere organizar essa parte comigo primeiro ou seguir para a triagem com um profissional?"
+            )
+        else:
+            assistant_text = (
+                "Faz sentido pedir ajuda para organizar isso. A gente pode separar o que está mais pesado agora "
+                "e pensar em um próximo passo sem decidir tudo de uma vez. "
+                "Você prefere organizar comigo primeiro ou seguir para a triagem com um profissional?"
+            )
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
         refresh_dashboard = save_lia_session_draft(db, current_user, session)
         return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)

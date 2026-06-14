@@ -1,8 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/useAuth';
-import { appService } from '../services/app';
-import type { TriageRequest, TriageSlot } from '../types/app';
 import {
   getCheckInCooldownExpiresAt,
   getCheckInCooldownStorageKey,
@@ -28,7 +26,7 @@ const lightQuestions = [
       { label: 'Organizar o que sinto', value: 'organizar o que sinto' },
       { label: 'Pensar no proximo passo', value: 'pensar no proximo passo' },
       { label: 'Conversar com calma', value: 'conversar com calma' },
-      { label: 'Ir para triagem', value: 'ir para triagem' },
+      { label: 'Ainda nao sei', value: 'ainda nao sei' },
     ],
   },
   {
@@ -165,23 +163,12 @@ function getQuestionIndex() {
   return total % lightQuestions.length;
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [otherSelected, setOtherSelected] = useState(false);
   const [otherValue, setOtherValue] = useState('');
-  const [triageRequest, setTriageRequest] = useState<TriageRequest | null>(null);
-  const [triageSlots, setTriageSlots] = useState<TriageSlot[]>([]);
-  const [triageBusy, setTriageBusy] = useState(false);
-  const [triageError, setTriageError] = useState('');
   const lightQuestion = useMemo(() => lightQuestions[getQuestionIndex()], []);
   const shouldSkipIntro = useMemo(() => {
     if (!user) {
@@ -238,41 +225,6 @@ export default function Dashboard() {
     completeIntro('Outro', trimmed);
   };
 
-  const handleDirectTriage = async () => {
-    setTriageBusy(true);
-    setTriageError('');
-
-    try {
-      const request = await appService.createTriageRequest();
-      const slots = await appService.listTriageSlots();
-      setTriageRequest(request);
-      setTriageSlots(slots);
-    } catch {
-      setTriageError('Nao foi possivel abrir a triagem agora. Voce ainda pode conversar com a Lia.');
-    } finally {
-      setTriageBusy(false);
-    }
-  };
-
-  const handleScheduleTriage = async (slotId: number) => {
-    if (!triageRequest || !user) {
-      return;
-    }
-
-    setTriageBusy(true);
-    setTriageError('');
-
-    try {
-      const scheduled = await appService.scheduleTriage(triageRequest.id, slotId);
-      setTriageRequest(scheduled);
-      localStorage.setItem(getCheckInCooldownStorageKey(user.id), getCheckInCooldownExpiresAt());
-    } catch {
-      setTriageError('Nao foi possivel agendar esse horario agora.');
-    } finally {
-      setTriageBusy(false);
-    }
-  };
-
   if (shouldSkipIntro) {
     return (
       <div className="auth-page">
@@ -286,52 +238,6 @@ export default function Dashboard() {
   return (
     <div className="auth-page">
       <section className="section-card auth-card auth-card-wide">
-        <div className="support-card-inline direct-triage-card">
-          <h3>Se hoje estiver pesado demais para conversar, tudo bem.</h3>
-          <p>Voce pode ir direto para a triagem com um profissional, sem precisar conversar com a Lia agora.</p>
-
-          {!triageRequest ? (
-            <button type="button" className="secondary-button" onClick={() => void handleDirectTriage()} disabled={triageBusy}>
-              {triageBusy ? 'Abrindo triagem...' : 'Ir direto para triagem'}
-            </button>
-          ) : null}
-
-          {triageRequest ? (
-            <div className="summary-block calm-card">
-              <p>
-                {triageRequest.status === 'scheduled'
-                  ? `Triagem agendada com ${triageRequest.psychologist_name ?? 'psicologo'} em ${formatDateTime(
-                      triageRequest.scheduled_for ?? triageRequest.requested_at,
-                    )}.`
-                  : 'Escolha um horario disponivel para concluir sua triagem.'}
-              </p>
-
-              {triageRequest.status !== 'scheduled' && triageSlots.length ? (
-                <div className="option-grid compact">
-                  {triageSlots.slice(0, 6).map((slot) => (
-                    <button
-                      key={slot.id}
-                      type="button"
-                      className="choice"
-                      onClick={() => void handleScheduleTriage(slot.id)}
-                      disabled={triageBusy}
-                    >
-                      <strong>{slot.psychologist_name}</strong>
-                      <span>{formatDateTime(slot.starts_at)}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {triageRequest.status !== 'scheduled' && !triageSlots.length ? (
-                <p className="chat-hint">No momento nao ha horarios disponiveis. Tente novamente mais tarde.</p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {triageError ? <div className="alert error">{triageError}</div> : null}
-        </div>
-
         <div className="companion-header">
           <div className="companion-text">
             <span className="pill">{lightQuestion.label}</span>

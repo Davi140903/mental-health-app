@@ -120,6 +120,7 @@ a {
 .auth-page {
   min-height: 100vh;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
@@ -871,6 +872,11 @@ a {
 
 .lia-triage-shortcut .secondary-button {
   min-width: 190px;
+}
+
+.lia-triage-shortcut .option-grid {
+  flex-basis: 100%;
+  width: 100%;
 }
 
 .lia-memory-strip {
