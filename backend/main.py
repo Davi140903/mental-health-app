@@ -1610,6 +1610,19 @@ def build_lia_context(session: LiaSessionState, user_message: str) -> dict[str, 
                 "acho que ja deu por hoje",
             ],
         ),
+        "gratitude_close": contains_any(
+            latest_text,
+            [
+                "obrigado lia",
+                "obrigada lia",
+                "obrigado",
+                "obrigada",
+                "valeu lia",
+                "valeu",
+                "espero que isso me ajude",
+                "espero que ajude",
+            ],
+        ),
         "asks_to_talk": contains_any(latest_text, ["quero conversar", "so queria conversar", "so quero conversar", "queria desabafar"]),
         "unsure": unsure,
         "short_yes": latest_compact in {"sim", "s", "isso", "por alguns minutos sim", "sim por alguns minutos"},
@@ -4856,6 +4869,24 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         reflection = (
             "Certo. Vou te encaminhar para a triagem agora. "
             "Você não precisa chegar com tudo perfeitamente explicado; essa conversa já ajuda a mostrar por onde começar."
+        )
+        return LiaAnalysis(
+            assistant_reply=reflection,
+            reflection=reflection,
+            next_question=None,
+            risk_level="none",
+            mood_value=session.mood_value,
+            gad7_scores=[None] * 7,
+            phq9_scores=[None] * 9,
+            ready_to_close=True,
+            recommended_stage="closing",
+        )
+
+    if context["gratitude_close"] and not context["asks_about_professional"] and not asks_about_lia_or_triage(context):
+        reflection = (
+            "Fico feliz que você tenha conseguido chegar até aqui. "
+            "Se a consulta estiver marcada, pode levar essa conversa como ponto de partida, sem precisar repetir tudo de uma vez. "
+            "Cuida de você, e quando quiser voltar eu continuo daqui."
         )
         return LiaAnalysis(
             assistant_reply=reflection,
