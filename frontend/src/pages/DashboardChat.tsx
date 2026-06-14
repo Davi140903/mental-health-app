@@ -272,15 +272,12 @@ export default function DashboardChat() {
       return;
     }
 
-    const nextTranscript = [...liaSession.transcript, { role: 'assistant' as const, content: 'Pode continuar. Eu sigo com você daqui.' }];
-
     setLiaSession({
       ...liaSession,
       completed: false,
       followup_mode: true,
       followup_turns_left: 2,
       followup_finished: false,
-      transcript: nextTranscript,
     });
   };
 
