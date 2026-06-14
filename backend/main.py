@@ -4848,7 +4848,19 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         "quer que eu te encaminhe para a triagem agora" in recent_assistant
         and contains_any(
             normalize_for_match(user_message),
-            ["sim", "quero", "pode", "pode sim", "seguir", "triagem", "encaminhar"],
+            [
+                "sim",
+                "quero",
+                "pode",
+                "pode sim",
+                "por favor",
+                "sim por favor",
+                "pode encaminhar",
+                "me encaminhe",
+                "seguir",
+                "triagem",
+                "encaminhar",
+            ],
         )
     ):
         reflection = (
