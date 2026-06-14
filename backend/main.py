@@ -378,31 +378,20 @@ def build_lia_session(memory: LiaMemorySnapshot | None = None) -> LiaSessionStat
 def build_lia_welcome_messages(user: User, memory: LiaMemorySnapshot) -> list[LiaTranscriptMessage]:
     first_name = get_first_name(user.nome)
 
-    if memory.is_first_contact:
-        return [
-            LiaTranscriptMessage(role="assistant", content=f"Oi, {first_name}. Eu sou a Lia."),
-            LiaTranscriptMessage(
-                role="assistant",
-                content=(
-                    "Eu estou aqui para te ouvir com calma, ajudar a organizar o que voce esta sentindo "
-                    "e, se fizer sentido, te orientar daqui para a frente."
-                ),
-            ),
-            LiaTranscriptMessage(
-                role="assistant",
-                content="O que voce quer conversar hoje?",
-            ),
-        ]
-
+    # Para a versão de apresentação, a abertura fica sempre como primeiro contato.
+    # A memória continua salva para dashboard e relatórios, mas não aparece como resumo no chat.
     return [
-        LiaTranscriptMessage(role="assistant", content=f"Oi de novo, {first_name}."),
+        LiaTranscriptMessage(role="assistant", content=f"Oi, {first_name}. Eu sou a Lia."),
         LiaTranscriptMessage(
             role="assistant",
-            content="Bom te ver por aqui. A gente pode continuar com calma, sem precisar puxar tudo de uma vez.",
+            content=(
+                "Eu estou aqui para te ouvir com calma, ajudar a organizar o que você está sentindo "
+                "e, se fizer sentido, te orientar daqui para a frente."
+            ),
         ),
         LiaTranscriptMessage(
             role="assistant",
-            content="Que tipo de ajuda faria sentido hoje?",
+            content="Sobre o que você quer conversar hoje?",
         ),
     ]
 
@@ -2797,9 +2786,6 @@ def build_contextual_reflection(
     if session.turn_count == 1 and context["tristeza"]:
         return "Entendi. Tem um peso ai que nao parece pequeno."
 
-    if session.turn_count == 1 and not session.memory.is_first_contact and session.memory.recent_summary:
-        return "Obrigada por retomar isso comigo. A gente pode seguir daqui com calma."
-
     if context["latest_duration"] == "por alguns minutos" and context["palpitacao"]:
         return "Entendi. Então, quando isso acontece, seu corpo leva alguns minutos para voltar ao ritmo normal."
 
@@ -4317,22 +4303,9 @@ Regras:
 
 
 def build_lia_memory_prompt(session: LiaSessionState) -> str:
-    return "Memoria atual do usuario: " + (
-        (
-            f"resumo acumulado: {session.memory.summary}. "
-            if session.memory.summary
-            else "sem resumo acumulado. "
-        )
-        + (
-            f"ultimo contexto: {session.memory.recent_summary}. "
-            if session.memory.recent_summary
-            else ""
-        )
-        + (
-            "topicos recorrentes: " + ", ".join(session.memory.topics) + "."
-            if session.memory.topics
-            else ""
-        )
+    return (
+        "Memoria atual do usuario: para esta versao de apresentacao, nao retome conversas anteriores. "
+        "Use apenas o que o usuario trouxer na conversa atual."
     )
 
 

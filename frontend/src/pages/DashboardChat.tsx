@@ -332,8 +332,7 @@ export default function DashboardChat() {
   const visibleTranscript =
     visibleTranscriptLength === null ? transcript : transcript.slice(0, Math.min(visibleTranscriptLength, transcript.length));
   const openingAnimationActive = visibleTranscriptLength !== null && visibleTranscriptLength < transcript.length;
-  const memory = liaSession?.memory;
-  const isReturning = Boolean(memory && !memory.is_first_contact);
+  const isReturning = false;
   const userName = user?.nome ?? user?.email;
 
   return (
@@ -353,6 +352,17 @@ export default function DashboardChat() {
             </div>
           </div>
 
+          {!startingLia && liaSession && !triageRequest ? (
+            <div className="lia-triage-shortcut">
+              <div>
+                <strong>Prefere ir direto para a triagem?</strong>
+                <span>Você pode escolher um horário com um profissional sem precisar continuar o chat agora.</span>
+              </div>
+              <button type="button" className="secondary-button" onClick={() => void handleCreateTriageRequest()} disabled={triageBusy}>
+                {triageBusy ? 'Abrindo triagem...' : 'Ir direto para triagem'}
+              </button>
+            </div>
+          ) : null}
 
           <div className="chat-thread chat-thread-immersive" aria-live="polite">
             {visibleTranscript.map((message, index) => (

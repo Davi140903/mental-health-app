@@ -842,6 +842,37 @@ a {
   gap: 0.8rem;
 }
 
+.lia-triage-shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 1.1rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(69, 95, 85, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 14px 34px rgba(37, 55, 49, 0.08);
+}
+
+.lia-triage-shortcut div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.lia-triage-shortcut strong {
+  color: var(--text);
+}
+
+.lia-triage-shortcut span {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.lia-triage-shortcut .secondary-button {
+  min-width: 190px;
+}
+
 .lia-memory-strip {
   display: grid;
   gap: 0.8rem;
@@ -2569,6 +2600,15 @@ a {
   .chat-input-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .lia-triage-shortcut {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lia-triage-shortcut .secondary-button {
+    width: 100%;
   }
 
   .nav-strip {
