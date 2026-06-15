@@ -1731,6 +1731,23 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
     latest_text = context["latest_text"]
     if mentions_existing_professional_context(latest_text):
         return False
+    if contains_any(
+        latest_text,
+        [
+            "o que eu preciso fazer",
+            "o que preciso fazer",
+            "e agora",
+            "qual o proximo passo",
+            "proximo passo",
+            "como eu sigo",
+            "como sigo",
+            "como faz",
+        ],
+    ) and contains_any(
+        context["combined_text"],
+        ["psicologo", "psicologa", "profissional", "triagem", "consulta", "atendimento"],
+    ):
+        return True
     return contains_any(
         latest_text,
         [
@@ -1745,6 +1762,11 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
             "quem ve isso",
             "meus dados",
             "relatorio",
+            "o que eu preciso fazer",
+            "o que preciso fazer",
+            "e agora",
+            "qual o proximo passo",
+            "proximo passo",
             "consulta",
             "psicologo",
             "psicologa",
@@ -1981,6 +2003,25 @@ def build_related_question_reply(session: LiaSessionState, context: dict[str, An
         )
 
     if asks_about_lia_or_triage(context):
+        if contains_any(
+            context["latest_text"],
+            [
+                "o que eu preciso fazer",
+                "o que preciso fazer",
+                "e agora",
+                "qual o proximo passo",
+                "proximo passo",
+                "como eu sigo",
+                "como sigo",
+                "como faz",
+            ],
+        ):
+            return (
+                "Você pode seguir para a triagem por aqui. Eu organizo o que já apareceu na conversa, "
+                "e o próximo passo é escolher um horário disponível com um profissional. "
+                "Se quiser, me diga que quer seguir para a triagem ou use o botão de triagem na tela."
+            )
+
         return (
             "A consulta com a psicóloga é o momento para conversar com mais calma sobre o que você trouxe aqui. "
             "Ela recebe um resumo inicial da conversa para entender melhor o contexto, mas você pode falar do seu jeito na consulta. "
