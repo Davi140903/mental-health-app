@@ -161,7 +161,7 @@ export default function DashboardChat() {
 
     setDraftMessage(storedDraft);
 
-    if (storedSession && !storedSession.completed) {
+    if (storedSession) {
       setLiaSession(storedSession);
       setStartingLia(false);
       return;
