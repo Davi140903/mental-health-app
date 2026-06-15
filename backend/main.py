@@ -1748,6 +1748,11 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
         ["psicologo", "psicologa", "profissional", "triagem", "consulta", "atendimento"],
     ):
         return True
+    if contains_any(latest_text, ["encontrar", "achar", "procurar", "falar com", "conversar com"]) and contains_any(
+        latest_text,
+        ["psicologo", "psicologa", "profissional", "terapeuta"],
+    ):
+        return True
     return contains_any(
         latest_text,
         [
@@ -1767,6 +1772,14 @@ def asks_about_lia_or_triage(context: dict[str, Any]) -> bool:
             "e agora",
             "qual o proximo passo",
             "proximo passo",
+            "encontrar um psicologo",
+            "encontrar uma psicologa",
+            "achar um psicologo",
+            "achar uma psicologa",
+            "procurar um psicologo",
+            "procurar uma psicologa",
+            "falar com um psicologo",
+            "falar com uma psicologa",
             "consulta",
             "psicologo",
             "psicologa",
@@ -1821,6 +1834,10 @@ def user_accepts_or_asks_triage_next_step(context: dict[str, Any]) -> bool:
             "quero conversar com um profissional",
             "quero seguir para triagem",
             "quero seguir para a triagem",
+            "quero seguir nessa triagem",
+            "quero seguir nesta triagem",
+            "seguir nessa triagem",
+            "seguir nesta triagem",
             "gostaria de seguir para triagem",
             "gostaria de seguir para a triagem",
             "quero a triagem",
@@ -1871,6 +1888,10 @@ def user_explicitly_requests_professional_handoff(context: dict[str, Any]) -> bo
             "seguir para atendimento",
             "seguir para triagem",
             "seguir para a triagem",
+            "seguir nessa triagem",
+            "seguir nesta triagem",
+            "quero seguir nessa triagem",
+            "quero seguir nesta triagem",
             "gostaria de seguir para triagem",
             "gostaria de seguir para a triagem",
             "gostaria de triagem",
@@ -2003,6 +2024,35 @@ def build_related_question_reply(session: LiaSessionState, context: dict[str, An
         )
 
     if asks_about_lia_or_triage(context):
+        if contains_any(context["latest_text"], ["encontrar", "achar", "procurar", "falar com", "conversar com"]) and contains_any(
+            context["latest_text"],
+            ["psicologo", "psicologa", "profissional", "terapeuta"],
+        ):
+            return (
+                "Posso te ajudar por aqui. O caminho no app é seguir para a triagem: "
+                "você escolhe um horário disponível com um profissional, e a conversa com a Lia vai como apoio inicial. "
+                "Se quiser, posso te encaminhar para essa triagem agora."
+            )
+
+        if contains_any(
+            context["latest_text"],
+            [
+                "encontrar um psicologo",
+                "encontrar uma psicologa",
+                "achar um psicologo",
+                "achar uma psicologa",
+                "procurar um psicologo",
+                "procurar uma psicologa",
+                "falar com um psicologo",
+                "falar com uma psicologa",
+            ],
+        ):
+            return (
+                "Posso te ajudar por aqui. O caminho no app é seguir para a triagem: "
+                "você escolhe um horário disponível com um profissional, e a conversa com a Lia vai como apoio inicial. "
+                "Se quiser, posso te encaminhar para essa triagem agora."
+            )
+
         if contains_any(
             context["latest_text"],
             [
