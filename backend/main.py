@@ -6522,6 +6522,41 @@ def get_current_triage_request(db: Session, user_id: str) -> TriageRequest | Non
     )
 
 
+def ensure_triage_request_for_user(
+    db: Session,
+    current_user: User,
+    interaction: LiaInteraction | None = None,
+    notes: str = "Pedido criado a partir do encerramento com a Lia.",
+) -> TriageRequest:
+    existing_open_request = db.scalar(
+        select(TriageRequest)
+        .where(TriageRequest.usuario_id == current_user.id, TriageRequest.status.in_(["pending", "scheduled"]))
+        .order_by(TriageRequest.requested_at.desc())
+        .limit(1)
+    )
+    if existing_open_request:
+        return existing_open_request
+
+    if interaction is None:
+        interaction = db.scalar(
+            select(LiaInteraction)
+            .where(LiaInteraction.usuario_id == current_user.id)
+            .order_by(LiaInteraction.created_at.desc())
+            .limit(1)
+        )
+
+    request = TriageRequest(
+        usuario_id=current_user.id,
+        lia_interaction_id=interaction.id if interaction else None,
+        status="pending",
+        notes=notes,
+    )
+    db.add(request)
+    db.flush()
+    db.refresh(request)
+    return request
+
+
 def ensure_triage_slots(db: Session) -> None:
     # Legacy fallback: only seed automatic slots when no psychologist has configured
     # future availability yet. Once professionals customize their agenda, patient
@@ -6976,6 +7011,19 @@ def lia_message(
         assistant_text = build_urgent_risk_reply()
         session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
         refresh_dashboard = save_lia_session_results(db, current_user, session)
+        latest_interaction = db.scalar(
+            select(LiaInteraction)
+            .where(LiaInteraction.usuario_id == current_user.id)
+            .order_by(LiaInteraction.created_at.desc())
+            .limit(1)
+        )
+        ensure_triage_request_for_user(
+            db,
+            current_user,
+            latest_interaction,
+            notes="Pedido automatico criado por sinal grave informado na conversa com a Lia.",
+        )
+        db.commit()
         return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     if should_finish_for_triage_handoff(session, context):
@@ -7346,30 +7394,7 @@ def create_triage_request(
         if interaction is None or interaction.usuario_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interacao nao encontrada.")
 
-    if interaction is None:
-        interaction = db.scalar(
-            select(LiaInteraction)
-            .where(LiaInteraction.usuario_id == current_user.id)
-            .order_by(LiaInteraction.created_at.desc())
-            .limit(1)
-        )
-
-    existing_open_request = db.scalar(
-        select(TriageRequest)
-        .where(TriageRequest.usuario_id == current_user.id, TriageRequest.status.in_(["pending", "scheduled"]))
-        .order_by(TriageRequest.requested_at.desc())
-        .limit(1)
-    )
-    if existing_open_request:
-        return build_triage_request_out(existing_open_request)
-
-    request = TriageRequest(
-        usuario_id=current_user.id,
-        lia_interaction_id=interaction.id if interaction else None,
-        status="pending",
-        notes="Pedido criado a partir do encerramento com a Lia.",
-    )
-    db.add(request)
+    request = ensure_triage_request_for_user(db, current_user, interaction)
     db.commit()
     db.refresh(request)
     return build_triage_request_out(request)
