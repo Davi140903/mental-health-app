@@ -586,8 +586,18 @@ URGENT_SIGNAL_FRAGMENTS = [
     "suicid",
     "sumir",
     "nao quero viver",
+    "nao quero mais viver",
     "nao queria estar aqui",
+    "nao queria mais estar aqui",
     "me machucar",
+    "tirar minha vida",
+    "tirar a minha vida",
+    "acabar com tudo",
+    "nao aguento mais viver",
+    "vou me ferir",
+    "vou me machucar",
+    "quero morrer",
+    "penso em morrer",
 ]
 
 
@@ -602,6 +612,22 @@ def contains_exact_phrase(text_value: str, phrases: list[str]) -> bool:
 def contains_risk_phrase(text_value: str, phrases: list[str]) -> bool:
     normalized = f" {normalize_for_match(text_value)} "
     return any(f" {normalize_for_match(phrase)} " in normalized for phrase in phrases)
+
+
+def has_urgent_risk_signal(text_value: str) -> bool:
+    normalized = normalize_for_match(text_value)
+    if contains_any(normalized, ["nao penso em me machucar", "nao penso em morrer", "nao quero me machucar"]):
+        return False
+    return contains_any(normalized, URGENT_SIGNAL_FRAGMENTS)
+
+
+def build_urgent_risk_reply() -> str:
+    return (
+        "Sinto muito que isso esteja aparecendo agora. Quando existe ideia de se machucar, morrer ou não querer mais viver, "
+        "isso precisa de ajuda imediata, não só de uma conversa comigo. Se houver risco agora, ligue para o SAMU 192, "
+        "para a emergência 190, ou vá a uma emergência mais próxima. Se puder, chame alguém de confiança para ficar com você "
+        "neste momento. Você também pode ligar para o CVV 188, que atende 24 horas. Sua segurança vem primeiro."
+    )
 
 
 def normalize_for_match(text_value: str) -> str:
@@ -4565,7 +4591,7 @@ def call_cloud_or_local_lia(
 
 def infer_risk_level_from_message(user_message: str) -> Literal["none", "attention", "urgent"]:
     text_value = normalize_for_match(user_message)
-    if contains_any(text_value, ["me matar", "suicid", "me machucar", "nao quero viver", "nao queria estar aqui"]):
+    if has_urgent_risk_signal(text_value):
         return "urgent"
     if contains_any(text_value, ["sumir", "desaparecer", "nao queria lidar com nada"]):
         return "attention"
@@ -5010,7 +5036,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         )
 
     risk_level: Literal["none", "attention", "urgent"] = "none"
-    if contains_risk_phrase(text_value, ["me matar", "suicid", "sumir", "nao quero viver", "me machucar"]):
+    if has_urgent_risk_signal(text_value):
         risk_level = "urgent"
 
     if any(term in text_value for term in ["ansios", "nervos", "tenso", "panico", "preocup"]):
@@ -5044,7 +5070,7 @@ def fallback_lia_analysis(session: LiaSessionState, user_message: str) -> LiaAna
         phq9_scores[6] = 2
     if any(term in text_value for term in ["devagar", "travado", "agitado"]):
         phq9_scores[7] = 1
-    if contains_risk_phrase(text_value, ["morrer", "sumir", "nao queria estar aqui", "me machucar"]):
+    if has_urgent_risk_signal(text_value):
         phq9_scores[8] = 2
         risk_level = "urgent"
 
@@ -5721,7 +5747,7 @@ def build_lia_closing_messages(session: LiaSessionState, risk_level: Literal["no
     if risk_level == "urgent" or (session.phq9_scores[-1] or 0) > 0:
         return [
             "Antes de qualquer outra coisa, sua seguranca vem primeiro.",
-            "Se existir risco agora, procure ajuda presencial imediata ou alguem de confianca perto de voce.",
+            "Se existir risco agora, ligue para o SAMU 192, para a emergencia 190, procure uma emergencia proxima ou chame alguem de confianca para ficar com voce. O CVV 188 tambem atende 24 horas.",
         ]
 
     gad_score = sum(score or 0 for score in session.gad7_scores)
@@ -6939,6 +6965,18 @@ def lia_message(
     session.turn_count += 1
     using_ollama = False
     context = build_lia_context(session, message_text)
+
+    if has_urgent_risk_signal(message_text):
+        infer_topic_states(session, message_text)
+        session.stage = "closing"
+        session.current_topic = "closing"
+        session.focus_kind = "phq9"
+        session.completed = True
+        session.phq9_scores[8] = 2
+        assistant_text = build_urgent_risk_reply()
+        session.transcript.append(LiaTranscriptMessage(role="assistant", content=assistant_text))
+        refresh_dashboard = save_lia_session_results(db, current_user, session)
+        return LiaTurnOut(session=session, refresh_dashboard=refresh_dashboard, using_ollama=False)
 
     if should_finish_for_triage_handoff(session, context):
         infer_topic_states(session, message_text)
